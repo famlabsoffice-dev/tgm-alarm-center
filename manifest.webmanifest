@@ -1,0 +1,12 @@
+{
+  "name":"TGM ALARM CENTER",
+  "short_name":"TGM Alarm",
+  "description":"Zentrale Alarm-, Kontakt-, Geräte- und Ereignisübersicht.",
+  "start_url":"./",
+  "display":"standalone",
+  "orientation":"landscape",
+  "background_color":"#080b10",
+  "theme_color":"#0a0d12",
+  "lang":"de",
+  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
