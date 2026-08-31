@@ -3,10 +3,12 @@ import { strict as assert } from 'node:assert';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const manifest = readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
+const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
+const guards = readFileSync(new URL('../runtime-guards.js', import.meta.url), 'utf8');
 const script = html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/)?.[1];
 assert(script, 'Main application script is missing.');
-
 new Function(script);
+new Function(guards);
 
 const required = [
   'schemaVersion:SCHEMA_VERSION',
@@ -26,6 +28,9 @@ const required = [
 ];
 for (const needle of required) assert(html.includes(needle), `Missing required product behavior: ${needle}`);
 assert(/"orientation"\s*:\s*"landscape"/.test(manifest), 'Landscape orientation is not configured.');
+assert(sw.includes('runtime-guards.js'), 'Offline shell does not install the production guard.');
+assert(guards.includes('Store-Aktivierung ist noch nicht verifiziert.'), 'Unverified premium unlock guard is missing.');
+assert(guards.includes('Browser-Test ausgelöst.'), 'Browser-only test guard is missing.');
 assert(!/lorem ipsum/i.test(html), 'Placeholder text detected.');
 assert(!/\bTODO\b/i.test(html), 'TODO marker detected.');
 
