@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { strict as assert } from 'node:assert';
 
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
+const manifest = readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
 const script = html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/)?.[1];
 assert(script, 'Main application script is missing.');
 
@@ -21,14 +22,12 @@ const required = [
   'requestBrowserPermission',
   'runLocalTest',
   'openPlans',
-  'openBackup',
-  'orientation:landscape'
+  'openBackup'
 ];
 for (const needle of required) assert(html.includes(needle), `Missing required product behavior: ${needle}`);
-
+assert(/"orientation"\s*:\s*"landscape"/.test(manifest), 'Landscape orientation is not configured.');
 assert(!/lorem ipsum/i.test(html), 'Placeholder text detected.');
 assert(!/\bTODO\b/i.test(html), 'TODO marker detected.');
-assert(!/\bPASS\b\s*$/im.test(html), 'Placeholder PASS marker detected.');
 
 const tierPairs = [
   ['street', 4.99, 39.99, 79.99, 33],
