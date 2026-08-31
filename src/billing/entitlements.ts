@@ -34,7 +34,8 @@ export async function restorePurchases(): Promise<Tier> {
 
 export async function purchaseTier(tier: Exclude<Tier, 'free'>, period: 'monthly' | 'yearly' | 'lifetime'): Promise<Tier> {
   if (Platform.OS === 'web') throw new Error('Käufe sind auf Web nicht verfügbar');
-  const key = `${tier}${period[0].toUpperCase()}${period.slice(1)}`;
+  const suffix = period === 'monthly' ? 'Monthly' : period === 'yearly' ? 'Yearly' : 'Lifetime';
+  const key = `${tier}${suffix}`;
   const productId = PRODUCTS[key];
   if (!productId) throw new Error('Store-Produkt ist nicht konfiguriert');
   const products = await Purchases.getProducts([productId]);
