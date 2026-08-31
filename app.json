@@ -11,7 +11,6 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tgm.alarmcenter",
       "infoPlist": {
-        "UIBackgroundModes": ["remote-notification"],
         "NSUserNotificationsUsageDescription": "TGM ALARM CENTER benötigt Benachrichtigungen, damit deine Alarmzeiten zuverlässig angekündigt werden."
       }
     },
@@ -24,9 +23,6 @@
     "plugins": [
       ["expo-notifications", {"sounds": ["./assets/notifications/alarm-pulse.wav", "./assets/notifications/alarm-siren.wav", "./assets/notifications/alarm-chime.wav"]}],
       ["expo-build-properties", {"android": {"compileSdkVersion": 35, "targetSdkVersion": 35, "buildToolsVersion": "35.0.0"}, "ios": {"deploymentTarget": "15.1"}}]
-    ],
-    "extra": {
-      "billing": {"streetBossMonthly": "street_boss_monthly", "streetBossYearly": "street_boss_yearly", "streetBossLifetime": "street_boss_lifetime", "caporegimeMonthly": "caporegime_monthly", "caporegimeYearly": "caporegime_yearly", "caporegimeLifetime": "caporegime_lifetime", "godfatherMonthly": "godfather_monthly", "godfatherYearly": "godfather_yearly", "godfatherLifetime": "godfather_lifetime"}
-    }
+    ]
   }
 }

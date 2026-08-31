@@ -1,39 +1,40 @@
-# TGM ALARM CENTER — Pre-Release Validation
+# TGM ALARM CENTER — Release-Status
 
-## Implemented in this release branch
+## Umgesetzter lokaler Gaming-Umfang
 
-- Local-first persistent data model with schema version 1.
-- Accounts and central active-account selection.
-- Bubble, GW Bubble and Custom alarm templates with required defaults.
-- Strict local date/time validation before persistence.
-- One-time and daily occurrences.
-- Absolute UTC persistence with local display.
-- Daily recurrence reconstructed from local wall-clock time so DST changes do not turn a daily 10:30 alarm into a fixed UTC interval.
-- Five-day GW cycle with a 24-hour protection window, start, end-warning and end occurrence.
-- Warning occurrences are ordered before their corresponding main event.
-- Occurrence-specific completion keys: alarm ID plus concrete event timestamp.
-- Protection state independent from active/paused state.
-- Centralized tier configuration and account alarm limits.
-- Duplicate operation creates a new ID, clears completion history and starts paused.
-- Pause/resume removes and rebuilds the active web schedule.
-- Web notification permission handling and in-session scheduling with a bounded 30-day horizon and 64-notification cap.
-- Web Health explicitly distinguishes browser support from native Android/iOS delivery.
-- JSON backup export and strict whole-backup validation/import.
-- Landscape PWA configuration and versioned offline cache.
-- Deterministic static validation script and CI workflow definition.
+- Lokales, versioniertes Datenmodell mit Accounts und aktivem Account.
+- Bubble-, GW-Bubble- und eigene Gaming-Alarmvorlagen.
+- Strikte lokale Kalender- und Uhrzeitprüfung vor dem Speichern.
+- Einmalige Termine und tägliche Wiederholungen.
+- Absolute Zeitwerte für konkrete Termine mit Anzeige in der Gerätezeitzone.
+- Tägliche Wiederholungen anhand der lokalen Wanduhr, damit Sommerzeitwechsel die eingestellte Uhrzeit nicht verschieben.
+- Fünf-Tage-GW-Zyklus mit 24-Stunden-Schutzfenster, Beginn, Ende-Warnung und Ende-Ereignis.
+- Vorwarnungen werden vor dem zugehörigen Hauptereignis eingeordnet.
+- Ereignisbezogene Erledigungsschlüssel aus Alarm-ID und konkretem Termin.
+- Schutzmarkierung unabhängig vom Aktivieren oder Pausieren.
+- Duplizieren erzeugt eine neue ID, leert die Erledigungshistorie und speichert den Klon pausiert.
+- Pausieren und Aktivieren aktualisieren den lokalen Browser-Scheduler.
+- Lokaler Browser-Scheduler mit begrenztem Zeitfenster, Wiederaufnahme nach Tab-Pausen und Schutz vor Doppelton-Auslösung.
+- Lokale Gaming-Tonprofile Pulse, Siren und Chime als echte WAV-Dateien.
+- Einmalige Audio-Freigabe nach bewusster Nutzeraktion.
+- Countdown, nächste Ereignisse, Alarmbestätigung, Pausieren, Duplizieren und Löschen.
+- JSON-Backup und strikte atomare Wiederherstellung.
+- Landscape-PWA-Konfiguration und versionierter Offline-App-Shell-Cache.
+- Responsive HTML/CSS/JS-Oberfläche für Desktop, Tablet und Smartphone.
+- Statisches Web-Core-Gate, JavaScript-Syntaxprüfung und Domain-Tests.
 
-## Explicit production gates still requiring real credentials, native builds or physical devices
+## Bewusst nicht enthalten
 
-1. Android exact alarms and `POST_NOTIFICATIONS` on supported Android versions.
-2. iOS notification permissions, sound, vibration and allowed time-sensitive/critical behavior.
-3. Reboot, force-close, locked-screen, Doze, battery-optimization and OEM matrix.
-4. Real local notification sound assets (`alarm-pulse.wav`, `alarm-siren.wav`, `alarm-chime.wav`) integrated into native builds.
-5. StoreKit product configuration, purchase, transaction verification and Restore Purchases.
-6. Google Play product configuration, purchase verification and Restore/Resync.
-7. Production authentication providers, sessions, token lifecycle and account isolation.
-8. Production cloud-sync backend, encrypted transport/storage, device management and conflict resolution.
-9. External alarm forwarding, SMS, push, sensor/gateway and control-center endpoints plus credentials.
-10. Release signing, AAB/IPA archives, final identifiers, Store metadata, privacy/legal documents and IP/brand clearance.
-11. Real Android and iPhone release-candidate validation.
+Das Produkt ist ausschließlich eine lokale Spielhilfe für **The Grand Mafia**. Es enthält keine Cloud-Synchronisation, keine Serverkonten und keine Schnittstellen zu externen Diensten. Es ist kein reales Gefahrenwarnsystem und keine Feuerwehr-, Rauchmelder-, Sensor-, Leitstellen- oder Sicherheitsanwendung.
 
-The branch intentionally does not mark any unverified native, store, cloud or external-integration capability as successful.
+Die Anwendung gibt Gaming-Alarmtöne lokal auf dem verwendeten Gerät aus. Browser- oder native lokale Benachrichtigungsmechanismen werden ausschließlich als geräteinterne Erinnerung verwendet; es gibt keine externe Weiterleitung.
+
+## Verifizierte Prüfungen
+
+```bash
+node scripts/verify-web-core.mjs
+node --check app.js
+node --check sw.js
+pnpm test
+pnpm typecheck
+```

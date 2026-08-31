@@ -1,51 +1,57 @@
-import { readFileSync } from 'node:fs';
-import { strict as assert } from 'node:assert';
+import assert from 'node:assert/strict';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 
-const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-const manifest = readFileSync(new URL('../manifest.webmanifest', import.meta.url), 'utf8');
-const sw = readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
-const guards = readFileSync(new URL('../runtime-guards.js', import.meta.url), 'utf8');
-const script = html.match(/<script>\s*'use strict';([\s\S]*?)<\/script>/)?.[1];
-assert(script, 'Main application script is missing.');
-new Function(script);
-new Function(guards);
+const root = new URL('..', import.meta.url);
+const read = (name) => readFileSync(new URL(name, root), 'utf8');
+const html = read('index.html');
+const css = read('styles.css');
+const js = read('app.js');
+const sw = read('sw.js');
+const manifest = JSON.parse(read('manifest.webmanifest'));
 
-const required = [
-  'schemaVersion:SCHEMA_VERSION',
-  "tgm-alarm-center-backup",
+assert(html.includes('<link rel="stylesheet" href="styles.css">'), 'CSS stylesheet is not linked.');
+assert(/<script src="app\.js(?:\?[^\"]+)?" defer><\/script>/.test(html), 'Application JavaScript is not linked.');
+assert(html.includes('alarmOverlay'), 'Alarm overlay root is missing.');
+assert(css.includes('.alarm-overlay'), 'Alarm overlay styles are missing.');
+new Function(js);
+new Function(sw);
+
+for (const needle of [
+  "const SOUNDS",
+  'function unlockAudio',
+  'function playSound',
+  'function fireDueMoments',
+  'function nextOccurrence',
+  'function momentsFor',
+  "repeat === 'gw5d'",
+  'end-warning',
   'function validateBackup',
-  'function rescheduleWeb',
-  'function occurrenceFor',
-  "repeat==='gw5d'",
-  "repeat==='daily'",
-  'completedOccurrences',
-  'SCHEDULE_HORIZON_DAYS=30',
-  'MAX_WEB_SCHEDULED=64',
-  'requestBrowserPermission',
-  'runLocalTest',
-  'openPlans',
-  'openBackup'
-];
-for (const needle of required) assert(html.includes(needle), `Missing required product behavior: ${needle}`);
-assert(/"orientation"\s*:\s*"landscape"/.test(manifest), 'Landscape orientation is not configured.');
-assert(sw.includes('runtime-guards.js'), 'Offline shell does not install the production guard.');
-assert(guards.includes('Store-Aktivierung ist noch nicht verifiziert.'), 'Unverified premium unlock guard is missing.');
-assert(guards.includes('Browser-Test ausgelöst.'), 'Browser-only test guard is missing.');
-assert(!/lorem ipsum/i.test(html), 'Placeholder text detected.');
-assert(!/\bTODO\b/i.test(html), 'TODO marker detected.');
+  'function exportBackup',
+  'function importBackup',
+  'localStorage',
+  'AudioContext',
+]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
 
-const tierPairs = [
-  ['street', 4.99, 39.99, 79.99, 33],
-  ['caporegime', 7.99, 69.99, 129.99, 27],
-  ['godfather', 12.99, 99.99, 199.99, 36]
-];
-for (const [id, month, year, lifetime, saving] of tierPairs) {
-  const marker = `${id}:{id:'${id}'`;
-  assert(html.includes(marker), `Tier ${id} missing.`);
-  assert(html.includes(`month:${month}`), `Tier ${id} monthly price missing.`);
-  assert(html.includes(`year:${year}`), `Tier ${id} yearly price missing.`);
-  assert(html.includes(`lifetime:${lifetime}`), `Tier ${id} lifetime price missing.`);
-  assert(html.includes(`saving:${saving}`), `Tier ${id} saving rate missing.`);
+for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
+  assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
+}
+for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
+  assert(!new RegExp(marker, 'i').test(js + html + css), `Placeholder marker found: ${marker}`);
 }
 
-console.log('TGM ALARM CENTER web core validation: PASS');
+assert(sw.includes('./styles.css') && sw.includes('./app.js?v=4'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
+assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
+assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');
+assert(manifest.orientation === 'landscape', 'Landscape orientation is not configured.');
+
+for (const asset of [
+  'assets/notifications/alarm-pulse.wav',
+  'assets/notifications/alarm-siren.wav',
+  'assets/notifications/alarm-chime.wav',
+]) {
+  const path = new URL(asset, root);
+  assert(existsSync(path) && statSync(path).size > 44, `Gaming sound asset is missing or empty: ${asset}`);
+}
+
+console.log('TGM ALARM CENTER local web core validation: PASS');
