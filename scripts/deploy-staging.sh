@@ -134,7 +134,7 @@ if ((${#releases[@]} > KEEP_RELEASES)); then
     [[ "$stale_release" != "$release_path" ]] || continue
     rm -rf -- "$stale_release"
   done
-fi
+done
 
 printf 'STAGING DEPLOY PASS\nrelease=%s\npath=%s\ncurrent=%s\ncommit=%s\nsha256=%s\n' \
   "$TAG" "$release_path" "$(readlink "$CURRENT_LINK")" "$manifest_commit" "$expected_digest"
