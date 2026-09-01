@@ -1,5 +1,6 @@
 node_modules/
 .expo/
 dist/
+release-assets/
 .expo-export-verification/
 *.log
