@@ -1,10 +1,36 @@
 import { execFileSync, spawn } from 'node:child_process';
+import { createRequire } from 'node:module';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import net from 'node:net';
-import { chromium } from 'playwright';
+
+function locatePlaywrightPackage() {
+  try {
+    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const cacheRoot = execFileSync(npm, ['config', 'get', 'cache'], { encoding: 'utf8' }).trim();
+    const npxRoot = join(cacheRoot, '_npx');
+    if (!existsSync(npxRoot)) return null;
+    const candidates = [];
+    for (const entry of readdirSync(npxRoot, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const packageRoot = join(npxRoot, entry.name, 'node_modules', 'playwright');
+      const packageFile = join(packageRoot, 'package.json');
+      if (existsSync(packageFile)) candidates.push({ packageRoot, mtime: statSync(packageFile).mtimeMs });
+    }
+    candidates.sort((a, b) => b.mtime - a.mtime);
+    return candidates[0]?.packageRoot || null;
+  } catch {
+    return null;
+  }
+}
+
+const playwrightRoot = locatePlaywrightPackage();
+if (!playwrightRoot) throw new Error('Pinned Playwright package is unavailable in the npx cache.');
+const requireFromPlaywright = createRequire(pathToFileURL(join(playwrightRoot, 'package.json')));
+const { chromium } = requireFromPlaywright('playwright');
 
 const root = process.cwd();
 const browserScript = resolve(root, 'scripts/serve-web.mjs');
@@ -38,30 +64,18 @@ async function waitFor(condition, description, timeoutMs = 10000, intervalMs = 1
   throw new Error(`Timed out waiting for ${description}.`);
 }
 
-async function ensureBrowser() {
-  try {
-    const browser = await chromium.launch({ headless: true });
-    await browser.close();
-  } catch (error) {
-    console.log('Browser smoke: installing pinned Playwright Chromium runtime.');
-    const npx = process.platform === 'win32' ? 'npx.cmd' : 'npx';
-    execFileSync(npx, ['--yes', 'playwright@1.55.0', 'install', 'chromium'], { cwd: root, stdio: 'inherit' });
-  }
-}
-
 if (!existsSync(webRoot)) throw new Error('dist/web does not exist. Run the canonical release verification build first.');
-await ensureBrowser();
 
 let serverProcess;
 let browser;
 try {
   const port = await freePort();
+  const baseUrl = `http://127.0.0.1:${port}`;
   serverProcess = spawn(process.execPath, [browserScript, '--root', 'dist/web', '--port', String(port)], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   serverProcess.stderr.on('data', (chunk) => process.stderr.write(`[web-server] ${chunk}`));
   await waitFor(async () => {
-    try { return (await fetch(`http://127.0.0.1:${port}/`)).ok; }
-    catch { return false; }
-  }, 'packaged web server', 10000);
+    try { return (await fetch(`${baseUrl}/`)).ok; } catch { return false; }
+  }, 'packaged web server');
 
   browser = await chromium.launchPersistentContext(browserProfile, {
     headless: true,
@@ -75,7 +89,7 @@ try {
   page.on('console', (message) => { if (message.type() === 'error') consoleErrors.push(message.text()); });
   page.on('pageerror', (error) => pageErrors.push(error.message));
 
-  await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.locator('#app').waitFor({ state: 'visible' });
   await page.getByText('Schnellstart', { exact: true }).waitFor({ state: 'visible' });
   if (await page.title() !== 'TGM ALARM CENTER') throw new Error('Dashboard document title mismatch.');
@@ -87,10 +101,8 @@ try {
   await page.locator('#modalRoot .modal').waitFor({ state: 'visible' });
   await page.locator('#eTitle').fill('CI Smoke Bubble');
   const future = new Date(Date.now() + 10 * 60 * 1000);
-  const dateValue = `${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`;
-  const timeValue = `${String(future.getHours()).padStart(2, '0')}:${String(future.getMinutes()).padStart(2, '0')}`;
-  await page.locator('#eDate').fill(dateValue);
-  await page.locator('#eTime').fill(timeValue);
+  await page.locator('#eDate').fill(`${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`);
+  await page.locator('#eTime').fill(`${String(future.getHours()).padStart(2, '0')}:${String(future.getMinutes()).padStart(2, '0')}`);
   await page.locator('#modalRoot button[data-action="save-alarm"]').click();
   await page.getByText('CI Smoke Bubble', { exact: true }).waitFor({ state: 'visible' });
   console.log('Browser smoke: alarm editor + create/save passed.');
@@ -120,6 +132,7 @@ try {
 
   if (consoleErrors.length) throw new Error(`Console error(s): ${consoleErrors.join(' | ')}`);
   if (pageErrors.length) throw new Error(`Page exception(s): ${pageErrors.join(' | ')}`);
+  console.log('Browser smoke: console/page error check passed.');
   console.log('TGM ALARM CENTER browser smoke: PASS');
 } finally {
   await browser?.close();
