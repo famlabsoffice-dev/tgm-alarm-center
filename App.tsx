@@ -44,6 +44,7 @@ import {
   initializeNotifications,
   registerCategories,
   scheduleAlarm,
+  scheduleLocalTestNotification,
 } from './src/native/notifications';
 
 Notifications.setNotificationHandler({
@@ -180,9 +181,36 @@ export default function App() {
     return () => { cancelled = true; };
   }, [state.alarms, state.notificationPreferences, readiness.permission, readiness.supported, ready]);
 
+  const openAlarmFromNotification = useCallback((alarmId: string): void => {
+    const alarm = state.alarms.find((item) => item.id === alarmId);
+    if (!alarm) {
+      Alert.alert('Alarm nicht verfügbar', 'Der angeforderte Alarm existiert nicht mehr.');
+      return;
+    }
+    setEditingId(alarm.id);
+    const input = localInputFromUtc(alarm.eventAtUtc);
+    setEditor({
+      type: alarm.type,
+      title: alarm.title,
+      date: input.date,
+      time: input.time,
+      warnings: [...alarm.warnings],
+      repeat: alarm.repeat,
+      sound: alarm.sound,
+      protected: alarm.protected,
+    });
+    setEditorVisible(true);
+  }, [state.alarms]);
+
   const completeFromNotification = useCallback((response: Notifications.NotificationResponse | null) => {
-    const data = response?.notification.request.content.data as { alarmId?: unknown; eventTime?: unknown } | undefined;
-    if (response?.actionIdentifier !== 'done' || typeof data?.alarmId !== 'string' || typeof data.eventTime !== 'string') return;
+    const data = response?.notification.request.content.data as { alarmId?: unknown; eventTime?: unknown; kind?: unknown } | undefined;
+    if (!data || typeof data.alarmId !== 'string') return;
+    if (data.kind === 'local-test') return;
+    if (response?.actionIdentifier === 'open') {
+      openAlarmFromNotification(data.alarmId);
+      return;
+    }
+    if (response?.actionIdentifier !== 'done' || typeof data.eventTime !== 'string') return;
     const event = new Date(data.eventTime);
     if (!Number.isFinite(event.getTime())) return;
     setState((current) => ({
@@ -193,12 +221,21 @@ export default function App() {
         updatedAt: nowIso(),
       } : alarm),
     }));
-  }, []);
+  }, [openAlarmFromNotification]);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener(completeFromNotification);
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener(completeFromNotification);
+    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data as { kind?: unknown } | undefined;
+      if (data?.kind !== 'local-test') return;
+      setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
+      Alert.alert('Notification-Test erfolgreich', 'Die lokale Benachrichtigung wurde vom Gerät empfangen.');
+    });
     Notifications.getLastNotificationResponseAsync().then(completeFromNotification).catch(() => undefined);
-    return () => subscription.remove();
+    return () => {
+      responseSubscription.remove();
+      receivedSubscription.remove();
+    };
   }, [completeFromNotification]);
 
   const next = useMemo(() => state.alarms
@@ -252,7 +289,7 @@ export default function App() {
       return;
     }
     if (!editingId && Number.isFinite(tierLimit) && state.alarms.length >= tierLimit) {
-      Alert.alert('Limit erreicht', 'Dein aktueller Plan erlaubt keine weiteren Alarme.');
+      Alert.alert('Limit erreicht', 'Dein aktueller Plan erlaubt keine weiteren Alarme. Öffne die Planansicht für mehr Spielraum.');
       return;
     }
     const activeAccountId = activeAccount?.id ?? state.activeAccountId;
@@ -359,6 +396,19 @@ export default function App() {
     }
   };
 
+  const runDeviceTest = async (): Promise<void> => {
+    if (!readiness.supported || !readiness.permission) {
+      Alert.alert('Notification-Test nicht möglich', 'Aktiviere zuerst die Benachrichtigungsberechtigung auf dem Gerät.');
+      return;
+    }
+    try {
+      await scheduleLocalTestNotification();
+      Alert.alert('Notification-Test geplant', 'Das Gerät sendet die lokale Testbenachrichtigung in Kürze. Der Status wird nach dem tatsächlichen Empfang bestätigt.');
+    } catch (error: unknown) {
+      Alert.alert('Notification-Test fehlgeschlagen', error instanceof Error ? error.message : 'Der lokale Test konnte nicht geplant werden.');
+    }
+  };
+
   const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {
     const event = nextOccurrence(item, new Date(now));
     const moments = upcomingMoments(item, new Date(now));
@@ -440,7 +490,7 @@ export default function App() {
             <View style={styles.actionRowFooter}>
               <Pressable accessibilityRole="button" onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={() => Alert.alert('Notification-Test', readiness.permission ? 'Ein kurzer Gerätetest wird vorbereitet.' : 'Aktiviere zuerst die Benachrichtigungsberechtigung in den Geräteeinstellungen.')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
             </View>
             <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1</Text>
           </View>
