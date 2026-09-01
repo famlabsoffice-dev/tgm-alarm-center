@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 import { BillingAdapter, StorePurchase, UnconfiguredBillingAdapter } from './adapter';
+import { ExpoIapBillingAdapter } from './expoIapAdapter';
 import { BillingProduct, getBillingCatalog, StorePlatform } from './catalog';
 import { getBillingConfiguration } from './config';
 import { BillingService, EntitlementVerifier } from './service';
@@ -12,16 +13,19 @@ export class HttpEntitlementVerifier implements EntitlementVerifier {
   constructor(private readonly endpoint: string) {}
 
   async verify(purchase: StorePurchase, product: BillingProduct): Promise<unknown> {
+    if (!purchase.userId) throw new Error('Store-Kauf ist keinem App-Konto zugeordnet.');
     const response = await fetch(this.endpoint, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
         productKey: product.key,
+        userId: purchase.userId,
         productId: purchase.productId,
         platform: purchase.platform,
         environment: purchase.environment,
         transactionId: purchase.transactionId,
-        purchaseToken: purchase.purchaseToken,
+        signedTransactionInfo: purchase.platform === 'ios' ? purchase.purchaseToken : undefined,
+        purchaseToken: purchase.platform === 'android' ? purchase.purchaseToken : undefined,
         raw: purchase.raw,
       }),
     });
@@ -32,7 +36,7 @@ export class HttpEntitlementVerifier implements EntitlementVerifier {
 
 export function createBillingService(adapter?: BillingAdapter): BillingService {
   const configuration = getBillingConfiguration();
-  const selectedAdapter = adapter ?? new UnconfiguredBillingAdapter(currentPlatform());
+  const selectedAdapter = adapter ?? (configuration.configured ? new ExpoIapBillingAdapter() : new UnconfiguredBillingAdapter(currentPlatform()));
   const verifier: EntitlementVerifier = configuration.configured && configuration.verificationEndpoint
     ? new HttpEntitlementVerifier(configuration.verificationEndpoint)
     : { verify: async () => { throw new Error('Serverseitige Entitlement-Verifikation ist nicht konfiguriert.'); } };

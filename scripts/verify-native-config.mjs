@@ -28,6 +28,11 @@ for (const requiredMarker of ['onPurchase', 'onRestore', 'Nicht verfÃ¼gbar', 'KÃ
   if (!paywall.includes(requiredMarker)) failures.push(`Paywall is missing required purchase state or action: ${requiredMarker}`);
 }
 
+const expoIapAdapter = fs.readFileSync(new URL('../src/billing/expoIapAdapter.ts', import.meta.url), 'utf8');
+for (const requiredMarker of ['getAvailablePurchases', 'iapRestorePurchases', 'finishTransaction', 'purchaseUpdatedListener']) {
+  if (!expoIapAdapter.includes(requiredMarker)) failures.push(`Expo-IAP restore adapter is missing required SDK operation: ${requiredMarker}`);
+}
+
 if (failures.length > 0) {
   console.error(['TGM ALARM CENTER native configuration validation: FAIL', ...failures.map((failure) => `- ${failure}`)].join('\n'));
   process.exit(1);

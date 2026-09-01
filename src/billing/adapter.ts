@@ -5,6 +5,7 @@ export interface StorePurchase {
   transactionId: string | null;
   purchaseToken: string | null;
   platform: StorePlatform;
+  userId: string | null;
   environment: 'sandbox' | 'production' | 'unknown';
   raw: unknown;
 }
@@ -22,7 +23,7 @@ export interface BillingAdapter {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   fetchProducts(products: BillingProduct[]): Promise<StoreProduct[]>;
-  purchase(product: BillingProduct): Promise<StorePurchase>;
+  purchase(product: BillingProduct, userId: string): Promise<StorePurchase>;
   restorePurchases(): Promise<StorePurchase[]>;
   finishPurchase(purchase: StorePurchase): Promise<void>;
 }

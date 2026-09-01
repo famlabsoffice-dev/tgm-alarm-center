@@ -66,12 +66,12 @@ export class BillingService {
     return this.adapter.fetchProducts(this.catalog.products);
   }
 
-  async purchase(productKey: string): Promise<VerifiedEntitlement> {
+  async purchase(productKey: string, userId: string): Promise<VerifiedEntitlement> {
     const product = productForKey(productKey);
     if (!product) throw new Error('Unbekanntes Billing-Produkt.');
     const productId = storeProductId(product, this.adapter.platform);
     if (!productId) throw new BillingUnavailableError('Dieses Produkt ist für die aktuelle Plattform nicht konfiguriert.');
-    const purchase = await this.adapter.purchase(product);
+    const purchase = await this.adapter.purchase(product, userId);
     if (purchase.productId !== productId) throw new Error('Store-Produkt stimmt nicht mit dem angeforderten Tier überein.');
     const verifiedPayload = await this.verifier.verify(purchase, product);
     const verified = normalizeVerifiedEntitlement(verifiedPayload, product, this.adapter.platform);

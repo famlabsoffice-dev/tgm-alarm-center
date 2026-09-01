@@ -62,3 +62,13 @@ Die Native-App enthält nun eine wiederverwendbare `Paywall`-Komponente. Sie gru
 Die Paywall wird über den Button `Pläne` geöffnet. Beim Öffnen werden Store-Produkte nur dann geladen, wenn der Katalog vollständig konfiguriert ist. Ohne Konfiguration zeigt die UI einen klaren Vorbereitungsstatus; sämtliche Kaufaktionen bleiben deaktiviert. Nach einem Kauf aktualisiert die App den lokalen Tierstatus erst nach erfolgreicher serverseitiger Entitlement-Prüfung und erfolgreichem Abschluss der Store-Transaktion.
 
 Der Kauf- und Restore-Ablauf folgt den Store-Lebenszyklusanforderungen. Pending-, abgelaufene, widerrufene oder nicht verifizierte Zustände werden nicht als aktiver Premiumzugang dargestellt. Die Store-Produktpreise sind die maßgebliche Anzeigequelle; lokale Preislisten dienen nur der Produktdefinition und nicht als Beleg für einen erfolgten Kauf.
+
+## Client-SDK: automatische Wiederherstellung
+
+Der native Client verwendet `expo-iap` 5.5.0 über `src/billing/expoIapAdapter.ts`. Beim Verbinden werden die Purchase- und Error-Listener registriert. Restore Purchases führt den SDK-Restore aus und fragt danach die aktuell verfügbaren Käufe ab. Jedes Ergebnis wird einzeln an den bestehenden Verifikationsendpunkt übertragen; erst nach erfolgreicher Serverprüfung wird die Transaktion abgeschlossen und das Entitlement übernommen.
+
+Die App führt Restore Purchases automatisch einmal beim Start und anschließend höchstens alle 15 Minuten beim Wechsel in den Vordergrund aus. Gleichzeitige Restore-Läufe werden über einen In-Flight-Schutz verhindert. iOS-Käufe erhalten ein `appAccountToken`; Android-Käufe erhalten `obfuscatedAccountId` und `obfuscatedProfileId`, damit der Server den Store-Nachweis einem stabilen App-Konto zuordnen kann.
+
+Die SDK-Verbindung wird nur mit vollständigem Produktkatalog und HTTPS-Verifikationsendpunkt aktiviert. Bei fehlender Konfiguration bleibt der vorhandene sichere Unconfigured-Adapter aktiv.
+
+Quelle: [Expo IAP / OpenIAP-Dokumentation](https://hyochan.github.io/expo-iap/)

@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  AppState as NativeAppState,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -46,6 +47,7 @@ import {
 } from './src/native/notifications';
 import { Paywall } from './src/billing/Paywall';
 import { createBillingService, getBillingCatalog, getBillingConfiguration } from './src/billing';
+import { getBillingAccountId } from './src/billing/account';
 import { BillingState, initialBillingState } from './src/billing/service';
 
 Notifications.setNotificationHandler({
@@ -139,12 +141,17 @@ export default function App() {
   const billingService = useMemo(() => createBillingService(), []);
   const billingCatalog = useMemo(() => getBillingCatalog(), []);
   const billingConfiguration = useMemo(() => getBillingConfiguration(), []);
+  const [billingAccountId, setBillingAccountId] = useState<string | null>(null);
+  const billingRestoreInFlight = useRef(false);
+  const lastAutomaticRestoreAt = useRef(0);
   const initialized = useRef(false);
 
   useEffect(() => {
     let mounted = true;
-    billingService.loadPersistedEntitlement().then((entitlement) => {
-      if (mounted) setBilling((current) => ({ ...current, entitlement }));
+    Promise.all([billingService.loadPersistedEntitlement(), getBillingAccountId()]).then(([entitlement, accountId]) => {
+      if (!mounted) return;
+      setBilling((current) => ({ ...current, entitlement }));
+      setBillingAccountId(accountId);
     }).catch(() => undefined);
     return () => { mounted = false; };
   }, [billingService]);
@@ -362,6 +369,35 @@ export default function App() {
     setState((current) => ({ ...current, notificationPreferences: { ...current.notificationPreferences, [key]: value } }));
   };
 
+  const restorePurchases = useCallback(async (automatic = false): Promise<void> => {
+    if (billingRestoreInFlight.current || !billingConfiguration.configured || !billingCatalog.configured) return;
+    if (automatic && Date.now() - lastAutomaticRestoreAt.current < 15 * 60 * 1000) return;
+    billingRestoreInFlight.current = true;
+    if (!automatic) setBilling((current) => ({ ...current, loading: true, error: null }));
+    try {
+      await billingService.connect();
+      const restored = await billingService.restorePurchases();
+      const tierRank = (tier: typeof state.tier): number => ({ free: 0, streetBoss: 1, caporegime: 2, underboss: 3, boss: 4, godfather: 5 }[tier]);
+      const entitlement = [...restored].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
+      setBilling((current) => ({ ...current, connected: true, loading: false, entitlement: entitlement ?? current.entitlement, error: entitlement || automatic ? null : 'Es wurde kein gültiges Entitlement gefunden.' }));
+      if (entitlement) setState((current) => ({ ...current, tier: entitlement.tier }));
+      lastAutomaticRestoreAt.current = Date.now();
+    } catch (error: unknown) {
+      if (!automatic) setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Käufe konnten nicht wiederhergestellt werden.' }));
+    } finally {
+      billingRestoreInFlight.current = false;
+    }
+  }, [billingCatalog.configured, billingConfiguration.configured, billingService]);
+
+  useEffect(() => {
+    if (!ready) return;
+    void restorePurchases(true);
+    const subscription = NativeAppState.addEventListener('change', (nextState) => {
+      if (nextState === 'active') void restorePurchases(true);
+    });
+    return () => subscription.remove();
+  }, [ready, restorePurchases]);
+
   const openPaywall = async (): Promise<void> => {
     setPaywallVisible(true);
     if (!billingConfiguration.configured || !billingCatalog.configured) return;
@@ -378,25 +414,13 @@ export default function App() {
   const purchaseProduct = async (productKey: string): Promise<void> => {
     setBilling((current) => ({ ...current, loading: true, error: null }));
     try {
-      const entitlement = await billingService.purchase(productKey);
+      if (!billingAccountId) throw new Error('App-Konto wird noch vorbereitet.');
+      const entitlement = await billingService.purchase(productKey, billingAccountId);
       setBilling((current) => ({ ...current, loading: false, entitlement, error: null }));
       setState((current) => ({ ...current, tier: entitlement.tier }));
       Alert.alert('Kauf bestätigt', 'Dein serverseitig verifiziertes Entitlement ist jetzt aktiv.');
     } catch (error: unknown) {
       setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Der Kauf konnte nicht abgeschlossen werden.' }));
-    }
-  };
-
-  const restorePurchases = async (): Promise<void> => {
-    setBilling((current) => ({ ...current, loading: true, error: null }));
-    try {
-      const restored = await billingService.restorePurchases();
-      const tierRank = (tier: typeof state.tier): number => ({ free: 0, streetBoss: 1, caporegime: 2, underboss: 3, boss: 4, godfather: 5 }[tier]);
-      const entitlement = [...restored].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
-      setBilling((current) => ({ ...current, loading: false, entitlement: entitlement ?? current.entitlement, error: entitlement ? null : 'Es wurde kein gültiges Entitlement gefunden.' }));
-      if (entitlement) setState((current) => ({ ...current, tier: entitlement.tier }));
-    } catch (error: unknown) {
-      setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Käufe konnten nicht wiederhergestellt werden.' }));
     }
   };
 
