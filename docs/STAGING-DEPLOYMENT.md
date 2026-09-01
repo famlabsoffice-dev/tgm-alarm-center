@@ -88,3 +88,20 @@ export TGM_EXPECTED_COMMIT='416c98ca64028d4501b8230844deb03a8a118223'
 Der Wrapper liefert `0`, wenn Deployment und Health-Check erfolgreich sind. Er liefert `1`, wenn das neue Deployment den Health-Check nicht besteht, der automatische Rollback jedoch erfolgreich war und der vorherige Release wieder gesund antwortet. Exit-Code `2` bedeutet Konfigurationsfehler, fehlgeschlagenes Deployment oder einen nicht erfolgreich verifizierten Rollback; in diesem Fall ist eine manuelle Prüfung erforderlich.
 
 Der Rollback wird nur ausgeführt, wenn vor der Aktivierung ein gültiger vorheriger Release mit `RELEASE-COMMIT` vorhanden war. Ohne belastbaren Vorgänger bleibt der Fehler sichtbar, anstatt eine unbekannte Version zu aktivieren. Der Symlink-Wechsel bleibt atomar; das Skript führt keine destruktive Löschung des aktuell aktiven oder wiederhergestellten Releases durch.
+
+## Produktions-Deployment mit Zero Downtime
+
+`scripts/deploy-production.sh` ist die produktionsspezifische Variante. Sie verwendet denselben geprüften Download-, Integritäts- und Health-Check-Pfad, verlangt jedoch zusätzlich eine HTTPS-Produktions-URL und die explizite Bestätigung `TGM_PRODUCTION_CONFIRM=DEPLOY`. Dadurch kann ein versehentliches Ausführen ohne bewusst gesetzte Produktionsfreigabe keine Aktivierung auslösen.
+
+Die neue Version wird vollständig in einem eigenen Release-Verzeichnis vorbereitet und geprüft. Der laufende Webserver bedient weiterhin `current`. Erst nach erfolgreichem Download, SHA-256-Prüfung, ZIP-Validierung, Manifest-Prüfung und Health-Check wird `current` durch einen atomaren Symlink-Wechsel ersetzt. Der Webserver wird nicht neu gestartet; offene Requests bleiben beim bisherigen statischen Verzeichnis und neue Requests sehen nach dem Wechsel die neue Version.
+
+```bash
+export TGM_GITHUB_TOKEN='…'
+export TGM_PRODUCTION_URL='https://www.example.com'
+export TGM_PRODUCTION_ROOT='/var/www/tgm-alarm-center'
+export TGM_EXPECTED_COMMIT='416c98ca64028d4501b8230844deb03a8a118223'
+export TGM_PRODUCTION_CONFIRM='DEPLOY'
+./scripts/deploy-production.sh
+```
+
+Bei einem fehlgeschlagenen Health-Check wird die vorherige Version atomar wieder aktiviert und erneut geprüft. Exit-Code `0` bedeutet erfolgreich aktiviert, Exit-Code `1` bedeutet erfolgreich zurückgerollt und Exit-Code `2` bedeutet, dass eine Sicherheits-, Installations- oder Rollback-Prüfung manuelle Intervention benötigt. Das Produktionsskript wurde nur implementiert und lokal gegen seine Schutzlogik geprüft; ein echter Produktions-Deploy wurde nicht ausgeführt.
