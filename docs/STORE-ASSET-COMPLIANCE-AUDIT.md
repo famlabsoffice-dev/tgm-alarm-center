@@ -87,3 +87,18 @@ Die Store-Einreichung bleibt unabhängig von den geprüften Dateien blockiert, s
 [3]: https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/ "Apple — Screenshot specifications"
 [4]: https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/ "Apple — Upload app previews and screenshots"
 [5]: https://developer.apple.com/app-store/product-page/ "Apple — Creating your product page"
+
+## Nachprüfung der Apple-Korrekturen
+
+Die beiden problematischen Mockups wurden bereinigt. Im GW-Zyklus-Asset wurde die nicht belegte Online-Statuskarte entfernt. Im Backup-Asset wurden der künstliche „ÖFFNEN“-Button, die App-Launcher-Darstellung und die Drei-Punkte-Steuerung entfernt; die tatsächliche Backup-/Wiederherstellungsoberfläche bleibt erhalten.
+
+Für Apple wurden zwei vollständige Portrait-Sets erzeugt:
+
+| Set | Abmessung | Dateien |
+|---|---:|---:|
+| iPhone 6,9 Zoll | 1290 × 2796 px | `store-assets/apple-6.9/01-dashboard.png` bis `04-backup.png` |
+| iPhone 6,5 Zoll | 1284 × 2778 px | `store-assets/apple-6.5/01-dashboard.png` bis `04-backup.png` |
+
+Alle acht Dateien sind PNG, RGB, ohne Alphakanal oder Transparenz und erfüllen die jeweilige Zielabmessung. Apple führt diese Gerätegrößen als akzeptierte Screenshot-Spezifikationen [3].
+
+Die Screenshot-Dateien sind damit **formal für die Apple-Uploadgrößen vorbereitet**. Vor der finalen Einreichung bleibt ein manueller Binary-Abgleich erforderlich: Apple verlangt, dass Screenshots das tatsächliche App-Erlebnis zeigen. Die verwendeten Mockup-Kompositionen dürfen nur hochgeladen werden, wenn sämtliche sichtbaren UI-Zustände und Texte in der signierten Release-Binary vorhanden sind.
