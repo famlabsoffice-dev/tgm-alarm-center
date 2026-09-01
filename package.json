@@ -16,7 +16,7 @@
     "build:web": "node scripts/build-web.mjs",
     "verify:packaging": "node scripts/verify-packaging.mjs",
     "serve:web": "node scripts/serve-web.mjs",
-    "browser:smoke": "npx --yes playwright@1.55.0 install chromium && npx --yes playwright@1.55.0 test tests/browser-smoke.spec.mjs --reporter=line --workers=1",
+    "browser:smoke": "npx --yes playwright@1.55.0 install chromium && npx --yes -p playwright@1.55.0 node scripts/browser-smoke.mjs",
     "verify:release": "node scripts/verify-release.mjs"
   },
   "dependencies": {
