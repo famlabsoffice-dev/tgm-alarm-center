@@ -16,6 +16,19 @@
   };
   const TYPE_LABEL = { bubble: 'Bubble', gw: 'GW Bubble', custom: 'Eigenes Event' };
   const REPEAT_LABEL = { once: 'Einmalig', daily: 'Täglich', gw5d: 'GW-Zyklus · alle 5 Tage' };
+  const TIER_ORDER = ['free', 'streetBoss', 'caporegime', 'godfather'];
+  const TIER_PRICING = {
+    free: { name: 'Free', limits: { accounts: 1, alarms: 1, events: 1 }, eur: { monthly: 0, yearly: 0, lifetime: 0 }, usdDirect: { monthly: 0, yearly: 0, lifetime: 0 }, usdStore: { monthly: 0, yearly: 0, lifetime: 0 }, annualSavingPercent: null },
+    streetBoss: { name: 'Street Boss', limits: { accounts: 2, alarms: 2, events: 2 }, eur: { monthly: 4.99, yearly: 39.99, lifetime: 79.99 }, usdDirect: { monthly: 5.79, yearly: 46.39, lifetime: 92.79 }, usdStore: { monthly: 4.99, yearly: 44.99, lifetime: 89.99 }, annualSavingPercent: 25 },
+    caporegime: { name: 'Caporegime', limits: { accounts: 3, alarms: 3, events: 3 }, eur: { monthly: 7.99, yearly: 69.99, lifetime: 129.99 }, usdDirect: { monthly: 9.27, yearly: 81.19, lifetime: 150.79 }, usdStore: { monthly: 9.99, yearly: 79.99, lifetime: 149.99 }, annualSavingPercent: 33 },
+    godfather: { name: 'Godfather', limits: { accounts: Infinity, alarms: Infinity, events: Infinity }, eur: { monthly: 12.99, yearly: 99.99, lifetime: 199.99 }, usdDirect: { monthly: 15.07, yearly: 115.99, lifetime: 231.99 }, usdStore: { monthly: 14.99, yearly: 119.99, lifetime: 229.99 }, annualSavingPercent: 33 },
+  };
+  const TIER_FEATURES = {
+    free: ['1 Kommando', '1 Gaming-Alarm', '1 eigenes Event', 'Alle drei Gaming-Töne'],
+    streetBoss: ['2 Kommandos', '2 Gaming-Alarme', '2 eigene Events', 'GW-Schutzfenster mit Vorwarnungen'],
+    caporegime: ['3 Kommandos', '3 Gaming-Alarme', '3 eigene Events', 'GW-Zyklen und vollständige Backup-Funktionen'],
+    godfather: ['Unbegrenzte Kommandos', 'Unbegrenzte Gaming-Alarme', 'Unbegrenzte eigene Events', 'Die vollständige lokale Alarmzentrale'],
+  };
   const DEFAULT_PREFS = {
     sound: 'pulse', warningSound: true, eventSound: true, vibration: true,
     criticalAlerts: true, audioEnabled: false,
@@ -53,10 +66,13 @@
     if (hours < 24) return `${hours} Std. · ${minutes % 60} Min.`;
     return `${Math.floor(hours / 24)} Tage · ${hours % 24} Std.`;
   };
+  const formatPlanPrice = (value, currency) => value === 0 ? 'Kostenlos' : new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(value);
+  const formatPlanLimit = (value) => Number.isFinite(value) ? String(value) : 'Unbegrenzt';
 
   function emptyState() {
     return {
       schemaVersion: SCHEMA_VERSION,
+      tier: 'free',
       activeAccountId: null,
       accounts: [],
       alarms: [],
@@ -131,6 +147,7 @@
     const firedMoments = raw.firedMoments && typeof raw.firedMoments === 'object' ? Object.fromEntries(Object.entries(raw.firedMoments).filter(([key, value]) => value === true && Number(key.split('|')[1]) > now() - 14 * DAY_MS)) : {};
     return {
       schemaVersion: SCHEMA_VERSION,
+      tier: TIER_PRICING[raw.tier] ? raw.tier : 'free',
       activeAccountId: typeof raw.activeAccountId === 'string' && accountIds.has(raw.activeAccountId) ? raw.activeAccountId : (uniqueAccounts[0]?.id ?? null),
       accounts: uniqueAccounts,
       alarms: alarms.filter((alarm, index, all) => all.findIndex((item) => item.id === alarm.id) === index),
@@ -345,7 +362,7 @@
   }
 
   function render() {
-    app.innerHTML = `<div class="app-shell"><header class="topbar"><div class="toprow"><div class="brand"><div class="brand-mark" aria-hidden="true">TGM</div><div class="brand-copy"><strong>TGM ALARM CENTER</strong><span>Lokale Gaming-Alarmzentrale für The Grand Mafia</span></div></div><div class="toolbar"><button class="audio-state ${state.preferences.audioEnabled ? 'ready' : ''}" type="button" data-action="unlock-audio"><span class="audio-dot"></span>${state.preferences.audioEnabled ? 'Gaming-Töne aktiv' : 'Audio aktivieren'}</button>${activeAccount() ? `<div class="account-pill"><span class="account-dot"></span>${esc(activeAccount().name)}</div>` : ''}</div></div><nav class="nav" aria-label="Hauptnavigation">${navButton('today', 'Übersicht')}${navButton('alarms', 'Alarme')}${navButton('accounts', 'Accounts')}${navButton('sounds', 'Gaming-Töne')}${navButton('settings', 'Einstellungen')}</nav></header><main class="main">${view === 'today' ? renderDashboard() : view === 'alarms' ? renderAlarmsView() : view === 'accounts' ? renderAccountsView() : view === 'sounds' ? renderSoundsView() : renderSettingsView()}</main><footer class="footer">TGM ALARM CENTER · lokale Speicherung · lokale Gaming-Alarmtöne · ${SCHEMA_VERSION.toString()}</footer></div>`;
+    app.innerHTML = `<div class="app-shell"><header class="topbar"><div class="toprow"><div class="brand"><div class="brand-mark" aria-hidden="true">TGM</div><div class="brand-copy"><strong>TGM ALARM CENTER</strong><span>Lokale Gaming-Alarmzentrale für The Grand Mafia</span></div></div><div class="toolbar"><button class="audio-state ${state.preferences.audioEnabled ? 'ready' : ''}" type="button" data-action="unlock-audio"><span class="audio-dot"></span>${state.preferences.audioEnabled ? 'Gaming-Töne aktiv' : 'Audio aktivieren'}</button>${activeAccount() ? `<button class="account-pill" type="button" data-action="account-menu" aria-label="Kommando wechseln"><span class="account-dot"></span>${esc(activeAccount().name)}<span class="account-chevron" aria-hidden="true">⌄</span></button>` : ''}</div></div><nav class="nav" aria-label="Hauptnavigation">${navButton('today', 'Übersicht')}${navButton('alarms', 'Alarme')}${navButton('accounts', 'Accounts')}${navButton('sounds', 'Gaming-Töne')}${navButton('plans', 'Tier-Pläne')}${navButton('settings', 'Einstellungen')}</nav></header><main class="main">${view === 'today' ? renderDashboard() : view === 'alarms' ? renderAlarmsView() : view === 'accounts' ? renderAccountsView() : view === 'sounds' ? renderSoundsView() : view === 'plans' ? renderPlansView() : renderSettingsView()}</main><footer class="footer">TGM ALARM CENTER · lokale Speicherung · lokale Gaming-Alarmtöne · ${SCHEMA_VERSION.toString()}</footer></div>`;
   }
 
   function navButton(key, label) { return `<button type="button" class="${view === key ? 'active' : ''}" data-action="view" data-view="${key}">${label}</button>`; }
@@ -384,6 +401,11 @@
     return `<section><div class="section-head"><div><div class="eyebrow">AUDIO</div><h2>Gaming-Alarmtöne</h2></div><button class="btn primary" type="button" data-action="unlock-audio">${state.preferences.audioEnabled ? 'Audio aktiviert' : 'Audio aktivieren'}</button></div><div class="note"><strong>Einmal aktivieren, dauerhaft bereit.</strong><br>Browser erlauben Audio erst nach einer Nutzeraktion. Danach werden die lokalen Töne für Vorwarnungen, Hauptereignisse und GW-Bubble-Enden verwendet.</div><div class="grid grid-3" style="margin-top:16px">${Object.entries(SOUNDS).map(([key, sound]) => `<article class="card pad"><div class="stat-icon">${esc(sound.symbol)}</div><h2>${esc(sound.label)}</h2><p class="muted">${esc(sound.description)}</p><div class="badges"><span class="badge ${key === 'siren' ? 'red' : key === 'chime' ? 'blue' : 'gold'}">${key === 'siren' ? 'GW' : key === 'chime' ? 'EVENT' : 'BUBBLE'}</span></div><button class="btn secondary full" type="button" data-action="preview-sound" data-sound="${esc(key)}">${state.preferences.audioEnabled ? 'Ton anhören' : 'Audio zuerst aktivieren'}</button></article>`).join('')}</div></section>`;
   }
 
+  function renderPlansView() {
+    const currentTier = state.tier || 'free';
+    return `<section><div class="section-head"><div><div class="eyebrow">PREMIUM-STRUKTUR</div><h2>Tier-Pläne</h2><p>Mehr Kommandos, mehr Gaming-Alarme, mehr Spielraum.</p></div><span class="badge gold">AKTIV: ${esc(TIER_PRICING[currentTier].name)}</span></div><div class="note plan-intro"><strong>Lokales Tier-Profil</strong><br>Wähle das Profil, das zu deiner TGM-Spielweise passt. Limits und Status werden direkt auf diesem Gerät gespeichert.</div><div class="plan-grid">${TIER_ORDER.map((tier) => { const plan = TIER_PRICING[tier]; const current = tier === currentTier; return `<article class="card plan ${current ? 'current' : ''}"><div class="plan-badge">${current ? 'AKTUELL' : tier === 'caporegime' ? 'BELIEBT' : tier === 'godfather' ? 'MAXIMUM' : 'START'}</div><h3>${esc(plan.name)}</h3><div class="plan-price">${formatPlanPrice(plan.eur.monthly, 'EUR')} <span>/ Monat</span></div>${plan.annualSavingPercent ? `<div class="plan-note">${plan.annualSavingPercent}% Ersparnis im Jahresplan</div>` : '<div class="plan-note">Für den Einstieg in deine lokale Alarmzentrale</div>'}<div class="plan-limit-grid"><div class="plan-limit"><span>Kommandos</span><strong>${formatPlanLimit(plan.limits.accounts)}</strong></div><div class="plan-limit"><span>Gaming-Alarme</span><strong>${formatPlanLimit(plan.limits.alarms)}</strong></div><div class="plan-limit"><span>Eigene Events</span><strong>${formatPlanLimit(plan.limits.events)}</strong></div></div><ul>${TIER_FEATURES[tier].map((feature) => `<li>${esc(feature)}</li>`).join('')}</ul><div class="plan-price-list"><div class="plan-price-row featured"><span>EUR · monatlich</span><strong>${formatPlanPrice(plan.eur.monthly, 'EUR')}</strong></div><div class="plan-price-row"><span>EUR · jährlich</span><strong>${formatPlanPrice(plan.eur.yearly, 'EUR')}</strong></div><div class="plan-price-row"><span>EUR · lebenslang</span><strong>${formatPlanPrice(plan.eur.lifetime, 'EUR')}</strong></div><div class="plan-price-row"><span>USD · Store monatlich</span><strong>${formatPlanPrice(plan.usdStore.monthly, 'USD')}</strong></div><div class="plan-price-row"><span>USD · Store jährlich</span><strong>${formatPlanPrice(plan.usdStore.yearly, 'USD')}</strong></div><div class="plan-price-row"><span>USD · Store lebenslang</span><strong>${formatPlanPrice(plan.usdStore.lifetime, 'USD')}</strong></div></div><button class="btn ${current ? 'ghost' : 'secondary'} full" type="button" data-action="select-tier" data-tier="${tier}">${current ? 'Aktueller Plan' : 'Plan aktivieren'}</button></article>`; }).join('')}</div></section>`;
+  }
+
   function renderSettingsView() {
     return `<section><div class="section-head"><div><div class="eyebrow">KONFIGURATION</div><h2>Einstellungen</h2></div></div><div class="grid grid-2"><div class="card pad"><div class="eyebrow">ALARMVERHALTEN</div><div class="settings-list"><div class="switch-row"><label for="prefWarningSound">Vorwarnungen mit Ton</label><input id="prefWarningSound" data-pref="warningSound" type="checkbox" ${state.preferences.warningSound ? 'checked' : ''}></div><div class="switch-row"><label for="prefEventSound">Hauptereignisse mit Ton</label><input id="prefEventSound" data-pref="eventSound" type="checkbox" ${state.preferences.eventSound ? 'checked' : ''}></div><div class="switch-row"><label for="prefVibration">Vibration auf Mobilgeräten</label><input id="prefVibration" data-pref="vibration" type="checkbox" ${state.preferences.vibration ? 'checked' : ''}></div><div class="switch-row"><label for="prefCritical">Zeitkritische Alarmstärke</label><input id="prefCritical" data-pref="criticalAlerts" type="checkbox" ${state.preferences.criticalAlerts ? 'checked' : ''}></div></div></div><div class="card pad"><div class="eyebrow">DATEN AUF DIESEM GERÄT</div><h2>Backup & Wiederherstellung</h2><p class="muted small">Exportiere Accounts, Alarme, Vorwarnungen, Wiederholungen und Gaming-Ton-Einstellungen als JSON-Datei. Der Import wird vollständig geprüft und atomar übernommen.</p><div class="actions"><button class="btn primary" type="button" data-action="export-backup">Backup exportieren</button><label class="btn secondary">Backup importieren<input id="backupFile" type="file" accept="application/json,.json" hidden></label><button class="btn danger" type="button" data-action="reset-app">Alle lokalen Daten löschen</button></div></div></div><div class="card pad" style="margin-top:16px"><div class="eyebrow">ZEITMODELL</div><h2>Lokale Gerätezeit</h2><p class="muted small">Einmalige und GW-Termine werden als absolute Zeitwerte gespeichert. Tägliche Alarme verwenden die lokale Uhrzeit. Die Anzeige folgt der Gerätezeitzone.</p><div class="grid grid-3"><div class="note"><strong>Gespeichert</strong><br>${esc(state.updatedAt)}</div><div class="note"><strong>Alarme</strong><br>${state.alarms.length}</div><div class="note"><strong>Accounts</strong><br>${state.accounts.length}</div></div></div></section>`;
   }
@@ -407,6 +429,10 @@
     if (!SOUNDS[sound]) return showToast('Alarmton ist ungültig.');
     if (!warnings.length) return showToast('Bitte mindestens eine Vorwarnung wählen.');
     const existing = id ? state.alarms.find((alarm) => alarm.id === id) : null;
+    const plan = TIER_PRICING[state.tier] || TIER_PRICING.free;
+    if (!existing && state.alarms.length >= plan.limits.alarms) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.alarms)} Gaming-Alarm${plan.limits.alarms === 1 ? '' : 'e'}. Öffne Tier-Pläne für mehr Spielraum.`);
+    const customEvents = state.alarms.filter((alarm) => alarm.type === 'custom' && alarm.id !== id).length;
+    if (type === 'custom' && customEvents >= plan.limits.events) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.events)} eigene${plan.limits.events === 1 ? 's Event' : ' Events'}. Öffne Tier-Pläne für mehr Spielraum.`);
     const record = {
       id: existing?.id || uid(), accountId: account.id, title, type, eventAt, date, time, repeat, sound, warnings,
       protected: document.getElementById('eProtected')?.checked === true, active: document.getElementById('eActive')?.checked !== false,
@@ -421,6 +447,8 @@
     const name = document.getElementById('accountName')?.value.trim() || '';
     const color = document.getElementById('accountColor')?.value || '#F4C969';
     if (!name || name.length > 80) return showToast('Bitte eine Bezeichnung mit 1 bis 80 Zeichen eingeben.');
+    const plan = TIER_PRICING[state.tier] || TIER_PRICING.free;
+    if (!id && state.accounts.length >= plan.limits.accounts) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Kommando${plan.limits.accounts === 1 ? '' : 's'}. Öffne Tier-Pläne für mehr Spielraum.`);
     if (id) {
       const account = state.accounts.find((item) => item.id === id);
       if (account) { account.name = name; account.color = color; }
@@ -514,6 +542,8 @@
     if (!button) return;
     const action = button.dataset.action;
     if (action === 'view') { view = button.dataset.view || 'today'; render(); return; }
+    if (action === 'account-menu') { view = 'accounts'; render(); showToast('Kommandoverwaltung geöffnet.'); return; }
+    if (action === 'select-tier') { const tier = button.dataset.tier; if (!TIER_PRICING[tier]) return; state.tier = tier; persist(); render(); showToast(`${TIER_PRICING[tier].name} ist jetzt aktiv.`); return; }
     if (action === 'unlock-audio') { unlockAudio(); return; }
     if (action === 'new-alarm') { openEditor(null, button.dataset.template || 'custom'); return; }
     if (action === 'edit-alarm') { openEditor(button.dataset.id); return; }

@@ -9,7 +9,7 @@ const js = read('app.js');
 const sw = read('sw.js');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 
-assert(html.includes('<link rel="stylesheet" href="styles.css">'), 'CSS stylesheet is not linked.');
+assert(html.includes('href="styles.css?v=5"'), 'CSS stylesheet is not linked.');
 assert(/<script src="app\.js(?:\?[^\"]+)?" defer><\/script>/.test(html), 'Application JavaScript is not linked.');
 assert(html.includes('alarmOverlay'), 'Alarm overlay root is missing.');
 assert(css.includes('.alarm-overlay'), 'Alarm overlay styles are missing.');
@@ -28,6 +28,10 @@ for (const needle of [
   'function validateBackup',
   'function exportBackup',
   'function importBackup',
+  'TIER_PRICING',
+  'account-menu',
+  'select-tier',
+  'renderPlansView',
   'localStorage',
   'AudioContext',
 ]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
@@ -39,11 +43,13 @@ for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
   assert(!new RegExp(marker, 'i').test(js + html + css), `Placeholder marker found: ${marker}`);
 }
 
-assert(sw.includes('./styles.css') && sw.includes('./app.js?v=4'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=5'), 'Offline shell does not cache the versioned application files.');
 assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');
-assert(manifest.orientation === 'landscape', 'Landscape orientation is not configured.');
+assert(manifest.orientation === 'any', 'Portrait and landscape orientations are not enabled.');
+assert(css.includes('touch-action: pan-x') && css.includes('overflow-x: auto'), 'Navigation is not touch-scrollable.');
+assert(!css.includes('.app-shell { display: none; }'), 'Portrait layout is still blocked.');
 
 for (const asset of [
   'assets/notifications/alarm-pulse.wav',

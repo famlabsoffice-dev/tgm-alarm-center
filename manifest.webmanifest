@@ -4,7 +4,7 @@
   "description":"Persönliche Alarmzentrale für Bubble, GW Bubble und eigene TGM-Events.",
   "start_url":"./",
   "display":"standalone",
-  "orientation":"landscape",
+  "orientation":"any",
   "background_color":"#090C12",
   "theme_color":"#090C12",
   "lang":"de",

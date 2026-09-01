@@ -19,3 +19,12 @@ Zusätzlicher Live-Audiotest: Die Browser-Medienfunktion wurde instrumentiert, u
 Instrumentierter Audiolauf: Siren und Chime wurden in der öffentlichen Vorschau über ihre jeweiligen Vorschaubuttons ausgelöst. Die Seite blieb stabil und die Play-Aufrufe wurden ohne sichtbare Browserfehler verarbeitet.
 
 Technischer Audio-Nachweis in der öffentlichen Live-Vorschau: `playCalls: 3`, `playErrors: []`, `audioState: Gaming-Töne aktiv`. Die Dateien `alarm-pulse.wav`, `alarm-siren.wav` und `alarm-chime.wav` wurden jeweils geladen und abgespielt.
+Korrekturtest: Nach Cache-Reset lädt die Live-Vorschau die neue App-Shell v5. Die Hauptnavigation enthält jetzt sichtbar den Punkt „Tier-Pläne“ zwischen „Gaming-Töne“ und „Einstellungen“. Der Portrait-Sperrbildschirm ist entfernt; die Oberfläche bleibt als normale scrollbare App-Shell verfügbar.
+
+Korrekturtest: In der Live-Vorschau öffnet der Punkt „Accounts“ die Kommandoverwaltung. Der Button „+ Account anlegen“ öffnet den vollständigen Account-Editor mit Bezeichnung, Farbe und Speichern.
+
+Kommando-Button-Test: Nach dem Anlegen des Testkommandos „Hauptkommando“ erscheint oberhalb der Navigation ein echter Button mit dem Label „Hauptkommando“ und dem Hinweis „Kommando wechseln“. Der Account wurde erfolgreich gespeichert.
+
+Live-Korrekturtest: Der obere Button „Hauptkommando“ navigiert beim Anklicken zur Kommandoverwaltung und zeigt einen Bestätigungshinweis. Die neue Ansicht „Tier-Pläne“ ist erreichbar und zeigt Free, Street Boss, Caporegime und Godfather mit den vereinbarten Limits, EUR-Preisen, USD-Store-Preisen, Jahresersparnissen und lokaler Planaktivierung.
+
+Finaler Korrekturtest: Frischer Chromium-Hochkantlauf bei 390×844 rendert die App sichtbar ohne Portrait-Sperrbildschirm. Die Navigation ist technisch horizontal scrollbar: `overflow-x: auto`, `touch-action: pan-x`, `scrollWidth 698 > clientWidth 461`, programmatisches Scrollen von `scrollLeft 0` auf `237` erfolgreich. Der obere Kommando-Button navigiert zur Kommandoverwaltung. Die Tier-Plan-Ansicht zeigt Free, Street Boss, Caporegime und Godfather mit Limits und Preisen.
