@@ -9,7 +9,8 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-native-config.mjs"
+    "test": "tsx --test tests/*.test.ts && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-native-config.mjs",
+    "billing:server": "tsx server/index.ts"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
