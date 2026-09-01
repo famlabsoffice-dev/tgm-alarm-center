@@ -3,7 +3,7 @@ run-name: TGM Release Verification · ${{ github.sha }}
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "fix/**"]
   pull_request:
     branches: ["main"]
   workflow_dispatch:
