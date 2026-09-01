@@ -31,7 +31,10 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
   if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) {
     permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
   }
-  return { supported: true, permission, exactAlarm: Platform.OS === 'android', channel };
+  // expo-notifications exposes neither the Android app-op state nor a portable
+  // exact-alarm capability check. Keep this explicitly unverified until a
+  // platform-specific native check is added.
+  return { supported: true, permission, exactAlarm: false, channel };
 }
 
 export async function cancelAllScheduled(): Promise<void> {
@@ -62,6 +65,21 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
     interruptionLevel: preferences.criticalAlerts ? 'timeSensitive' : 'active',
   };
   return content;
+}
+
+export async function scheduleLocalNotificationTest(): Promise<string> {
+  if (Platform.OS === 'web' || !Device.isDevice) throw new Error('Der Gerätetest ist nur auf einem echten Gerät verfügbar.');
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'TGM ALARM CENTER · Gerätetest',
+      body: 'Lokale Benachrichtigungen sind auf diesem Gerät erreichbar.',
+      sound: 'alarm-pulse.wav',
+      data: { kind: 'local-test', testId: `test-${Date.now()}` },
+      categoryIdentifier: 'tgm-event',
+      interruptionLevel: 'active',
+    },
+    trigger: null,
+  });
 }
 
 export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPreferences): Promise<string[]> {

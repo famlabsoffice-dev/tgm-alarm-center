@@ -78,10 +78,11 @@ Für den nativen Expo-Pfad stehen `App.tsx`, die Domain-Engine und die lokalen N
 
 ```bash
 node scripts/verify-web-core.mjs
+node scripts/verify-native-config.mjs
 node --check app.js
 node --check sw.js
 pnpm test
 pnpm typecheck
 ```
 
-Die Daten verlassen das Gerät nicht. Es gibt keine Kontenserver, keine Synchronisation und keine Schnittstellen für externe Alarmdienste.
+Die Daten verlassen das Gerät nicht. Es gibt keine Kontenserver, keine Synchronisation und keine Schnittstellen für externe Alarmdienste. Das Native-Health-Modell markiert Android-Exact-Alarm-Unterstützung ausdrücklich als nicht verifiziert, solange kein plattformspezifischer App-Op-Check vorhanden ist. Der Native-Gerätetest plant eine echte lokale Benachrichtigung; der Status wird erst nach tatsächlichem Empfang beziehungsweise Öffnen der Testbenachrichtigung bestätigt.

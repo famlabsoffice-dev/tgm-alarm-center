@@ -42,6 +42,7 @@ import {
   initializeNotifications,
   registerCategories,
   scheduleAlarm,
+  scheduleLocalNotificationTest,
 } from './src/native/notifications';
 
 Notifications.setNotificationHandler({
@@ -129,6 +130,7 @@ export default function App() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [now, setNow] = useState(Date.now());
   const [storageError, setStorageError] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
   const initialized = useRef(false);
 
   useEffect(() => {
@@ -174,7 +176,12 @@ export default function App() {
   }, [state.alarms, state.notificationPreferences, readiness.permission, readiness.supported, ready]);
 
   const completeFromNotification = useCallback((response: Notifications.NotificationResponse | null) => {
-    const data = response?.notification.request.content.data as { alarmId?: unknown; eventTime?: unknown } | undefined;
+    const data = response?.notification.request.content.data as { alarmId?: unknown; eventTime?: unknown; kind?: unknown } | undefined;
+    if (data?.kind === 'local-test') {
+      setTestStatus('success');
+      setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
+      return;
+    }
     if (response?.actionIdentifier !== 'done' || typeof data?.alarmId !== 'string' || typeof data.eventTime !== 'string') return;
     const event = new Date(data.eventTime);
     if (!Number.isFinite(event.getTime())) return;
@@ -191,7 +198,17 @@ export default function App() {
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener(completeFromNotification);
     Notifications.getLastNotificationResponseAsync().then(completeFromNotification).catch(() => undefined);
-    return () => subscription.remove();
+    const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data as { kind?: unknown } | undefined;
+      if (data?.kind === 'local-test') {
+        setTestStatus('success');
+        setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
+      }
+    });
+    return () => {
+      subscription.remove();
+      receivedSubscription.remove();
+    };
   }, [completeFromNotification]);
 
   const next = useMemo(() => state.alarms
@@ -329,6 +346,21 @@ export default function App() {
     setState((current) => ({ ...current, notificationPreferences: { ...current.notificationPreferences, [key]: value } }));
   };
 
+  const runDeviceTest = async (): Promise<void> => {
+    if (!readiness.supported || !readiness.permission) {
+      Alert.alert('Benachrichtigungen nicht bereit', 'Aktiviere zuerst die Benachrichtigungsberechtigung in den Geräteeinstellungen.');
+      return;
+    }
+    setTestStatus('pending');
+    try {
+      await scheduleLocalNotificationTest();
+      Alert.alert('Gerätetest gestartet', 'Bestätige den Test erst, wenn die lokale Benachrichtigung tatsächlich angezeigt wurde.');
+    } catch (error: unknown) {
+      setTestStatus('error');
+      Alert.alert('Gerätetest fehlgeschlagen', error instanceof Error ? error.message : 'Die Testbenachrichtigung konnte nicht geplant werden.');
+    }
+  };
+
   const exportCurrentBackup = (): void => {
     exportBackup(state).catch((error: unknown) => Alert.alert('Backup fehlgeschlagen', error instanceof Error ? error.message : 'Backup konnte nicht erstellt werden.'));
   };
@@ -429,7 +461,7 @@ export default function App() {
             <View style={styles.actionRowFooter}>
               <Pressable accessibilityRole="button" onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={() => Alert.alert('Notification-Test', readiness.permission ? 'Ein kurzer Gerätetest wird vorbereitet.' : 'Aktiviere zuerst die Benachrichtigungsberechtigung in den Geräteeinstellungen.')} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
+              <Pressable accessibilityRole="button" onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>{testStatus === 'success' ? 'Gerätetest bestätigt' : testStatus === 'pending' ? 'Test wartet …' : 'Gerätetest'}</Text></Pressable>
             </View>
             <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1</Text>
           </View>
