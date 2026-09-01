@@ -27,42 +27,6 @@
   const FAMILY_ACCOUNT_NAME_KEYS = new Set(FAMILY_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
   const TIER_PRICING = {free:{name:'Free',limits:{accounts:1,alarms:2,events:1,perAccount:{bubbleAlarms:1,eventAlarms:1,individualAlarms:0,rssAlarms:0}},eur:{weekly:0,monthly:0,sixMonth:0,yearly:0,lifetime:0},usdDirect:{weekly:0,monthly:0,sixMonth:0,yearly:0,lifetime:0},usdStore:{weekly:0,monthly:0,sixMonth:0,yearly:0,lifetime:0},jpyDirect:{weekly:0,monthly:0,sixMonth:0,yearly:0,lifetime:0},jpyStore:{weekly:0,monthly:0,sixMonth:0,yearly:0,lifetime:0},annualSavingPercent:null},streetBoss:{name:'Street Boss',limits:{accounts:2,alarms:4,events:2,perAccount:{bubbleAlarms:1,eventAlarms:1,individualAlarms:0,rssAlarms:0}},eur:{weekly:4.99,monthly:14.99,sixMonth:79.99,yearly:129.99,lifetime:199.99},usdDirect:{weekly:5.79,monthly:17.37,sixMonth:92.77,yearly:150.77,lifetime:231.91},usdStore:{weekly:5.99,monthly:16.99,sixMonth:89.99,yearly:149.99,lifetime:214.99},jpyDirect:{weekly:924,monthly:2777,sixMonth:14815,yearly:24072,lifetime:37042},jpyStore:{weekly:1000,monthly:2800,sixMonth:14800,yearly:24000,lifetime:37000},annualSavingPercent:17},caporegime:{name:'Caporegime',limits:{accounts:3,alarms:9,events:3,perAccount:{bubbleAlarms:1,eventAlarms:1,individualAlarms:1,rssAlarms:0}},eur:{weekly:7.99,monthly:24.99,sixMonth:129.99,yearly:199.99,lifetime:299.99},usdDirect:{weekly:9.26,monthly:28.99,sixMonth:150.72,yearly:231.83,lifetime:347.73},usdStore:{weekly:9.99,monthly:27.99,sixMonth:149.99,yearly:229.99,lifetime:319.99},jpyDirect:{weekly:1479,monthly:4629,sixMonth:24077,yearly:37038,lifetime:55557},jpyStore:{weekly:1500,monthly:4600,sixMonth:24000,yearly:37000,lifetime:55000},annualSavingPercent:23},underboss:{name:'Underboss',limits:{accounts:5,alarms:15,events:5,perAccount:{bubbleAlarms:1,eventAlarms:1,individualAlarms:1,rssAlarms:1}},eur:{weekly:9.99,monthly:34.99,sixMonth:179.99,yearly:299.99,lifetime:449.99},usdDirect:{weekly:11.58,monthly:40.56,sixMonth:208.77,yearly:347.79,lifetime:521.87},usdStore:{weekly:11.99,monthly:39.99,sixMonth:199.99,yearly:349.99,lifetime:479.99},jpyDirect:{weekly:1850,monthly:6483,sixMonth:33332,yearly:55552,lifetime:83358},jpyStore:{weekly:1900,monthly:6500,sixMonth:33000,yearly:56000,lifetime:83000},annualSavingPercent:17},boss:{name:'Boss',limits:{accounts:10,alarms:70,events:20,perAccount:{bubbleAlarms:1,eventAlarms:2,individualAlarms:2,rssAlarms:2}},eur:{weekly:14.99,monthly:49.99,sixMonth:249.99,yearly:399.99,lifetime:599.99},usdDirect:{weekly:17.38,monthly:57.94,sixMonth:289.9,yearly:463.84,lifetime:695.76},usdStore:{weekly:16.99,monthly:54.99,sixMonth:299.99,yearly:499.99,lifetime:699.99},jpyDirect:{weekly:2777,monthly:9259,sixMonth:46296,yearly:74088,lifetime:111132},jpyStore:{weekly:2800,monthly:10000,sixMonth:50000,yearly:78000,lifetime:115000},annualSavingPercent:20},godfather:{name:'Godfather',limits:{accounts:null,alarms:null,events:null,perAccount:{bubbleAlarms:null,eventAlarms:null,individualAlarms:null,rssAlarms:null}},eur:{weekly:19.99,monthly:69.99,sixMonth:399.99,yearly:599.99,lifetime:799.99},usdDirect:{weekly:23.18,monthly:81.1,sixMonth:463.96,yearly:695.68,lifetime:927.64},usdStore:{weekly:22.99,monthly:79.99,sixMonth:449.99,yearly:699.99,lifetime:899.99},jpyDirect:{weekly:3702,monthly:12956,sixMonth:74086,yearly:111061,lifetime:148106},jpyStore:{weekly:3700,monthly:13000,sixMonth:74000,yearly:111000,lifetime:148000},annualSavingPercent:17}};
   const TIER_FEATURES = {free:['1 Account','1 Bubble-Alarm','1 Event-Alarm: Individual oder Hellcat','Keine Individual- oder RSS-Alarme'],streetBoss:['2 Accounts','Je 1 Bubble-Alarm pro Account','Je 1 Event-Alarm pro Account','Keine Individual- oder RSS-Alarme'],caporegime:['3 Accounts','Je 1 Bubble-Alarm pro Account','Je 1 Event-Alarm pro Account','Je 1 Individual-Alarm: Investment, Building oder Training'],underboss:['5 Accounts','Je 1 Bubble-Alarm pro Account','Je 1 Event-Alarm pro Account','Je 1 Individual-Alarm und je 1 RSS-Alarm: Tiles, Trucks oder Schmuggler'],boss:['10 Accounts','Je 1 Bubble-Alarm pro Account','Je 2 Event-Alarme pro Account','Je 2 Individual- und 2 RSS-Alarme pro Account'],godfather:['Unbegrenzte Accounts','Unbegrenzte Alarme','Bubble-, Event-, Individual- und RSS-Alarme ohne Limit','Vollständiger Funktionsumfang für die Alarmplanung']};
-  const app = document.getElementById('app');
-  const modalRoot = document.getElementById('modalRoot');
-  const toastRoot = document.getElementById('toast');
-  const overlayRoot = document.getElementById('alarmOverlay');
-
-  let state;
-  const VALID_VIEWS = new Set(['today', 'alarms', 'accounts', 'sounds', 'plans', 'settings']);
-  const viewFromLocation = () => VALID_VIEWS.has(location.hash.slice(1)) ? location.hash.slice(1) : 'today';
-  let view = viewFromLocation();
-  let editingId = null;
-  let modalMode = null;
-  let audioContext = null;
-  let currentAudio = null;
-  let ticker = null;
-  let toastTimer = null;
-  let alertTimer = null;
-  let navScrollLeft = 0;
-
-  const now = () => Date.now();
-  const iso = (ms) => new Date(ms).toISOString();
-  const uid = () => (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') ? globalThis.crypto.randomUUID() : `tgm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-  const money = (value) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
-  const formatDateTime = (ms) => new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms));
-  const formatTime = (ms) => new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
-  const formatDateInput = (ms) => { const date = new Date(ms); return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`; };
-  const formatTimeInput = (ms) => { const date = new Date(ms); return `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`; };
-  const countdown = (ms) => {
-    const remaining = Math.max(0, ms - now());
-    if (remaining < 60_000) return `${Math.floor(remaining / 1000)} Sek.`;
-    const minutes = Math.floor(remaining / 60_000);
-    if (minutes < 60) return `${minutes} Min.`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours} Std. · ${minutes % 60} Min.`;
-    return `${Math.floor(hours / 24)} Tage · ${hours % 24} Std.`;
-  };
   const formatPlanPrice = (value, currency) => value === 0 ? 'Kostenlos' : new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(value);
   const formatPlanLimit = (value) => Number.isFinite(value) ? String(value) : 'Unbegrenzt';
   const freeTrialActive = () => {
