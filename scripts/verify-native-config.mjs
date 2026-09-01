@@ -33,6 +33,11 @@ for (const requiredMarker of ['getAvailablePurchases', 'iapRestorePurchases', 'f
   if (!expoIapAdapter.includes(requiredMarker)) failures.push(`Expo-IAP restore adapter is missing required SDK operation: ${requiredMarker}`);
 }
 
+const offlineCache = fs.readFileSync(new URL('../src/billing/offlineCache.ts', import.meta.url), 'utf8');
+for (const requiredMarker of ['OFFLINE_ENTITLEMENT_MAX_AGE_MS', 'isEntitlementUsable', "status: 'expired'", 'source !== \'server\'']) {
+  if (!offlineCache.includes(requiredMarker)) failures.push(`Offline entitlement cache is missing required safety rule: ${requiredMarker}`);
+}
+
 if (failures.length > 0) {
   console.error(['TGM ALARM CENTER native configuration validation: FAIL', ...failures.map((failure) => `- ${failure}`)].join('\n'));
   process.exit(1);

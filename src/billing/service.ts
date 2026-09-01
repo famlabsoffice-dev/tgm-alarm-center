@@ -2,6 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BillingAdapter, BillingUnavailableError, StorePurchase, StoreProduct } from './adapter';
 import { BillingCatalog, BillingProduct, productForKey, storeProductId } from './catalog';
 import { EMPTY_ENTITLEMENT, EntitlementSnapshot, normalizeVerifiedEntitlement, VerifiedEntitlement } from './entitlements';
+import { clearOfflineEntitlement, offlineEntitlementResult, readOfflineEntitlement, writeOfflineEntitlement } from './offlineCache';
 
 export const ENTITLEMENT_STORAGE_KEY = 'tgm-alarm-center-entitlement-v1';
 
@@ -20,6 +21,8 @@ export interface BillingState {
   loading: boolean;
   products: StoreProduct[];
   entitlement: EntitlementSnapshot;
+  cacheStatus: 'usable' | 'expired' | 'empty' | 'invalid' | 'online';
+  cachedAt: string | null;
   error: string | null;
 }
 
@@ -28,6 +31,8 @@ export const initialBillingState = (): BillingState => ({
   loading: false,
   products: [],
   entitlement: { ...EMPTY_ENTITLEMENT },
+  cacheStatus: 'empty',
+  cachedAt: null,
   error: null,
 });
 
@@ -38,22 +43,31 @@ export class BillingService {
     private readonly catalog: BillingCatalog,
   ) {}
 
-  async loadPersistedEntitlement(): Promise<EntitlementSnapshot> {
+  async loadPersistedEntitlementState(): Promise<{ entitlement: EntitlementSnapshot; status: 'usable' | 'expired' | 'empty' | 'invalid'; cachedAt: string | null }> {
+    const offline = await readOfflineEntitlement();
+    if (offline.status === 'usable') return offline;
+
     const raw = await AsyncStorage.getItem(ENTITLEMENT_STORAGE_KEY);
-    if (!raw) return { ...EMPTY_ENTITLEMENT };
+    if (!raw) return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'empty', cachedAt: null };
     try {
       const parsed = JSON.parse(raw) as unknown;
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { ...EMPTY_ENTITLEMENT };
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'invalid', cachedAt: null };
       const value = parsed as Partial<EntitlementSnapshot>;
-      if (value.source !== 'server' || typeof value.productKey !== 'string') return { ...EMPTY_ENTITLEMENT };
+      if (value.source !== 'server' || typeof value.productKey !== 'string') return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'invalid', cachedAt: null };
       const product = productForKey(value.productKey);
       const platform = value.platform;
-      if (!product || (platform !== 'ios' && platform !== 'android')) return { ...EMPTY_ENTITLEMENT };
+      if (!product || (platform !== 'ios' && platform !== 'android')) return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'invalid', cachedAt: null };
       const normalized = normalizeVerifiedEntitlement(value, product, platform);
-      return normalized ? { ...normalized } : { ...EMPTY_ENTITLEMENT };
+      if (!normalized) return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'invalid', cachedAt: null };
+      const legacy = offlineEntitlementResult({ entitlement: normalized, cachedAt: normalized.verifiedAt });
+      return { entitlement: legacy.entitlement, status: legacy.status, cachedAt: legacy.cachedAt };
     } catch {
-      return { ...EMPTY_ENTITLEMENT };
+      return { entitlement: { ...EMPTY_ENTITLEMENT }, status: 'invalid', cachedAt: null };
     }
+  }
+
+  async loadPersistedEntitlement(): Promise<EntitlementSnapshot> {
+    return (await this.loadPersistedEntitlementState()).entitlement;
   }
 
   async connect(): Promise<void> {
@@ -91,15 +105,22 @@ export class BillingService {
       const verified = normalizeVerifiedEntitlement(verifiedPayload, product, this.adapter.platform);
       if (!verified) continue;
       await this.adapter.finishPurchase(purchase);
-      verifiedEntitlements.push(verified);
+      if (verified.status === 'active') verifiedEntitlements.push(verified);
     }
     const strongest = verifiedEntitlements.sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0] ?? null;
     if (strongest) await this.persist(strongest);
+    else if (verifiedEntitlements.length === 0) await this.clearPersistedEntitlement();
     return verifiedEntitlements;
   }
 
   private async persist(entitlement: VerifiedEntitlement): Promise<void> {
+    await writeOfflineEntitlement(entitlement);
     await AsyncStorage.setItem(ENTITLEMENT_STORAGE_KEY, JSON.stringify(entitlement));
+  }
+
+  private async clearPersistedEntitlement(): Promise<void> {
+    await clearOfflineEntitlement();
+    await AsyncStorage.removeItem(ENTITLEMENT_STORAGE_KEY);
   }
 }
 

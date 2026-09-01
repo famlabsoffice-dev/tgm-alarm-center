@@ -17,6 +17,7 @@ import {
 import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFamilyAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
 import { getBillingCatalog } from '../src/billing/catalog';
 import { effectiveVerifiedTier, isEntitlementUsable } from '../src/billing/entitlements';
+import { OFFLINE_ENTITLEMENT_MAX_AGE_MS, offlineEntitlementResult } from '../src/billing/offlineCache';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -96,6 +97,64 @@ test('does not treat client-only or expired entitlements as premium', () => {
   assert.equal(isEntitlementUsable({ ...base, source: 'server' }, Date.parse('2029-01-01')), true);
   assert.equal(effectiveVerifiedTier({ ...base, source: 'server' }, Date.parse('2029-01-01')), 'godfather');
   assert.equal(effectiveVerifiedTier({ ...base, source: 'server', expiresAt: '2028-01-01T00:00:00.000Z' }, Date.parse('2029-01-01')), 'free');
+});
+
+test('uses a recent server entitlement while offline', () => {
+  const now = Date.parse('2030-01-08T00:00:00.000Z');
+  const entitlement = {
+    status: 'active' as const,
+    tier: 'underboss' as const,
+    productKey: 'underboss-monthly',
+    productId: 'com.tgm.underboss.monthly',
+    transactionId: 'transaction-1',
+    platform: 'ios' as const,
+    environment: 'production' as const,
+    expiresAt: '2030-02-01T00:00:00.000Z',
+    verifiedAt: '2030-01-07T00:00:00.000Z',
+    source: 'server' as const,
+  };
+  const result = offlineEntitlementResult({ entitlement, cachedAt: new Date(now - 60 * 60 * 1000).toISOString() }, now);
+  assert.equal(result.status, 'usable');
+  assert.equal(result.entitlement.tier, 'underboss');
+});
+
+test('expires the offline entitlement after the trust window', () => {
+  const now = Date.parse('2030-01-08T00:00:00.000Z');
+  const entitlement = {
+    status: 'active' as const,
+    tier: 'underboss' as const,
+    productKey: 'underboss-monthly',
+    productId: 'com.tgm.underboss.monthly',
+    transactionId: 'transaction-2',
+    platform: 'ios' as const,
+    environment: 'production' as const,
+    expiresAt: '2030-02-01T00:00:00.000Z',
+    verifiedAt: '2030-01-01T00:00:00.000Z',
+    source: 'server' as const,
+  };
+  const result = offlineEntitlementResult({ entitlement, cachedAt: new Date(now - OFFLINE_ENTITLEMENT_MAX_AGE_MS - 1).toISOString() }, now);
+  assert.equal(result.status, 'expired');
+  assert.equal(result.entitlement.tier, 'free');
+  assert.equal(effectiveVerifiedTier(result.entitlement, now), 'free');
+});
+
+test('does not use an offline entitlement after its store expiry', () => {
+  const now = Date.parse('2030-01-08T00:00:00.000Z');
+  const entitlement = {
+    status: 'active' as const,
+    tier: 'underboss' as const,
+    productKey: 'underboss-monthly',
+    productId: 'com.tgm.underboss.monthly',
+    transactionId: 'transaction-3',
+    platform: 'ios' as const,
+    environment: 'production' as const,
+    expiresAt: '2030-01-07T00:00:00.000Z',
+    verifiedAt: '2030-01-06T00:00:00.000Z',
+    source: 'server' as const,
+  };
+  const result = offlineEntitlementResult({ entitlement, cachedAt: '2030-01-07T12:00:00.000Z' }, now);
+  assert.equal(result.status, 'expired');
+  assert.equal(result.entitlement.tier, 'free');
 });
 
 test('recognizes every Family account and grants the permanent Godfather tier', () => {

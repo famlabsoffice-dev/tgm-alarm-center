@@ -72,3 +72,11 @@ Die App führt Restore Purchases automatisch einmal beim Start und anschließend
 Die SDK-Verbindung wird nur mit vollständigem Produktkatalog und HTTPS-Verifikationsendpunkt aktiviert. Bei fehlender Konfiguration bleibt der vorhandene sichere Unconfigured-Adapter aktiv.
 
 Quelle: [Expo IAP / OpenIAP-Dokumentation](https://hyochan.github.io/expo-iap/)
+
+## Offline-Cache und Fallback
+
+Aktive Entitlements, die der Server bestätigt hat, werden zusätzlich in einem separaten lokalen Cache gespeichert. Der Cache ist sieben Tage ab dem letzten erfolgreichen Serverkontakt gültig und wird nur verwendet, wenn der gespeicherte Store-Ablaufzeitpunkt ebenfalls noch in der Zukunft liegt. Nicht verifizierte, clientseitige, manipulierte, ungültige oder abgelaufene Daten werden verworfen und führen zum Free-Fallback.
+
+Beim App-Start wird der Cache geladen, damit die Kernfunktionen ohne Netz nicht unnötig gesperrt werden. Sobald eine Store-Verbindung möglich ist, führt die App eine automatische Restore-/Revalidierungsrunde aus. Ein aktives Ergebnis ersetzt den Cache; ein leerer oder nicht verifizierter Restore löscht den alten Zugang. Nach Ablauf des sieben-tägigen Vertrauensfensters wird kein Premium-Zugang mehr aus dem Offline-Cache gewährt.
+
+Der Cache-Schlüssel liegt ausschließlich im nativen Gerätespeicher. Der Produktionsbetrieb sollte zusätzlich verschlüsselten Gerätespeicher beziehungsweise eine plattformspezifische Secure-Storage-Lösung für Entitlement-Snapshots einsetzen, sofern der lokale Schutzbedarf dies erfordert.

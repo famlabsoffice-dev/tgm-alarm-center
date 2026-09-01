@@ -148,9 +148,9 @@ export default function App() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([billingService.loadPersistedEntitlement(), getBillingAccountId()]).then(([entitlement, accountId]) => {
+    Promise.all([billingService.loadPersistedEntitlementState(), getBillingAccountId()]).then(([loadedEntitlement, accountId]) => {
       if (!mounted) return;
-      setBilling((current) => ({ ...current, entitlement }));
+      setBilling((current) => ({ ...current, entitlement: loadedEntitlement.entitlement, cacheStatus: loadedEntitlement.status, cachedAt: loadedEntitlement.cachedAt }));
       setBillingAccountId(accountId);
     }).catch(() => undefined);
     return () => { mounted = false; };
@@ -379,7 +379,7 @@ export default function App() {
       const restored = await billingService.restorePurchases();
       const tierRank = (tier: typeof state.tier): number => ({ free: 0, streetBoss: 1, caporegime: 2, underboss: 3, boss: 4, godfather: 5 }[tier]);
       const entitlement = [...restored].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
-      setBilling((current) => ({ ...current, connected: true, loading: false, entitlement: entitlement ?? current.entitlement, error: entitlement || automatic ? null : 'Es wurde kein gültiges Entitlement gefunden.' }));
+      setBilling((current) => ({ ...current, connected: true, loading: false, cacheStatus: entitlement ? 'online' : current.cacheStatus, cachedAt: entitlement ? new Date().toISOString() : current.cachedAt, entitlement: entitlement ?? current.entitlement, error: entitlement || automatic ? null : 'Es wurde kein gültiges Entitlement gefunden.' }));
       if (entitlement) setState((current) => ({ ...current, tier: entitlement.tier }));
       lastAutomaticRestoreAt.current = Date.now();
     } catch (error: unknown) {
@@ -416,7 +416,7 @@ export default function App() {
     try {
       if (!billingAccountId) throw new Error('App-Konto wird noch vorbereitet.');
       const entitlement = await billingService.purchase(productKey, billingAccountId);
-      setBilling((current) => ({ ...current, loading: false, entitlement, error: null }));
+      setBilling((current) => ({ ...current, loading: false, cacheStatus: 'online', cachedAt: new Date().toISOString(), entitlement, error: null }));
       setState((current) => ({ ...current, tier: entitlement.tier }));
       Alert.alert('Kauf bestätigt', 'Dein serverseitig verifiziertes Entitlement ist jetzt aktiv.');
     } catch (error: unknown) {
@@ -574,6 +574,7 @@ export default function App() {
             entitlement={billing.entitlement}
             loading={billing.loading}
             configured={billingConfiguration.configured && billingCatalog.configured}
+            cacheStatus={billing.cacheStatus}
             error={billing.error}
             onPurchase={purchaseProduct}
             onRestore={restorePurchases}

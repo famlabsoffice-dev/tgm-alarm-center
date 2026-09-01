@@ -31,6 +31,7 @@ export interface PaywallProps {
   entitlement: EntitlementSnapshot;
   loading: boolean;
   configured: boolean;
+  cacheStatus: 'usable' | 'expired' | 'empty' | 'invalid' | 'online';
   error: string | null;
   onPurchase: PaywallAction;
   onRestore: () => void;
@@ -57,7 +58,7 @@ function durationLabel(product: BillingProduct): string {
   return product.durationLabel;
 }
 
-export function Paywall({ catalog, products, entitlement, loading, configured, error, onPurchase, onRestore, onClose }: PaywallProps): React.ReactElement {
+export function Paywall({ catalog, products, entitlement, loading, configured, cacheStatus, error, onPurchase, onRestore, onClose }: PaywallProps): React.ReactElement {
   const groups = useMemo(() => groupProducts(catalog), [catalog]);
   const storeProducts = useMemo(() => new Map(products.map((product) => [product.productId, product])), [products]);
   const entitlementActive = isEntitlementUsable(entitlement);
@@ -77,6 +78,13 @@ export function Paywall({ catalog, products, entitlement, loading, configured, e
         <View style={styles.activeBanner}>
           <Text style={styles.activeTitle}>{entitlement.tier} ist aktiv</Text>
           <Text style={styles.activeText}>Dein serverseitig bestätigtes Entitlement ist auf diesem Gerät verfügbar.</Text>
+        </View>
+      ) : null}
+
+      {cacheStatus === 'usable' ? (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineTitle}>Offlinezugriff aktiv</Text>
+          <Text style={styles.offlineText}>Der zuletzt serverseitig bestätigte Zugang bleibt vorübergehend verfügbar. Beim nächsten Online-Kontakt wird er erneut geprüft.</Text>
         </View>
       ) : null}
 
@@ -139,6 +147,9 @@ const styles = StyleSheet.create({
   activeBanner: { marginHorizontal: 18, marginBottom: 10, padding: 13, borderRadius: 13, backgroundColor: '#17351B', borderColor: '#416B35', borderWidth: 1 },
   activeTitle: { color: COLORS.mint, fontSize: 14, fontWeight: '900' },
   activeText: { color: '#C7E9BD', fontSize: 12, lineHeight: 17, marginTop: 3 },
+  offlineBanner: { marginHorizontal: 18, marginBottom: 10, padding: 13, borderRadius: 13, backgroundColor: '#13232C', borderColor: '#2A5470', borderWidth: 1 },
+  offlineTitle: { color: '#ABE0FB', fontSize: 14, fontWeight: '900' },
+  offlineText: { color: '#C5E6F5', fontSize: 12, lineHeight: 17, marginTop: 3 },
   infoBanner: { marginHorizontal: 18, marginBottom: 10, padding: 13, borderRadius: 13, backgroundColor: '#2B2416', borderColor: '#67532D', borderWidth: 1 },
   infoTitle: { color: COLORS.gold, fontSize: 14, fontWeight: '900' },
   infoText: { color: '#E6D7AE', fontSize: 12, lineHeight: 17, marginTop: 3 },
