@@ -472,8 +472,10 @@
     const accountAlarmList = accountAlarms(account.id).filter((alarm) => alarm.id !== id);
     const bubbleAlarms = accountAlarmList.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gw').length;
     const eventAlarms = accountAlarmList.filter((alarm) => alarm.type === 'custom').length;
-    if ((type === 'bubble' || type === 'gw') && bubbleAlarms >= plan.limits.perAccount.bubbleAlarms) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)} Bubble-Alarm${plan.limits.perAccount.bubbleAlarms === 1 ? '' : 'e'}.`);
-    if (type === 'custom' && eventAlarms >= plan.limits.perAccount.eventAlarms) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.eventAlarms)} Event-Alarm${plan.limits.perAccount.eventAlarms === 1 ? '' : 'e'}.`);
+    const bubbleLimit = plan.limits.perAccount.bubbleAlarms ?? Number.POSITIVE_INFINITY;
+    const eventLimit = plan.limits.perAccount.eventAlarms ?? Number.POSITIVE_INFINITY;
+    if ((type === 'bubble' || type === 'gw') && bubbleAlarms >= bubbleLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)} Bubble-Alarm${plan.limits.perAccount.bubbleAlarms === 1 ? '' : 'e'}.`);
+    if (type === 'custom' && eventAlarms >= eventLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.eventAlarms)} Event-Alarm${plan.limits.perAccount.eventAlarms === 1 ? '' : 'e'}.`);
     const record = {
       id: existing?.id || uid(), accountId: account.id, title, type, eventAt, date, time, repeat, sound, warnings,
       protected: document.getElementById('eProtected')?.checked === true, active: document.getElementById('eActive')?.checked !== false,
@@ -489,7 +491,8 @@
     const color = document.getElementById('accountColor')?.value || '#F4C969';
     if (!name || name.length > 80) return showToast('Bitte eine Bezeichnung mit 1 bis 80 Zeichen eingeben.');
     const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
-    if (!id && state.accounts.length >= plan.limits.accounts) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Account${plan.limits.accounts === 1 ? '' : 's'}. Öffne „Pläne und Preise“, um den verfügbaren Umfang zu vergleichen.`);
+    const accountLimit = plan.limits.accounts ?? Number.POSITIVE_INFINITY;
+    if (!id && state.accounts.length >= accountLimit) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Account${plan.limits.accounts === 1 ? '' : 's'}. Öffne „Pläne und Preise“, um den verfügbaren Umfang zu vergleichen.`);
     if (id) {
       const account = state.accounts.find((item) => item.id === id);
       if (account) { account.name = name; account.color = color; }

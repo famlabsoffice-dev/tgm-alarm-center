@@ -4,7 +4,7 @@ const ASSETS = [
   './',
   './index.html',
   './styles.css?v=5',
-  './app.js?v=12',
+  './app.js?v=13',
   './manifest.webmanifest',
   './icon.png',
   './assets/notifications/alarm-pulse.wav',
