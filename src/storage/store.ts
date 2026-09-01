@@ -47,7 +47,7 @@ function isoOr(value: unknown, fallback: string): string {
 }
 
 function validType(value: unknown): AlarmType {
-  return value === 'bubble' || value === 'gwBubble' || value === 'custom' ? value : 'custom';
+  return value === 'bubble' || value === 'gwBubble' || value === 'custom' || value === 'individual' || value === 'rss' ? value : 'custom';
 }
 
 function validRepeat(value: unknown, type: AlarmType, legacyGwCycle: unknown): RepeatMode {
@@ -153,7 +153,7 @@ function normalizeState(value: unknown): AppState {
     ? value.alarms.map((alarm) => normalizeAlarm(alarm, accountIds)).filter((alarm): alarm is Alarm => alarm !== null)
     : [];
   const legacyTier = value.tierId === 'street' ? 'streetBoss' : value.tierId === 'caporegime' ? 'caporegime' : value.tierId === 'godfather' ? 'godfather' : value.tier;
-  const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'godfather' ? legacyTier : 'free';
+  const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'underboss' || legacyTier === 'boss' || legacyTier === 'godfather' ? legacyTier : 'free';
   const rawPreferences = isRecord(value.notificationPreferences) ? value.notificationPreferences : isRecord(value.preferences) ? value.preferences : {};
   const preferences: NotificationPreferences = {
     sound: validSound(rawPreferences.sound),

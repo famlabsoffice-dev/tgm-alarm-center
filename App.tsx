@@ -245,6 +245,26 @@ export default function App() {
       Alert.alert('Limit erreicht', 'Dein aktueller Plan erlaubt keine weiteren Alarme.');
       return;
     }
+    const activeAccountId = activeAccount?.id ?? state.activeAccountId;
+    const accountAlarms = state.alarms.filter((alarm) => alarm.accountId === activeAccountId);
+    const categoryCount = editor.type === 'bubble' || editor.type === 'gwBubble'
+      ? accountAlarms.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gwBubble').length
+      : editor.type === 'custom'
+        ? accountAlarms.filter((alarm) => alarm.type === 'custom').length
+        : editor.type === 'individual'
+          ? accountAlarms.filter((alarm) => alarm.type === 'individual').length
+          : accountAlarms.filter((alarm) => alarm.type === 'rss').length;
+    const categoryLimit = editor.type === 'bubble' || editor.type === 'gwBubble'
+      ? TIER_LIMITS[effectiveAppTier].perAccount.bubbleAlarms
+      : editor.type === 'custom'
+        ? TIER_LIMITS[effectiveAppTier].perAccount.eventAlarms
+        : editor.type === 'individual'
+          ? TIER_LIMITS[effectiveAppTier].perAccount.individualAlarms
+          : TIER_LIMITS[effectiveAppTier].perAccount.rssAlarms;
+    if (!editingId && Number.isFinite(categoryLimit) && categoryCount >= categoryLimit) {
+      Alert.alert('Limit erreicht', `Dein aktueller Plan erlaubt ${categoryLimit} ${alarmTypeLabel(editor.type)} je Account.`);
+      return;
+    }
     setState((current) => {
       const ensured = createAccountIfNeeded(current);
       if (editingId) {
@@ -390,7 +410,7 @@ export default function App() {
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
             <View style={styles.templateGrid}>
-              {(['bubble', 'gwBubble', 'custom'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' ? '60 · 15 Min. · Pulse' : key === 'gwBubble' ? '60 · 30 · 15 Min. · Siren' : '15 Min. · Chime'}</Text></Pressable>)}
+              {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' ? '60 · 15 Min. · Pulse' : key === 'gwBubble' ? '60 · 30 · 15 Min. · Siren' : '15 Min. · Chime'}</Text></Pressable>)}
             </View>
             <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{state.alarms.length} gespeichert</Text></View>
           </View>
@@ -421,7 +441,7 @@ export default function App() {
             <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editingId ? 'Alarm bearbeiten' : 'Neuer Alarm'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Editor schließen" onPress={() => setEditorVisible(false)} style={styles.closeButton}><Text style={styles.closeText}>×</Text></Pressable></View>
             <Text style={styles.fieldLabel}>SCHNELLSTART-TYP</Text>
             <View style={styles.choiceRow}>
-              {(['bubble', 'gwBubble', 'custom'] as TemplateKey[]).map((key) => <Pressable key={key} onPress={() => setEditor((current) => ({ ...current, ...defaultEditor(TEMPLATES[key]), title: current.title }))} style={[styles.choice, editor.type === TEMPLATES[key].type && styles.choiceActive]}><Text style={styles.choiceText}>{alarmTypeLabel(TEMPLATES[key].type)}</Text></Pressable>)}
+              {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} onPress={() => setEditor((current) => ({ ...current, ...defaultEditor(TEMPLATES[key]), title: current.title }))} style={[styles.choice, editor.type === TEMPLATES[key].type && styles.choiceActive]}><Text style={styles.choiceText}>{alarmTypeLabel(TEMPLATES[key].type)}</Text></Pressable>)}
             </View>
             <Text style={styles.fieldLabel}>BEZEICHNUNG</Text>
             <TextInput value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />

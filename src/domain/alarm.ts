@@ -1,7 +1,7 @@
-export type AlarmType = 'bubble' | 'gwBubble' | 'custom';
+export type AlarmType = 'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss';
 export type RepeatMode = 'once' | 'daily' | 'gw5d';
 export type SoundProfile = 'pulse' | 'siren' | 'chime';
-export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'godfather';
+export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'boss' | 'godfather';
 export type OccurrenceKind = 'warning' | 'main' | 'end-warning' | 'end';
 
 export interface Account {
@@ -66,18 +66,21 @@ export interface NotificationMoment {
   endAt?: Date;
 }
 
-export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number } }> = {
-  free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
-  streetBoss: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
-  caporegime: { accounts: 3, alarms: 6, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
-  underboss: { accounts: 5, alarms: 10, events: 5, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
-  godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY } },
+export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number; individualAlarms: number; rssAlarms: number } }> = {
+  free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
+  streetBoss: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
+  caporegime: { accounts: 3, alarms: 9, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 1, rssAlarms: 0 } },
+  underboss: { accounts: 5, alarms: 15, events: 5, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 1, rssAlarms: 1 } },
+  boss: { accounts: 10, alarms: 70, events: 20, perAccount: { bubbleAlarms: 1, eventAlarms: 2, individualAlarms: 2, rssAlarms: 2 } },
+  godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
 };
 
-export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom', AlarmTemplate> = {
+export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
   bubble: { title: 'Bubble-Zeitfenster', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'pulse', protected: true },
   gwBubble: { title: 'GW-Zeitfenster', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'once', sound: 'siren', protected: true },
   custom: { title: 'Mein TGM-Event', type: 'custom', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
+  individual: { title: 'Individual-Alarm', type: 'individual', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
+  rss: { title: 'RSS-Alarm', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
 };
 
 const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
@@ -225,6 +228,8 @@ export function buildAlarm(template: AlarmTemplate, accountId: string, date: str
 export function alarmTypeLabel(type: AlarmType): string {
   if (type === 'bubble') return 'Bubble';
   if (type === 'gwBubble') return 'GW Bubble';
+  if (type === 'individual') return 'Individual-Alarm';
+  if (type === 'rss') return 'RSS-Alarm';
   return 'Eigenes Event';
 }
 

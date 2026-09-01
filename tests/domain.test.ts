@@ -82,16 +82,28 @@ test('recognizes every Family account and grants the permanent Godfather tier', 
   assert.equal(effectiveTierForAccount('free', 'TGMack2'), 'free');
 });
 
-test('keeps the five-tier commercial ladder and all currency periods synchronized', () => {
-  assert.deepEqual(Object.keys(TIER_LIMITS), ['free', 'streetBoss', 'caporegime', 'underboss', 'godfather']);
+test('keeps the six-tier commercial ladder and all currency periods synchronized', () => {
+  assert.deepEqual(Object.keys(TIER_LIMITS), ['free', 'streetBoss', 'caporegime', 'underboss', 'boss', 'godfather']);
   assert.equal(TIER_LIMITS.underboss.accounts, 5);
-  assert.equal(TIER_LIMITS.underboss.alarms, 10);
+  assert.equal(TIER_LIMITS.underboss.alarms, 15);
   assert.equal(TIER_LIMITS.underboss.events, 5);
+  assert.equal(TIER_LIMITS.caporegime.perAccount.individualAlarms, 1);
+  assert.equal(TIER_LIMITS.caporegime.perAccount.rssAlarms, 0);
+  assert.equal(TIER_LIMITS.underboss.perAccount.individualAlarms, 1);
+  assert.equal(TIER_LIMITS.underboss.perAccount.rssAlarms, 1);
+  assert.equal(TIER_LIMITS.boss.accounts, 10);
+  assert.equal(TIER_LIMITS.boss.perAccount.eventAlarms, 2);
+  assert.equal(TIER_LIMITS.boss.perAccount.individualAlarms, 2);
+  assert.equal(TIER_LIMITS.boss.perAccount.rssAlarms, 2);
   assert.equal(TIER_PRICING.streetBoss.eur.monthly, 14.99);
   assert.equal(TIER_PRICING.streetBoss.eur.lifetime, 199.99);
   assert.equal(TIER_PRICING.caporegime.eur.monthly, 24.99);
   assert.equal(TIER_PRICING.underboss.eur.monthly, 34.99);
   assert.equal(TIER_PRICING.underboss.eur.lifetime, 449.99);
+  assert.equal(TIER_PRICING.boss.eur.monthly, 49.99);
+  assert.equal(TIER_PRICING.boss.eur.lifetime, 599.99);
+  assert.equal(TIER_PRICING.boss.usdStore.monthly, 54.99);
+  assert.equal(TIER_PRICING.boss.usdStore.lifetime, 699.99);
   assert.equal(TIER_PRICING.godfather.eur.monthly, 69.99);
   assert.equal(TIER_PRICING.godfather.eur.lifetime, 799.99);
   assert.equal(TIER_PRICING.streetBoss.usdStore.monthly, 16.99);
@@ -102,6 +114,8 @@ test('keeps the five-tier commercial ladder and all currency periods synchronize
   assert.equal(TIER_PRICING.underboss.usdStore.lifetime, 479.99);
   assert.equal(TIER_PRICING.godfather.usdStore.monthly, 79.99);
   assert.equal(TIER_PRICING.godfather.usdStore.lifetime, 899.99);
+  assert.deepEqual(TEMPLATES.individual.type, 'individual');
+  assert.deepEqual(TEMPLATES.rss.type, 'rss');
   for (const tier of Object.values(TIER_PRICING)) {
     assert.deepEqual(Object.keys(tier.eur), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
     assert.deepEqual(Object.keys(tier.usdStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);

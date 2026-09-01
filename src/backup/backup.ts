@@ -8,10 +8,10 @@ export interface Backup { format: typeof FORMAT; version: 1; exportedAt: string;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isIso = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(new Date(value).getTime());
-const validType = (value: unknown): value is AlarmType => value === 'bubble' || value === 'gwBubble' || value === 'custom';
+const validType = (value: unknown): value is AlarmType => value === 'bubble' || value === 'gwBubble' || value === 'custom' || value === 'individual' || value === 'rss';
 const validRepeat = (value: unknown): value is RepeatMode => value === 'once' || value === 'daily' || value === 'gw5d';
 const validSound = (value: unknown): value is SoundProfile => value === 'pulse' || value === 'siren' || value === 'chime';
-const validTier = (value: unknown): value is Tier => value === 'free' || value === 'streetBoss' || value === 'caporegime' || value === 'underboss' || value === 'godfather';
+const validTier = (value: unknown): value is Tier => value === 'free' || value === 'streetBoss' || value === 'caporegime' || value === 'underboss' || value === 'boss' || value === 'godfather';
 const validColor = (value: unknown): value is string => typeof value === 'string' && /^(#[0-9A-Fa-f]{6}|[a-zA-Z]{1,24})$/.test(value);
 
 function validateAccount(value: unknown, ids: Set<string>): void {
