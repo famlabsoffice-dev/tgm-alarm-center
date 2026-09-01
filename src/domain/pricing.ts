@@ -2,6 +2,29 @@ import type { Tier } from './alarm';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 
+export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
+export const FREE_TRIAL_TIER: Tier = 'godfather';
+
+export interface FreeTrialState {
+  startedAt: string | null;
+  endsAt: string | null;
+}
+
+export function isFreeTrialActive(trial: FreeTrialState, at = Date.now()): boolean {
+  if (!trial.startedAt || !trial.endsAt) return false;
+  const started = Date.parse(trial.startedAt);
+  const ends = Date.parse(trial.endsAt);
+  return Number.isFinite(started) && Number.isFinite(ends) && ends > started && at >= started && at < ends;
+}
+
+export function canStartFreeTrial(trial: FreeTrialState): boolean {
+  return trial.startedAt === null && trial.endsAt === null;
+}
+
+export function startFreeTrial(at = Date.now()): FreeTrialState {
+  return { startedAt: new Date(at).toISOString(), endsAt: new Date(at + FREE_TRIAL_DURATION_MS).toISOString() };
+}
+
 export interface TierPricing {
   tier: Tier;
   name: string;
@@ -114,3 +137,7 @@ export const BUSINESS_VALUE_GUIDANCE = {
 } as const;
 
 export const getTierPricing = (tier: Tier): TierPricing => TIER_PRICING[tier];
+
+export function effectiveTier(tier: Tier, trial: FreeTrialState, at = Date.now()): Tier {
+  return isFreeTrialActive(trial, at) ? FREE_TRIAL_TIER : tier;
+}

@@ -19,6 +19,8 @@
   const TIER_ORDER = ['free', 'streetBoss', 'caporegime', 'godfather'];
   const BILLING_PERIODS = ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime'];
   const BILLING_LABELS = { weekly: '1 Woche', monthly: '1 Monat', sixMonth: '6 Monate', yearly: '1 Jahr', lifetime: 'Lifetime' };
+  const FREE_TRIAL_DURATION_MS = 3 * DAY_MS;
+  const FREE_TRIAL_TIER = 'godfather';
   const TIER_PRICING = {
     free: { name: 'Free', limits: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } }, eur: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, usdDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, usdStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, annualSavingPercent: null },
     streetBoss: { name: 'Street Boss', limits: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } }, eur: { weekly: 1.99, monthly: 5.99, sixMonth: 32.99, yearly: 54.99, lifetime: 99.99 }, usdDirect: { weekly: 2.31, monthly: 6.95, sixMonth: 38.27, yearly: 63.79, lifetime: 115.99 }, usdStore: { weekly: 1.99, monthly: 6.99, sixMonth: 34.99, yearly: 59.99, lifetime: 104.99 }, annualSavingPercent: 25 },
@@ -73,6 +75,15 @@
   };
   const formatPlanPrice = (value, currency) => value === 0 ? 'Kostenlos' : new Intl.NumberFormat('de-DE', { style: 'currency', currency }).format(value);
   const formatPlanLimit = (value) => Number.isFinite(value) ? String(value) : 'Unbegrenzt';
+  const freeTrialActive = () => {
+    const started = Date.parse(state?.freeTrialStartedAt || '');
+    const ends = Date.parse(state?.freeTrialEndsAt || '');
+    return Number.isFinite(started) && Number.isFinite(ends) && ends > started && now() >= started && now() < ends;
+  };
+  const freeTrialAvailable = () => !state?.freeTrialStartedAt && !state?.freeTrialEndsAt;
+  const effectiveTierKey = () => freeTrialActive() ? FREE_TRIAL_TIER : (state.tier || 'free');
+  const trialCountdownLabel = () => freeTrialActive() ? `Noch ${countdown(Date.parse(state.freeTrialEndsAt))}` : '';
+
 
   function emptyState() {
     return {
@@ -84,6 +95,8 @@
       preferences: { ...DEFAULT_PREFS },
       firedMoments: {},
       testConfirmedAt: null,
+      freeTrialStartedAt: null,
+      freeTrialEndsAt: null,
       updatedAt: iso(now()),
     };
   }
@@ -150,6 +163,9 @@
       audioEnabled: oldPreferences.audioEnabled === true,
     };
     const firedMoments = raw.firedMoments && typeof raw.firedMoments === 'object' ? Object.fromEntries(Object.entries(raw.firedMoments).filter(([key, value]) => value === true && Number(key.split('|')[1]) > now() - 14 * DAY_MS)) : {};
+    const trialStartedAt = typeof raw.freeTrialStartedAt === 'string' && Number.isFinite(Date.parse(raw.freeTrialStartedAt)) ? new Date(raw.freeTrialStartedAt).toISOString() : null;
+    const trialEndsAt = typeof raw.freeTrialEndsAt === 'string' && Number.isFinite(Date.parse(raw.freeTrialEndsAt)) ? new Date(raw.freeTrialEndsAt).toISOString() : null;
+    const validTrial = trialStartedAt && trialEndsAt && Date.parse(trialEndsAt) > Date.parse(trialStartedAt);
     return {
       schemaVersion: SCHEMA_VERSION,
       tier: TIER_PRICING[raw.tier] ? raw.tier : 'free',
@@ -159,6 +175,8 @@
       preferences,
       firedMoments,
       testConfirmedAt: typeof raw.testConfirmedAt === 'string' && Number.isFinite(Date.parse(raw.testConfirmedAt)) ? new Date(raw.testConfirmedAt).toISOString() : null,
+      freeTrialStartedAt: validTrial ? trialStartedAt : null,
+      freeTrialEndsAt: validTrial ? trialEndsAt : null,
       updatedAt: iso(now()),
     };
   }
@@ -170,6 +188,16 @@
   function persist() {
     state.updatedAt = iso(now());
     localStorage.setItem(STORE, JSON.stringify(state));
+  }
+
+  function startFreeTrial() {
+    if (!freeTrialAvailable()) return showToast(freeTrialActive() ? 'Der 3-Tage-Free-Trial läuft bereits.' : 'Der einmalige 3-Tage-Free-Trial wurde bereits genutzt.');
+    const startedAt = now();
+    state.freeTrialStartedAt = iso(startedAt);
+    state.freeTrialEndsAt = iso(startedAt + FREE_TRIAL_DURATION_MS);
+    persist();
+    render();
+    showToast('3-Tage-Free-Trial aktiviert. Alle lokalen Alarmfunktionen sind freigeschaltet.');
   }
 
   function activeAccount() { return state.accounts.find((account) => account.id === state.activeAccountId) || null; }
@@ -414,8 +442,9 @@
   }
 
   function renderPlansView() {
-    const currentTier = state.tier || 'free';
-    return `<section><div class="section-head"><div><div class="eyebrow">PREMIUM-STRUKTUR</div><h2>Tier-Pläne</h2><p>Mehr Kommandos, mehr Gaming-Alarme, mehr Spielraum.</p></div><span class="badge gold">AKTIV: ${esc(TIER_PRICING[currentTier].name)}</span></div><div class="note plan-intro"><strong>Lokales Tier-Profil</strong><br>Wähle das Profil, das zu deiner TGM-Spielweise passt. Limits und Status werden direkt auf diesem Gerät gespeichert.</div><div class="plan-grid">${TIER_ORDER.map((tier) => { const plan = TIER_PRICING[tier]; const current = tier === currentTier; return `<article class="card plan ${current ? 'current' : ''}"><div class="plan-badge">${current ? 'AKTUELL' : tier === 'caporegime' ? 'BELIEBT' : tier === 'godfather' ? 'MAXIMUM' : 'START'}</div><h3>${esc(plan.name)}</h3><div class="plan-price">${formatPlanPrice(plan.eur.monthly, 'EUR')} <span>/ Monat</span></div>${plan.annualSavingPercent ? `<div class="plan-note">${plan.annualSavingPercent}% Ersparnis im Jahresplan gegenüber 12 Monatszahlungen</div>` : '<div class="plan-note">Für den Einstieg in deine lokale Alarmzentrale</div>'}<div class="plan-limit-grid"><div class="plan-limit"><span>Kommandos</span><strong>${formatPlanLimit(plan.limits.accounts)}</strong></div><div class="plan-limit"><span>Bubble-Alarme je Kommando</span><strong>${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)}</strong></div><div class="plan-limit"><span>Event-Alarme je Kommando</span><strong>${formatPlanLimit(plan.limits.perAccount.eventAlarms)}</strong></div></div><ul>${TIER_FEATURES[tier].map((feature) => `<li>${esc(feature)}</li>`).join('')}</ul><div class="plan-price-list"><div class="plan-price-row plan-price-head"><span>Laufzeit</span><span>EUR</span><span>USD Store</span></div>${BILLING_PERIODS.map((period) => `<div class="plan-price-row ${period === 'monthly' ? 'featured' : ''}"><span>${BILLING_LABELS[period]}</span><strong>${formatPlanPrice(plan.eur[period], 'EUR')}</strong><strong>${formatPlanPrice(plan.usdStore[period], 'USD')}</strong></div>`).join('')}</div><button class="btn ${current ? 'ghost' : 'secondary'} full" type="button" data-action="select-tier" data-tier="${tier}">${current ? 'Aktueller Plan' : 'Plan aktivieren'}</button></article>`; }).join('')}</div></section>`;
+    const currentTier = effectiveTierKey();
+    const trialPanel = freeTrialActive() ? `<div class="note trial-panel active"><strong>3-Tage-Free-Trial aktiv</strong><br>Alle lokalen Alarmfunktionen sind freigeschaltet. ${esc(trialCountdownLabel())}</div>` : freeTrialAvailable() ? `<div class="note trial-panel"><strong>Einmaliger 3-Tage-Free-Trial</strong><br>Teste die vollständige lokale Alarmzentrale drei Tage lang kostenlos auf diesem Gerät.<div class="actions"><button class="btn primary" type="button" data-action="start-free-trial">3 Tage testen</button></div></div>` : `<div class="note trial-panel expired"><strong>3-Tage-Free-Trial bereits genutzt</strong><br>Der Trial kann auf diesem Gerät nur einmal aktiviert werden.</div>`;
+    return `<section><div class="section-head"><div><div class="eyebrow">PREMIUM-STRUKTUR</div><h2>Tier-Pläne</h2><p>Mehr Kommandos, mehr Gaming-Alarme, mehr Spielraum.</p></div><span class="badge gold">${freeTrialActive() ? 'TRIAL · ' : 'AKTIV: '}${esc(TIER_PRICING[currentTier].name)}</span></div><div class="note plan-intro"><strong>Lokales Tier-Profil</strong><br>Wähle das Profil, das zu deiner TGM-Spielweise passt. Limits und Status werden direkt auf diesem Gerät gespeichert.</div>${trialPanel}<div class="plan-grid">${TIER_ORDER.map((tier) => { const plan = TIER_PRICING[tier]; const current = tier === currentTier; return `<article class="card plan ${current ? 'current' : ''}"><div class="plan-badge">${current ? 'AKTUELL' : tier === 'caporegime' ? 'BELIEBT' : tier === 'godfather' ? 'MAXIMUM' : 'START'}</div><h3>${esc(plan.name)}</h3><div class="plan-price">${formatPlanPrice(plan.eur.monthly, 'EUR')} <span>/ Monat</span></div>${plan.annualSavingPercent ? `<div class="plan-note">${plan.annualSavingPercent}% Ersparnis im Jahresplan gegenüber 12 Monatszahlungen</div>` : '<div class="plan-note">Für den Einstieg in deine lokale Alarmzentrale</div>'}<div class="plan-limit-grid"><div class="plan-limit"><span>Kommandos</span><strong>${formatPlanLimit(plan.limits.accounts)}</strong></div><div class="plan-limit"><span>Bubble-Alarme je Kommando</span><strong>${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)}</strong></div><div class="plan-limit"><span>Event-Alarme je Kommando</span><strong>${formatPlanLimit(plan.limits.perAccount.eventAlarms)}</strong></div></div><ul>${TIER_FEATURES[tier].map((feature) => `<li>${esc(feature)}</li>`).join('')}</ul><div class="plan-price-list"><div class="plan-price-row plan-price-head"><span>Laufzeit</span><span>EUR</span><span>USD Store</span></div>${BILLING_PERIODS.map((period) => `<div class="plan-price-row ${period === 'monthly' ? 'featured' : ''}"><span>${BILLING_LABELS[period]}</span><strong>${formatPlanPrice(plan.eur[period], 'EUR')}</strong><strong>${formatPlanPrice(plan.usdStore[period], 'USD')}</strong></div>`).join('')}</div><button class="btn ${current ? 'ghost' : 'secondary'} full" type="button" data-action="select-tier" data-tier="${tier}">${current ? 'Aktueller Plan' : 'Plan aktivieren'}</button></article>`; }).join('')}</div></section>`;
   }
 
   function renderSettingsView() {
@@ -441,7 +470,7 @@
     if (!SOUNDS[sound]) return showToast('Alarmton ist ungültig.');
     if (!warnings.length) return showToast('Bitte mindestens eine Vorwarnung wählen.');
     const existing = id ? state.alarms.find((alarm) => alarm.id === id) : null;
-    const plan = TIER_PRICING[state.tier] || TIER_PRICING.free;
+    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
     const accountAlarmList = accountAlarms(account.id).filter((alarm) => alarm.id !== id);
     const bubbleAlarms = accountAlarmList.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gw').length;
     const eventAlarms = accountAlarmList.filter((alarm) => alarm.type === 'custom').length;
@@ -461,7 +490,7 @@
     const name = document.getElementById('accountName')?.value.trim() || '';
     const color = document.getElementById('accountColor')?.value || '#F4C969';
     if (!name || name.length > 80) return showToast('Bitte eine Bezeichnung mit 1 bis 80 Zeichen eingeben.');
-    const plan = TIER_PRICING[state.tier] || TIER_PRICING.free;
+    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
     if (!id && state.accounts.length >= plan.limits.accounts) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Kommando${plan.limits.accounts === 1 ? '' : 's'}. Öffne Tier-Pläne für mehr Spielraum.`);
     if (id) {
       const account = state.accounts.find((item) => item.id === id);
@@ -558,6 +587,7 @@
     if (action === 'view') { const nextView = button.dataset.view || 'today'; if (!VALID_VIEWS.has(nextView)) return; view = nextView; history.replaceState(null, '', `${location.pathname}${location.search}#${view}`); render(); return; }
     if (action === 'account-menu') { view = 'accounts'; render(); showToast('Kommandoverwaltung geöffnet.'); return; }
     if (action === 'select-tier') { const tier = button.dataset.tier; if (!TIER_PRICING[tier]) return; state.tier = tier; persist(); render(); showToast(`${TIER_PRICING[tier].name} ist jetzt aktiv.`); return; }
+    if (action === 'start-free-trial') { startFreeTrial(); return; }
     if (action === 'unlock-audio') { unlockAudio(); return; }
     if (action === 'new-alarm') { openEditor(null, button.dataset.template || 'custom'); return; }
     if (action === 'edit-alarm') { openEditor(button.dataset.id); return; }

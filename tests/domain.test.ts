@@ -11,6 +11,7 @@ import {
   upcomingMoments,
   validateDateTime,
 } from '../src/domain/alarm';
+import { FREE_TRIAL_DURATION_MS, canStartFreeTrial, effectiveTier, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -53,6 +54,19 @@ test('calculates the five-day GW cycle and both end moments', () => {
   const moments = upcomingMoments(alarm, new Date());
   assert.ok(moments.some((moment) => moment.kind === 'end-warning'));
   assert.ok(moments.some((moment) => moment.kind === 'end'));
+});
+
+test('supports one-time three-day free trial activation and expiry', () => {
+  const started = Date.parse('2030-01-01T12:00:00.000Z');
+  const trial = startFreeTrial(started);
+  assert.equal(FREE_TRIAL_DURATION_MS, 3 * 24 * 60 * 60 * 1000);
+  assert.equal(canStartFreeTrial({ startedAt: null, endsAt: null }), true);
+  assert.equal(canStartFreeTrial(trial), false);
+  assert.equal(isFreeTrialActive(trial, started), true);
+  assert.equal(isFreeTrialActive(trial, started + FREE_TRIAL_DURATION_MS - 1), true);
+  assert.equal(isFreeTrialActive(trial, started + FREE_TRIAL_DURATION_MS), false);
+  assert.equal(effectiveTier('free', trial, started + 1), 'godfather');
+  assert.equal(effectiveTier('free', trial, started + FREE_TRIAL_DURATION_MS), 'free');
 });
 
 test('does not resurface a completed one-off occurrence', () => {

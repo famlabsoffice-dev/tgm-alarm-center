@@ -187,6 +187,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .plan-price-head { padding-bottom: 3px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .plan-price-head span:not(:first-child) { text-align: right; }
 .plan-note { margin-top: 14px; color: var(--muted); font-size: 11px; }
+.trial-panel { margin: 16px 0; border-color: rgba(244, 201, 105, .34); }
+.trial-panel.active { border-color: rgba(112, 224, 159, .42); }
+.trial-panel.expired { border-color: rgba(255, 117, 117, .28); }
+.trial-panel .actions { margin-top: 12px; }
 
 .modal-wrap { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: rgba(0, 0, 0, .78); backdrop-filter: blur(8px); }
 .modal { width: min(720px, 100%); max-height: min(92vh, 850px); overflow: auto; padding: 22px; background: #151d25; border: 1px solid var(--line-strong); border-radius: var(--radius-lg); box-shadow: 0 34px 120px rgba(0, 0, 0, .62); animation: modal-in .22s var(--ease-out); }

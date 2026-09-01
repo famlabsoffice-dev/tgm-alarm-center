@@ -36,3 +36,7 @@ Tier-Plan-Preis- und Limit-Update: Die Live-Ansicht zeigt bei Free, Street Boss 
 
 Finaler Pricing-Live-Test: Die aktualisierte App-Shell Version 9 zeigt Free, Street Boss, Caporegime und Godfather mit den accountbezogenen Werten. Free: 1 Kommando, 1 Bubble-Alarm je Kommando, 1 Event-Alarm je Kommando. Street Boss: 2 Kommandos, jeweils 1 Bubble- und 1 Event-Alarm. Caporegime: 3 Kommandos, jeweils 1 Bubble- und 1 Event-Alarm. Godfather: unbegrenzt. Jede Karte enthält 1 Woche, 1 Monat, 6 Monate, 1 Jahr und Lifetime sowie EUR- und USD-Store-Preise.
 
+3-Tage-Free-Trial Live-Check: Nach Cache-Reset zeigt die Tier-Ansicht die neue Karte „Einmaliger 3-Tage-Free-Trial“, den lokalen Hinweis „Teste die vollständige lokale Alarmzentrale drei Tage lang kostenlos auf diesem Gerät.“ sowie den Button „3 Tage testen“. Die Preis- und Tier-Karten bleiben vollständig sichtbar.
+
+Trial-Aktivierung Live-Check: Der Klick auf „3 Tage testen“ aktiviert den Trial lokal. Die Ansicht zeigt danach „TRIAL · Godfather“, „3-Tage-Free-Trial aktiv“, „Alle lokalen Alarmfunktionen sind freigeschaltet“ sowie einen Countdown von „Noch 2 Tage · 23 Std.“. Die Godfather-Karte wird als „AKTUELL“ markiert; die Bestätigung „3-Tage-Free-Trial aktiviert. Alle lokalen Alarmfunktionen sind freigeschaltet.“ erscheint als Toast.
+
