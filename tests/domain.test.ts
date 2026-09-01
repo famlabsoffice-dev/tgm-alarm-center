@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   TEMPLATES,
+  TIER_LIMITS,
   buildAlarm,
   localDateTimeToUtc,
   localInputFromUtc,
@@ -11,7 +12,7 @@ import {
   upcomingMoments,
   validateDateTime,
 } from '../src/domain/alarm';
-import { FREE_TRIAL_DURATION_MS, canStartFreeTrial, effectiveTier, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
+import { FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -67,6 +68,33 @@ test('supports one-time three-day free trial activation and expiry', () => {
   assert.equal(isFreeTrialActive(trial, started + FREE_TRIAL_DURATION_MS), false);
   assert.equal(effectiveTier('free', trial, started + 1), 'godfather');
   assert.equal(effectiveTier('free', trial, started + FREE_TRIAL_DURATION_MS), 'free');
+});
+
+test('keeps the five-tier commercial ladder and all currency periods synchronized', () => {
+  assert.deepEqual(Object.keys(TIER_LIMITS), ['free', 'streetBoss', 'caporegime', 'underboss', 'godfather']);
+  assert.equal(TIER_LIMITS.underboss.accounts, 5);
+  assert.equal(TIER_LIMITS.underboss.alarms, 10);
+  assert.equal(TIER_LIMITS.underboss.events, 5);
+  assert.equal(TIER_PRICING.streetBoss.eur.monthly, 14.99);
+  assert.equal(TIER_PRICING.streetBoss.eur.lifetime, 199.99);
+  assert.equal(TIER_PRICING.caporegime.eur.monthly, 24.99);
+  assert.equal(TIER_PRICING.underboss.eur.monthly, 34.99);
+  assert.equal(TIER_PRICING.underboss.eur.lifetime, 449.99);
+  assert.equal(TIER_PRICING.godfather.eur.monthly, 69.99);
+  assert.equal(TIER_PRICING.godfather.eur.lifetime, 799.99);
+  assert.equal(TIER_PRICING.streetBoss.usdStore.monthly, 16.99);
+  assert.equal(TIER_PRICING.streetBoss.usdStore.lifetime, 214.99);
+  assert.equal(TIER_PRICING.caporegime.usdStore.monthly, 27.99);
+  assert.equal(TIER_PRICING.caporegime.usdStore.lifetime, 319.99);
+  assert.equal(TIER_PRICING.underboss.usdStore.monthly, 39.99);
+  assert.equal(TIER_PRICING.underboss.usdStore.lifetime, 479.99);
+  assert.equal(TIER_PRICING.godfather.usdStore.monthly, 79.99);
+  assert.equal(TIER_PRICING.godfather.usdStore.lifetime, 899.99);
+  for (const tier of Object.values(TIER_PRICING)) {
+    assert.deepEqual(Object.keys(tier.eur), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
+    assert.deepEqual(Object.keys(tier.usdStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
+    assert.deepEqual(Object.keys(tier.jpyStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
+  }
 });
 
 test('does not resurface a completed one-off occurrence', () => {
