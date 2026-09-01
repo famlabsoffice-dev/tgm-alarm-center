@@ -13,6 +13,13 @@ import {
 } from '../domain/alarm';
 
 export const STORAGE_KEY = 'tgm-alarm-center-v1';
+const TEMP_STORAGE_KEY = `${STORAGE_KEY}:pending`;
+const MAX_STORAGE_BYTES = 512 * 1024;
+const MAX_ACCOUNTS = 50;
+const MAX_ALARMS = 500;
+const MAX_WARNINGS = 16;
+const MAX_COMPLETED_OCCURRENCES = 500;
+const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 export const defaultPreferences: NotificationPreferences = {
   sound: 'pulse',
   warningSound: true,
@@ -65,7 +72,8 @@ function validWarnings(value: unknown, fallback: number[]): number[] {
   const warnings = value
     .filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= 7 * 24 * 60)
     .filter((item, index, all) => all.indexOf(item) === index)
-    .sort((a, b) => b - a);
+    .sort((a, b) => b - a)
+    .slice(0, MAX_WARNINGS);
   return warnings.length > 0 ? warnings : [...fallback];
 }
 
@@ -78,7 +86,7 @@ function defaultWarnings(type: AlarmType): number[] {
 function migrateCompleted(value: unknown, alarmId: string): Record<string, true> {
   const completed: Record<string, true> = {};
   if (Array.isArray(value)) {
-    for (const entry of value) {
+    for (const entry of value.slice(0, MAX_COMPLETED_OCCURRENCES)) {
       if (typeof entry === 'string') {
         const separator = entry.indexOf('|');
         const key = separator >= 0 ? `${alarmId}:${entry.slice(separator + 1)}` : `${alarmId}:${entry}`;
@@ -88,7 +96,7 @@ function migrateCompleted(value: unknown, alarmId: string): Record<string, true>
     return completed;
   }
   if (isRecord(value)) {
-    for (const [key, item] of Object.entries(value)) if (item === true) completed[key] = true;
+    for (const [key, item] of Object.entries(value).slice(0, MAX_COMPLETED_OCCURRENCES)) if (item === true && key.length <= 180) completed[key] = true;
   }
   return completed;
 }
@@ -140,17 +148,17 @@ function normalizeState(value: unknown): AppState {
   const base = emptyState();
   if (!isRecord(value)) return base;
   const accounts = Array.isArray(value.accounts)
-    ? value.accounts.filter(isRecord).map((account) => ({
+    ? value.accounts.slice(0, MAX_ACCOUNTS).filter(isRecord).map((account) => ({
       id: stringOr(account.id, ''),
       name: stringOr(account.name, ''),
-      color: stringOr(account.color, '#F0C76A'),
+      color: HEX_COLOR.test(stringOr(account.color, '')) ? stringOr(account.color, '') : '#F0C76A',
       createdAt: isoOr(account.createdAt, new Date().toISOString()),
     })).filter((account) => account.id && account.name && account.name.length <= 80)
     : [];
   const uniqueAccounts = accounts.filter((account, index, all) => all.findIndex((item) => item.id === account.id) === index);
   const accountIds = new Set(uniqueAccounts.map((account) => account.id));
   const alarms = Array.isArray(value.alarms)
-    ? value.alarms.map((alarm) => normalizeAlarm(alarm, accountIds)).filter((alarm): alarm is Alarm => alarm !== null)
+    ? value.alarms.slice(0, MAX_ALARMS).map((alarm) => normalizeAlarm(alarm, accountIds)).filter((alarm): alarm is Alarm => alarm !== null)
     : [];
   const legacyTier = value.tierId === 'street' ? 'streetBoss' : value.tierId === 'caporegime' ? 'caporegime' : value.tierId === 'godfather' ? 'godfather' : value.tier;
   const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'underboss' || legacyTier === 'boss' || legacyTier === 'godfather' ? legacyTier : 'free';
@@ -184,7 +192,7 @@ function normalizeState(value: unknown): AppState {
 
 export async function loadState(): Promise<AppState> {
   const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!raw) return emptyState();
+  if (!raw || raw.length > MAX_STORAGE_BYTES) return emptyState();
   try {
     return normalizeState(JSON.parse(raw) as unknown);
   } catch {
@@ -194,7 +202,11 @@ export async function loadState(): Promise<AppState> {
 
 export async function saveState(state: AppState): Promise<void> {
   const normalized = normalizeState(state);
-  await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+  const serialized = JSON.stringify(normalized);
+  if (serialized.length > MAX_STORAGE_BYTES) throw new Error('Der lokale Speicher ist voll. Bitte lösche alte Alarme oder exportiere ein Backup.');
+  await AsyncStorage.setItem(TEMP_STORAGE_KEY, serialized);
+  await AsyncStorage.setItem(STORAGE_KEY, serialized);
+  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
 }
 
 export async function resetState(): Promise<void> {
