@@ -54,7 +54,8 @@ mkdir -p "$INSTALL_ROOT" "$RELEASES_DIR"
 atomic_symlink() {
   local target="$1"
   local link="$2"
-  local temporary="${link}.tmp.$$"
+  local temporary
+  temporary="${link}.tmp.$$"
   rm -f "$temporary"
   ln -s "$target" "$temporary"
   mv -Tf "$temporary" "$link"
@@ -134,7 +135,7 @@ if ((${#releases[@]} > KEEP_RELEASES)); then
     [[ "$stale_release" != "$release_path" ]] || continue
     rm -rf -- "$stale_release"
   done
-done
+fi
 
 printf 'STAGING DEPLOY PASS\nrelease=%s\npath=%s\ncurrent=%s\ncommit=%s\nsha256=%s\n' \
   "$TAG" "$release_path" "$(readlink "$CURRENT_LINK")" "$manifest_commit" "$expected_digest"
