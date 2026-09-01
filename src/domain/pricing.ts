@@ -1,6 +1,7 @@
 import type { Tier } from './alarm';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
+export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
 
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
@@ -36,15 +37,21 @@ export interface TierPricing {
   };
   eur: Record<BillingPeriod, number>;
   usdDirect: Record<BillingPeriod, number>;
-  usdStore: Record<Exclude<BillingPeriod, 'monthly'> | 'monthly', number>;
+  usdStore: Record<BillingPeriod, number>;
+  jpyDirect: Record<BillingPeriod, number>;
+  jpyStore: Record<BillingPeriod, number>;
   annualSavingPercent: number | null;
 }
 
-/**
- * Central commercial configuration.
- * EUR target prices are authoritative; USD store prices are the recommended
- * conversion-optimized public list prices.
- */
+/** EUR is the authoritative commercial price list. USD/JPY use the latest
+ * configured ECB reference conversion and stable psychological local prices. */
+export const PRICE_REFERENCE = {
+  date: '2026-08-31',
+  eurUsd: 1.1596,
+  eurJpy: 185.22,
+  source: 'ECB euro reference exchange rates',
+} as const;
+
 export const TIER_PRICING: Record<Tier, TierPricing> = {
   free: {
     tier: 'free',
@@ -53,6 +60,8 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
     eur: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
     usdDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
     usdStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
+    jpyDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
+    jpyStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
     annualSavingPercent: null,
   },
   streetBoss: {
@@ -60,79 +69,74 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
     name: 'Street Boss',
     limits: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
     eur: { weekly: 4.99, monthly: 14.99, sixMonth: 79.99, yearly: 129.99, lifetime: 199.99 },
-    usdDirect: { weekly: 5.79, monthly: 17.39, sixMonth: 92.79, yearly: 150.79, lifetime: 231.99 },
-    usdStore: { weekly: 4.99, monthly: 16.99, sixMonth: 84.99, yearly: 139.99, lifetime: 214.99 },
-    annualSavingPercent: 25,
+    usdDirect: { weekly: 5.79, monthly: 17.37, sixMonth: 92.77, yearly: 150.77, lifetime: 231.91 },
+    usdStore: { weekly: 5.99, monthly: 16.99, sixMonth: 89.99, yearly: 149.99, lifetime: 214.99 },
+    jpyDirect: { weekly: 924, monthly: 2777, sixMonth: 14815, yearly: 24072, lifetime: 37042 },
+    jpyStore: { weekly: 1000, monthly: 2800, sixMonth: 14800, yearly: 24000, lifetime: 37000 },
+    annualSavingPercent: 17,
   },
   caporegime: {
     tier: 'caporegime',
     name: 'Caporegime',
     limits: { accounts: 3, alarms: 6, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
     eur: { weekly: 7.99, monthly: 24.99, sixMonth: 129.99, yearly: 199.99, lifetime: 299.99 },
-    usdDirect: { weekly: 9.27, monthly: 28.99, sixMonth: 150.79, yearly: 231.99, lifetime: 347.99 },
-    usdStore: { weekly: 7.99, monthly: 27.99, sixMonth: 139.99, yearly: 214.99, lifetime: 319.99 },
-    annualSavingPercent: 33,
+    usdDirect: { weekly: 9.26, monthly: 28.99, sixMonth: 150.72, yearly: 231.83, lifetime: 347.73 },
+    usdStore: { weekly: 9.99, monthly: 27.99, sixMonth: 149.99, yearly: 229.99, lifetime: 319.99 },
+    jpyDirect: { weekly: 1479, monthly: 4629, sixMonth: 24077, yearly: 37038, lifetime: 55557 },
+    jpyStore: { weekly: 1500, monthly: 4600, sixMonth: 24000, yearly: 37000, lifetime: 55000 },
+    annualSavingPercent: 23,
+  },
+  underboss: {
+    tier: 'underboss',
+    name: 'Underboss',
+    limits: { accounts: 5, alarms: 10, events: 5, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+    eur: { weekly: 9.99, monthly: 34.99, sixMonth: 179.99, yearly: 299.99, lifetime: 449.99 },
+    usdDirect: { weekly: 11.58, monthly: 40.56, sixMonth: 208.77, yearly: 347.79, lifetime: 521.87 },
+    usdStore: { weekly: 11.99, monthly: 39.99, sixMonth: 199.99, yearly: 349.99, lifetime: 479.99 },
+    jpyDirect: { weekly: 1850, monthly: 6483, sixMonth: 33332, yearly: 55552, lifetime: 83358 },
+    jpyStore: { weekly: 1900, monthly: 6500, sixMonth: 33000, yearly: 56000, lifetime: 83000 },
+    annualSavingPercent: 17,
   },
   godfather: {
     tier: 'godfather',
     name: 'Godfather',
-    limits: {
-      accounts: Number.POSITIVE_INFINITY,
-      alarms: Number.POSITIVE_INFINITY,
-      events: Number.POSITIVE_INFINITY,
-      perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY },
-    },
-    eur: { weekly: 12.99, monthly: 39.99, sixMonth: 214.99, yearly: 319.99, lifetime: 499.99 },
-    usdDirect: { weekly: 15.07, monthly: 46.39, sixMonth: 231.99, yearly: 347.99, lifetime: 579.99 },
-    usdStore: { weekly: 12.99, monthly: 44.99, sixMonth: 229.99, yearly: 349.99, lifetime: 529.99 },
-    annualSavingPercent: 33,
+    limits: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY } },
+    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 },
+    usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68, lifetime: 927.64 },
+    usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 },
+    jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 },
+    jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 },
+    annualSavingPercent: 17,
   },
 };
 
 export const STORE_PRICING_NOTES = {
-  usdStorePricing:
-    'Recommended conversion-optimized USD list prices for App Store / Google Play.',
-  streetBossMonthlyAlternativeUsd: 6.99,
-  streetBossMonthlyAlternativeReason:
-    'Optional alternative when the USD list price should stay closer to the EUR equivalent.',
-  eurAuthority:
-    'EUR target prices remain the central pricing configuration.',
+  eurAuthority: 'EUR target prices remain the authoritative commercial configuration.',
+  usdStorePricing: 'USD store prices preserve the user-specified monthly and lifetime list prices and use logical rounded local prices for other durations.',
+  jpyStorePricing: 'JPY store prices are rounded local list prices derived from EUR reference conversion, not live FX at checkout.',
+  noHiddenCosts: 'Pricing presentation is explicit; plan selection and real store billing remain separate concerns.',
+  referenceRateDate: PRICE_REFERENCE.date,
 } as const;
 
 export const VALUE_GUIDANCE = {
-  freeUser: {
-    purchasePriceUsd: 0,
-    estimatedPreventedIncidentValueUsd: { min: 5, max: 50 },
-    description:
-      'Zeitwert eines verhinderten verpassten Bubble/GW-Events kann deutlich über dem Kaufpreis liegen.',
-  },
-  streetBoss: {
-    accountCount: 2,
-    estimatedMonthlyValueUsd: { min: 8, max: 20 },
-    priceRangeUsd: { min: 4.99, max: 5.99 },
-  },
-  caporegime: {
-    accountCount: 3,
-    estimatedMonthlyValueUsd: { min: 15, max: 40 },
-  },
-  godfather: {
-    unlimited: true,
-    estimatedMonthlyValueUsd: { min: 25, max: 80 },
-    lifetimeSubjectivePaybackMonths: { min: 3, max: 9 },
-  },
+  freeUser: { purchasePriceUsd: 0, estimatedPreventedIncidentValueUsd: { min: 5, max: 50 }, description: 'Zeitwert eines verhinderten verpassten Bubble/GW-Events kann deutlich über dem Kaufpreis liegen.' },
+  streetBoss: { accountCount: 2, estimatedMonthlyValueUsd: { min: 8, max: 20 }, priceRangeUsd: { min: 4.99, max: 16.99 } },
+  caporegime: { accountCount: 3, estimatedMonthlyValueUsd: { min: 15, max: 40 }, priceRangeUsd: { min: 7.99, max: 27.99 } },
+  underboss: { accountCount: 5, estimatedMonthlyValueUsd: { min: 25, max: 60 }, priceRangeUsd: { min: 9.99, max: 39.99 } },
+  godfather: { unlimited: true, estimatedMonthlyValueUsd: { min: 50, max: 120 }, lifetimeSubjectivePaybackMonths: { min: 3, max: 12 } },
 } as const;
 
 export const BUSINESS_VALUE_GUIDANCE = {
   storeFeeAssumptionPercent: { min: 15, max: 30 },
   scenarios: {
-    small: { payingUsers: 1500, yearlyMixPercent: 60, netAnnualUsd: { min: 40_000, max: 70_000 } },
-    medium: { payingUsers: 4000, yearlyMixPercent: 65, netAnnualUsd: { min: 120_000, max: 200_000 } },
-    strong: { payingUsers: 10_000, yearlyMixPercent: 70, netAnnualUsd: { min: 300_000, max: 500_000 }, openEnded: true },
+    small: { payingUsers: 1500, yearlyMixPercent: 60, netAnnualUsd: { min: 60_000, max: 110_000 } },
+    medium: { payingUsers: 4000, yearlyMixPercent: 65, netAnnualUsd: { min: 180_000, max: 320_000 } },
+    strong: { payingUsers: 10_000, yearlyMixPercent: 70, netAnnualUsd: { min: 450_000, max: 800_000 }, openEnded: true },
   },
   ltvGuidanceUsd: {
-    monthly: { min: 15, max: 40 },
-    yearly: { min: 45, max: 120 },
-    lifetime: { min: 90, max: 230 },
+    monthly: { min: 20, max: 90 },
+    yearly: { min: 60, max: 220 },
+    lifetime: { min: 110, max: 420 },
   },
 } as const;
 
