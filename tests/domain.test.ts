@@ -15,6 +15,8 @@ import {
   validateDateTime,
 } from '../src/domain/alarm';
 import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFamilyAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
+import { getBillingCatalog } from '../src/billing/catalog';
+import { effectiveVerifiedTier, isEntitlementUsable } from '../src/billing/entitlements';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -70,6 +72,30 @@ test('supports one-time three-day free trial activation and expiry', () => {
   assert.equal(isFreeTrialActive(trial, started + FREE_TRIAL_DURATION_MS), false);
   assert.equal(effectiveTier('free', trial, started + 1), 'godfather');
   assert.equal(effectiveTier('free', trial, started + FREE_TRIAL_DURATION_MS), 'free');
+});
+
+test('keeps billing unavailable until every platform product is configured', () => {
+  const catalog = getBillingCatalog();
+  assert.equal(catalog.products.length, 25);
+  assert.equal(catalog.configured, false);
+  assert.equal(catalog.missingProductKeys.length, 25);
+});
+
+test('does not treat client-only or expired entitlements as premium', () => {
+  const base = {
+    status: 'active' as const,
+    tier: 'godfather' as const,
+    productKey: 'godfather.lifetime',
+    productId: 'real.product',
+    platform: 'ios' as const,
+    environment: 'production' as const,
+    expiresAt: null,
+    verifiedAt: '2030-01-01T00:00:00.000Z',
+  };
+  assert.equal(isEntitlementUsable({ ...base, source: 'none' }, Date.parse('2029-01-01')), false);
+  assert.equal(isEntitlementUsable({ ...base, source: 'server' }, Date.parse('2029-01-01')), true);
+  assert.equal(effectiveVerifiedTier({ ...base, source: 'server' }, Date.parse('2029-01-01')), 'godfather');
+  assert.equal(effectiveVerifiedTier({ ...base, source: 'server', expiresAt: '2028-01-01T00:00:00.000Z' }, Date.parse('2029-01-01')), 'free');
 });
 
 test('recognizes every Family account and grants the permanent Godfather tier', () => {
