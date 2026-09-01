@@ -9,6 +9,14 @@
   const FIVE_DAYS_MS = 5 * DAY_MS;
   const MAX_TITLE_LENGTH = 80;
   const MAX_WARNINGS = 7 * 24 * 60;
+  const MAX_WARNING_COUNT = 32;
+  const MAX_ACCOUNTS = 100;
+  const MAX_ALARMS = 1000;
+  const MAX_COMPLETED_OCCURRENCES = 4000;
+  const MAX_FIRED_MOMENTS = 8000;
+  const MAX_BACKUP_BYTES = 512 * 1024;
+  const MAX_CATCH_UP_MS = 24 * DAY_MS;
+  const PENDING_STORE = `${STORE}:pending`;
   const DEFAULT_PREFS = Object.freeze({
     warningSound: true,
     eventSound: true,
@@ -118,18 +126,22 @@
     return Number.isFinite(value) ? value : null;
   }
 
+  function validAccountColor(value) {
+    return typeof value === 'string' && /^#[0-9A-Fa-f]{6}$/.test(value);
+  }
+
   function normalize(raw) {
     const base = emptyState();
     if (!raw || typeof raw !== 'object') return base;
-    const accounts = Array.isArray(raw.accounts) ? raw.accounts.map((account) => ({
+    const accounts = Array.isArray(raw.accounts) ? raw.accounts.slice(0, MAX_ACCOUNTS).map((account) => ({
       id: typeof account?.id === 'string' ? account.id : '',
       name: typeof account?.name === 'string' ? account.name.trim().slice(0, 80) : '',
-      color: typeof account?.color === 'string' ? account.color : '#F4C969',
+      color: validAccountColor(account?.color) ? account.color : '#F4C969',
       createdAt: Number.isFinite(Date.parse(account?.createdAt)) ? new Date(account.createdAt).toISOString() : iso(now()),
     })).filter((account) => account.id && account.name) : [];
     const uniqueAccounts = accounts.filter((account, index, all) => all.findIndex((item) => item.id === account.id) === index);
     const accountIds = new Set(uniqueAccounts.map((account) => account.id));
-    const alarms = Array.isArray(raw.alarms) ? raw.alarms.map((alarm) => {
+    const alarms = Array.isArray(raw.alarms) ? raw.alarms.slice(0, MAX_ALARMS).map((alarm) => {
       if (!alarm || typeof alarm !== 'object') return null;
       const id = typeof alarm.id === 'string' && alarm.id ? alarm.id : uid();
       const accountId = typeof alarm.accountId === 'string' && accountIds.has(alarm.accountId) ? alarm.accountId : null;
@@ -140,8 +152,10 @@
       if (!accountId || !title || !Number.isFinite(eventAt)) return null;
       const eventDate = new Date(eventAt);
       const repeat = alarm.repeat === 'daily' || alarm.repeat === 'gw5d' ? alarm.repeat : 'once';
-      const warnings = Array.isArray(alarm.warnings) ? alarm.warnings.filter((item) => Number.isInteger(item) && item > 0 && item <= MAX_WARNINGS).filter((item, index, all) => all.indexOf(item) === index).sort((a, b) => b - a) : [15];
-      const completed = Array.isArray(alarm.completedOccurrences) ? alarm.completedOccurrences.reduce((result, key) => { if (typeof key === 'string') result[key] = true; return result; }, {}) : (alarm.completedOccurrences && typeof alarm.completedOccurrences === 'object' ? Object.fromEntries(Object.entries(alarm.completedOccurrences).filter(([, value]) => value === true)) : {});
+      const warnings = Array.isArray(alarm.warnings) ? alarm.warnings.filter((item) => Number.isInteger(item) && item > 0 && item <= MAX_WARNINGS).filter((item, index, all) => all.indexOf(item) === index).sort((a, b) => b - a).slice(0, MAX_WARNING_COUNT) : [15];
+      const completed = Array.isArray(alarm.completedOccurrences)
+        ? alarm.completedOccurrences.slice(-MAX_COMPLETED_OCCURRENCES).reduce((result, key) => { if (typeof key === 'string') result[key] = true; return result; }, {})
+        : (alarm.completedOccurrences && typeof alarm.completedOccurrences === 'object' ? Object.fromEntries(Object.entries(alarm.completedOccurrences).filter(([, value]) => value === true).slice(-MAX_COMPLETED_OCCURRENCES)) : {});
       return {
         id, accountId, title, type: repeat === 'gw5d' ? 'gw' : type,
         eventAt, date: formatDateInput(eventAt), time: formatTimeInput(eventAt), warnings: warnings.length ? warnings : [15],
@@ -162,7 +176,9 @@
       sound: SOUNDS[oldPreferences.sound] ? oldPreferences.sound : DEFAULT_PREFS.sound,
       audioEnabled: oldPreferences.audioEnabled === true,
     };
-    const firedMoments = raw.firedMoments && typeof raw.firedMoments === 'object' ? Object.fromEntries(Object.entries(raw.firedMoments).filter(([key, value]) => value === true && Number(key.split('|')[1]) > now() - 14 * DAY_MS)) : {};
+    const firedMoments = raw.firedMoments && typeof raw.firedMoments === 'object'
+      ? Object.fromEntries(Object.entries(raw.firedMoments).filter(([key, value]) => value === true && Number(key.split('|')[1]) > now() - 14 * DAY_MS).slice(-MAX_FIRED_MOMENTS))
+      : {};
     const trialStartedAt = typeof raw.freeTrialStartedAt === 'string' && Number.isFinite(Date.parse(raw.freeTrialStartedAt)) ? new Date(raw.freeTrialStartedAt).toISOString() : null;
     const trialEndsAt = typeof raw.freeTrialEndsAt === 'string' && Number.isFinite(Date.parse(raw.freeTrialEndsAt)) ? new Date(raw.freeTrialEndsAt).toISOString() : null;
     const validTrial = trialStartedAt && trialEndsAt && Date.parse(trialEndsAt) > Date.parse(trialStartedAt);
@@ -183,12 +199,25 @@
   }
 
   function loadState() {
-    try { return normalize(JSON.parse(localStorage.getItem(STORE) || 'null')); } catch { return emptyState(); }
+    try {
+      const serialized = localStorage.getItem(STORE) || localStorage.getItem(PENDING_STORE) || 'null';
+      return normalize(JSON.parse(serialized));
+    } catch { return emptyState(); }
   }
 
   function persist() {
     state.updatedAt = iso(now());
-    localStorage.setItem(STORE, JSON.stringify(state));
+    try {
+      const serialized = JSON.stringify(state);
+      if (serialized.length > MAX_BACKUP_BYTES) throw new Error('Lokaler Speicher ist voll.');
+      localStorage.setItem(PENDING_STORE, serialized);
+      localStorage.setItem(STORE, serialized);
+      localStorage.removeItem(PENDING_STORE);
+      return true;
+    } catch {
+      showToast('Lokaler Speicher ist voll. Exportiere zuerst ein Backup.');
+      return false;
+    }
   }
 
   function startFreeTrial() {
@@ -348,7 +377,7 @@
       moments.push({ alarmId: alarm.id, eventAt, at: endAt - 60 * 60 * 1000, kind: 'end-warning', endAt });
       moments.push({ alarmId: alarm.id, eventAt, at: endAt, kind: 'end', endAt });
     }
-    return moments.filter((moment) => moment.at <= reference && reference - moment.at <= 120000);
+    return moments.filter((moment) => moment.at <= reference && reference - moment.at <= MAX_CATCH_UP_MS);
   }
 
   function fireDueMoments() {
@@ -553,6 +582,8 @@
   function validateBackup(value) {
     if (!value || typeof value !== 'object' || value.format !== BACKUP_FORMAT || value.version !== BACKUP_VERSION || value.schemaVersion !== SCHEMA_VERSION || !value.data || typeof value.data !== 'object') throw new Error('Backupformat oder Version ungültig.');
     const candidate = normalize(value.data);
+    if (Array.isArray(value.data.accounts) && value.data.accounts.length > MAX_ACCOUNTS) throw new Error('Zu viele Accounts im Backup.');
+    if (Array.isArray(value.data.alarms) && value.data.alarms.length > MAX_ALARMS) throw new Error('Zu viele Alarme im Backup.');
     if (!candidate.accounts.length && value.data.accounts?.length) throw new Error('Accountdaten im Backup sind ungültig.');
     if (Array.isArray(value.data.alarms) && candidate.alarms.length !== value.data.alarms.length) throw new Error('Alarmdaten im Backup sind ungültig.');
     return candidate;
@@ -573,8 +604,11 @@
 
   async function importBackup(file) {
     if (!file) return;
+    if (file.size > MAX_BACKUP_BYTES) return showToast('Backup ist zu groß. Maximal 512 KB sind erlaubt.');
     try {
-      const candidate = validateBackup(JSON.parse(await file.text()));
+      const serialized = await file.text();
+      if (serialized.length > MAX_BACKUP_BYTES) return showToast('Backup ist zu groß. Maximal 512 KB sind erlaubt.');
+      const candidate = validateBackup(JSON.parse(serialized));
       state = candidate;
       persist();
       render();

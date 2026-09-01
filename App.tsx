@@ -130,6 +130,7 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [storageError, setStorageError] = useState<string | null>(null);
   const initialized = useRef(false);
+  const notificationGeneration = useRef(0);
 
   useEffect(() => {
     let mounted = true;
@@ -161,15 +162,19 @@ export default function App() {
 
   useEffect(() => {
     if (!ready || !readiness.supported || !readiness.permission) return;
+    const generation = notificationGeneration.current + 1;
+    notificationGeneration.current = generation;
     let cancelled = false;
-    (async () => {
+    const reconcile = async (): Promise<void> => {
+      if (cancelled || generation !== notificationGeneration.current) return;
       await cancelAllScheduled();
-      if (cancelled) return;
+      if (cancelled || generation !== notificationGeneration.current) return;
       for (const alarm of state.alarms.filter((item) => item.active)) {
+        if (cancelled || generation !== notificationGeneration.current) return;
         await scheduleAlarm(alarm, state.notificationPreferences);
-        if (cancelled) return;
       }
-    })().catch(() => setStorageError('Benachrichtigungen konnten nicht neu geplant werden.'));
+    };
+    reconcile().catch(() => setStorageError('Benachrichtigungen konnten nicht neu geplant werden.'));
     return () => { cancelled = true; };
   }, [state.alarms, state.notificationPreferences, readiness.permission, readiness.supported, ready]);
 
@@ -406,7 +411,7 @@ export default function App() {
             <View style={styles.statsRow}>
               <View style={styles.statCard}><Text style={styles.eyebrow}>ALARME</Text><Text style={styles.statValue}>{alarmLimitText}</Text><Text style={styles.muted}>im aktuellen Plan</Text></View>
               <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE ALARM</Text><Text style={styles.statValue}>{state.alarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>Massacre Alarm-Zyklen aktiv</Text></View>
-              <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Lokaler Gerätetest'}</Text></View>
+              <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Exakte Alarmberechtigung nicht verifiziert'}</Text></View>
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
             <View style={styles.templateGrid}>

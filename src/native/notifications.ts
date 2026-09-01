@@ -31,7 +31,7 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
   if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) {
     permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
   }
-  return { supported: true, permission, exactAlarm: Platform.OS === 'android', channel };
+  return { supported: true, permission, exactAlarm: false, channel };
 }
 
 export async function cancelAllScheduled(): Promise<void> {
