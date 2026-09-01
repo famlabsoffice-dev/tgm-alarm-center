@@ -54,11 +54,12 @@
   let toastTimer = null;
   let alertTimer = null;
   let navScrollLeft = 0;
+  let planFocus = null;
 
   const now = () => Date.now();
   const iso = (ms) => new Date(ms).toISOString();
   const uid = () => (globalThis.crypto && typeof globalThis.crypto.randomUUID === 'function') ? globalThis.crypto.randomUUID() : `tgm-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+  const esc = (value) => String(value ?? '').replace(/[&<>\"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', "'": '&#39;' }[character]));
   const money = (value) => new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(value);
   const formatDateTime = (ms) => new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms));
   const formatTime = (ms) => new Intl.DateTimeFormat('de-DE', { hour: '2-digit', minute: '2-digit' }).format(new Date(ms));
@@ -83,7 +84,6 @@
   const freeTrialAvailable = () => !state?.freeTrialStartedAt && !state?.freeTrialEndsAt;
   const effectiveTierKey = () => freeTrialActive() ? FREE_TRIAL_TIER : (state.tier || 'free');
   const trialCountdownLabel = () => freeTrialActive() ? `Noch ${countdown(Date.parse(state.freeTrialEndsAt))}` : '';
-
 
   function emptyState() {
     return {
@@ -138,7 +138,6 @@
       let eventAt = Number.isFinite(alarm.eventAt) ? alarm.eventAt : Date.parse(alarm.eventAtUtc);
       if (!Number.isFinite(eventAt) && validDateTime(alarm.date, alarm.time)) eventAt = localDateTime(alarm.date, alarm.time);
       if (!accountId || !title || !Number.isFinite(eventAt)) return null;
-      const eventDate = new Date(eventAt);
       const repeat = alarm.repeat === 'daily' || alarm.repeat === 'gw5d' ? alarm.repeat : 'once';
       const warnings = Array.isArray(alarm.warnings) ? alarm.warnings.filter((item) => Number.isInteger(item) && item > 0 && item <= MAX_WARNINGS).filter((item, index, all) => all.indexOf(item) === index).sort((a, b) => b - a) : [15];
       const completed = Array.isArray(alarm.completedOccurrences) ? alarm.completedOccurrences.reduce((result, key) => { if (typeof key === 'string') result[key] = true; return result; }, {}) : (alarm.completedOccurrences && typeof alarm.completedOccurrences === 'object' ? Object.fromEntries(Object.entries(alarm.completedOccurrences).filter(([, value]) => value === true)) : {});
@@ -203,9 +202,54 @@
 
   function activeAccount() { return state.accounts.find((account) => account.id === state.activeAccountId) || null; }
   function accountAlarms(accountId) { return state.alarms.filter((alarm) => alarm.accountId === accountId); }
+  function nextUpgradeTier() {
+    const index = TIER_ORDER.indexOf(effectiveTierKey());
+    return index >= 0 && index < TIER_ORDER.length - 1 ? TIER_ORDER[index + 1] : null;
+  }
+  function openPlanGate(message, targetTier = nextUpgradeTier()) {
+    planFocus = targetTier;
+    view = 'plans';
+    history.replaceState(null, '', `${location.pathname}${location.search}#plans`);
+    render();
+    if (targetTier) {
+      const target = app.querySelector(`[data-plan="${targetTier}"]`);
+      target?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+    showToast(message);
+  }
+  function enforceCapacity({ accountId, type, excludeId = null }) {
+    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
+    const sameAccount = accountAlarms(accountId).filter((alarm) => alarm.id !== excludeId);
+    const bubbleAlarms = sameAccount.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gw').length;
+    const eventAlarms = sameAccount.filter((alarm) => alarm.type === 'custom').length;
+    const totalAlarms = state.alarms.filter((alarm) => alarm.id !== excludeId).length;
+    const totalEvents = state.alarms.filter((alarm) => alarm.id !== excludeId && alarm.type === 'custom').length;
+    if ((type === 'bubble' || type === 'gw') && bubbleAlarms >= plan.limits.perAccount.bubbleAlarms) {
+      openPlanGate(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)} Bubble-Alarm${plan.limits.perAccount.bubbleAlarms === 1 ? '' : 'e'}.`);
+      return false;
+    }
+    if (type === 'custom' && eventAlarms >= plan.limits.perAccount.eventAlarms) {
+      openPlanGate(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.eventAlarms)} Event-Alarm${plan.limits.perAccount.eventAlarms === 1 ? '' : 'e'}.`);
+      return false;
+    }
+    if (Number.isFinite(plan.limits.alarms) && totalAlarms >= plan.limits.alarms) {
+      openPlanGate(`${plan.name} hat das Alarm-Limit erreicht. Wähle einen höheren Plan für mehr Spielraum.`);
+      return false;
+    }
+    if (type === 'custom' && Number.isFinite(plan.limits.events) && totalEvents >= plan.limits.events) {
+      openPlanGate(`${plan.name} hat das Event-Limit erreicht. Wähle einen höheren Plan für mehr Spielraum.`);
+      return false;
+    }
+    return true;
+  }
   function ensureAccount() {
     const current = activeAccount();
     if (current) return current;
+    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
+    if (Number.isFinite(plan.limits.accounts) && state.accounts.length >= plan.limits.accounts) {
+      openPlanGate(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Account${plan.limits.accounts === 1 ? '' : 's'}. Öffne Tier-Pläne für mehr Spielraum.`);
+      return null;
+    }
     const account = { id: uid(), name: 'Mein TGM-Account', color: '#F4C969', createdAt: iso(now()) };
     state.accounts.push(account);
     state.activeAccountId = account.id;
@@ -230,7 +274,8 @@
       return null;
     }
     const base = new Date(alarm.eventAt);
-    let candidate = new Date(new Date(reference).getFullYear(), new Date(reference).getMonth(), new Date(reference).getDate(), base.getHours(), base.getMinutes(), 0, 0).getTime();
+    const referenceDate = new Date(reference);
+    let candidate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), referenceDate.getDate(), base.getHours(), base.getMinutes(), 0, 0).getTime();
     if (candidate <= reference) candidate += DAY_MS;
     for (let attempt = 0; attempt < 370; attempt += 1) {
       if (!isCompleted(alarm, candidate)) return candidate;
@@ -445,7 +490,7 @@
   function renderPlansView() {
     const currentTier = effectiveTierKey();
     const trialPanel = freeTrialActive() ? `<div class="note trial-panel active"><strong>3-Tage-Free-Trial aktiv</strong><br>Alle lokalen Alarmfunktionen sind freigeschaltet. ${esc(trialCountdownLabel())}</div>` : freeTrialAvailable() ? `<div class="note trial-panel"><strong>Einmaliger 3-Tage-Free-Trial</strong><br>Teste die vollständige lokale Alarmzentrale drei Tage lang kostenlos auf diesem Gerät.<div class="actions"><button class="btn primary" type="button" data-action="start-free-trial">3 Tage testen</button></div></div>` : `<div class="note trial-panel expired"><strong>3-Tage-Free-Trial bereits genutzt</strong><br>Der Trial kann auf diesem Gerät nur einmal aktiviert werden.</div>`;
-    return `<section><div class="section-head"><div><div class="eyebrow">PREMIUM-STRUKTUR</div><h2>Tier-Pläne</h2><p>Mehr Accounts, mehr Gaming-Alarme, mehr Spielraum.</p></div><span class="badge gold">${freeTrialActive() ? 'TRIAL · ' : 'AKTIV: '}${esc(TIER_PRICING[currentTier].name)}</span></div><div class="note plan-intro"><strong>Lokales Tier-Profil</strong><br>Wähle das Profil, das zu deiner TGM-Spielweise passt. Limits und Status werden direkt auf diesem Gerät gespeichert.</div>${trialPanel}<div class="plan-grid">${TIER_ORDER.map((tier) => { const plan = TIER_PRICING[tier]; const current = tier === currentTier; return `<article class="card plan ${current ? 'current' : ''}"><div class="plan-badge">${current ? 'AKTUELL' : tier === 'caporegime' ? 'BELIEBT' : tier === 'godfather' ? 'MAXIMUM' : 'START'}</div><h3>${esc(plan.name)}</h3><div class="plan-price">${formatPlanPrice(plan.eur.monthly, 'EUR')} <span>/ Monat</span></div>${plan.annualSavingPercent ? `<div class="plan-note">${plan.annualSavingPercent}% Ersparnis im Jahresplan gegenüber 12 Monatszahlungen</div>` : '<div class="plan-note">Für den Einstieg in deine lokale Alarmzentrale</div>'}<div class="plan-limit-grid"><div class="plan-limit"><span>Accounts</span><strong>${formatPlanLimit(plan.limits.accounts)}</strong></div><div class="plan-limit"><span>Bubble-Alarme je Account</span><strong>${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)}</strong></div><div class="plan-limit"><span>Event-Alarme je Account</span><strong>${formatPlanLimit(plan.limits.perAccount.eventAlarms)}</strong></div></div><ul>${TIER_FEATURES[tier].map((feature) => `<li>${esc(feature)}</li>`).join('')}</ul><div class="plan-price-list"><div class="plan-price-row plan-price-head"><span>Laufzeit</span><span>EUR</span><span>USD Store</span></div>${BILLING_PERIODS.map((period) => `<div class="plan-price-row ${period === 'monthly' ? 'featured' : ''}"><span>${BILLING_LABELS[period]}</span><strong>${formatPlanPrice(plan.eur[period], 'EUR')}</strong><strong>${formatPlanPrice(plan.usdStore[period], 'USD')}</strong></div>`).join('')}</div><button class="btn ${current ? 'ghost' : 'secondary'} full" type="button" data-action="select-tier" data-tier="${tier}">${current ? 'Aktueller Plan' : 'Plan aktivieren'}</button></article>`; }).join('')}</div></section>`;
+    return `<section><div class="section-head"><div><div class="eyebrow">PREMIUM-STRUKTUR</div><h2>Tier-Pläne</h2><p>Mehr Accounts, mehr Gaming-Alarme, mehr Spielraum.</p></div><span class="badge gold">${freeTrialActive() ? 'TRIAL · ' : 'AKTIV: '}${esc(TIER_PRICING[currentTier].name)}</span></div><div class="note plan-intro"><strong>Lokales Tier-Profil</strong><br>Wähle das Profil, das zu deiner TGM-Spielweise passt. Limits und Status werden direkt auf diesem Gerät gespeichert.</div>${trialPanel}<div class="plan-grid">${TIER_ORDER.map((tier) => { const plan = TIER_PRICING[tier]; const current = tier === currentTier; const focused = tier === planFocus; return `<article class="card plan ${current ? 'current' : ''}" data-plan="${tier}"><div class="plan-badge">${current ? 'AKTUELL' : focused ? 'EMPFOHLEN' : tier === 'caporegime' ? 'BELIEBT' : tier === 'godfather' ? 'MAXIMUM' : 'START'}</div><h3>${esc(plan.name)}</h3><div class="plan-price">${formatPlanPrice(plan.eur.monthly, 'EUR')} <span>/ Monat</span></div>${plan.annualSavingPercent ? `<div class="plan-note">${plan.annualSavingPercent}% Ersparnis im Jahresplan gegenüber 12 Monatszahlungen</div>` : '<div class="plan-note">Für den Einstieg in deine lokale Alarmzentrale</div>'}<div class="plan-limit-grid"><div class="plan-limit"><span>Accounts</span><strong>${formatPlanLimit(plan.limits.accounts)}</strong></div><div class="plan-limit"><span>Bubble-Alarme je Account</span><strong>${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)}</strong></div><div class="plan-limit"><span>Event-Alarme je Account</span><strong>${formatPlanLimit(plan.limits.perAccount.eventAlarms)}</strong></div></div><ul>${TIER_FEATURES[tier].map((feature) => `<li>${esc(feature)}</li>`).join('')}</ul><div class="plan-price-list"><div class="plan-price-row plan-price-head"><span>Laufzeit</span><span>EUR</span><span>USD Store</span></div>${BILLING_PERIODS.map((period) => `<div class="plan-price-row ${period === 'monthly' ? 'featured' : ''}"><span>${BILLING_LABELS[period]}</span><strong>${formatPlanPrice(plan.eur[period], 'EUR')}</strong><strong>${formatPlanPrice(plan.usdStore[period], 'USD')}</strong></div>`).join('')}</div><button class="btn ${current ? 'ghost' : focused ? 'primary' : 'secondary'} full" type="button" data-action="select-tier" data-tier="${tier}">${current ? 'Aktueller Plan' : 'Plan aktivieren'}</button></article>`; }).join('')}</div></section>`;
   }
 
   function renderSettingsView() {
@@ -454,6 +499,7 @@
 
   function saveAlarm(id) {
     const account = ensureAccount();
+    if (!account) return;
     const title = document.getElementById('eTitle')?.value.trim() || '';
     const type = document.getElementById('eType')?.value;
     const date = document.getElementById('eDate')?.value || '';
@@ -471,12 +517,7 @@
     if (!SOUNDS[sound]) return showToast('Alarmton ist ungültig.');
     if (!warnings.length) return showToast('Bitte mindestens eine Vorwarnung wählen.');
     const existing = id ? state.alarms.find((alarm) => alarm.id === id) : null;
-    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
-    const accountAlarmList = accountAlarms(account.id).filter((alarm) => alarm.id !== id);
-    const bubbleAlarms = accountAlarmList.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gw').length;
-    const eventAlarms = accountAlarmList.filter((alarm) => alarm.type === 'custom').length;
-    if ((type === 'bubble' || type === 'gw') && bubbleAlarms >= plan.limits.perAccount.bubbleAlarms) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)} Bubble-Alarm${plan.limits.perAccount.bubbleAlarms === 1 ? '' : 'e'}.`);
-    if (type === 'custom' && eventAlarms >= plan.limits.perAccount.eventAlarms) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.eventAlarms)} Event-Alarm${plan.limits.perAccount.eventAlarms === 1 ? '' : 'e'}.`);
+    if (!enforceCapacity({ accountId: account.id, type, excludeId: existing?.id || null })) return;
     const record = {
       id: existing?.id || uid(), accountId: account.id, title, type, eventAt, date, time, repeat, sound, warnings,
       protected: document.getElementById('eProtected')?.checked === true, active: document.getElementById('eActive')?.checked !== false,
@@ -484,6 +525,7 @@
       createdAt: existing?.createdAt || iso(now()), updatedAt: iso(now()),
     };
     if (existing) state.alarms = state.alarms.map((alarm) => alarm.id === id ? record : alarm); else state.alarms.push(record);
+    planFocus = null;
     persist(); closeModal(); render(); showToast(existing ? 'Alarm gespeichert.' : 'Gaming-Alarm angelegt.');
   }
 
@@ -492,7 +534,7 @@
     const color = document.getElementById('accountColor')?.value || '#F4C969';
     if (!name || name.length > 80) return showToast('Bitte eine Bezeichnung mit 1 bis 80 Zeichen eingeben.');
     const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
-    if (!id && state.accounts.length >= plan.limits.accounts) return showToast(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Account${plan.limits.accounts === 1 ? '' : 's'}. Öffne Tier-Pläne für mehr Spielraum.`);
+    if (!id && state.accounts.length >= plan.limits.accounts) return openPlanGate(`${plan.name} erlaubt ${formatPlanLimit(plan.limits.accounts)} Account${plan.limits.accounts === 1 ? '' : 's'}.`, nextUpgradeTier());
     if (id) {
       const account = state.accounts.find((item) => item.id === id);
       if (account) { account.name = name; account.color = color; }
@@ -524,8 +566,10 @@
   function duplicateAlarm(id) {
     const source = state.alarms.find((item) => item.id === id);
     if (!source) return;
+    if (!enforceCapacity({ accountId: source.accountId, type: source.type })) return;
     const copy = { ...source, id: uid(), title: `${source.title} Kopie`.slice(0, MAX_TITLE_LENGTH), active: false, createdAt: iso(now()), updatedAt: iso(now()), completedOccurrences: {} };
     state.alarms.push(copy);
+    planFocus = null;
     persist(); render(); showToast('Alarm dupliziert und pausiert gespeichert.');
   }
 
@@ -574,6 +618,7 @@
   function resetApp() {
     if (!window.confirm('Alle lokalen Accounts und Gaming-Alarme löschen?')) return;
     state = emptyState();
+    planFocus = null;
     persist();
     render();
     showToast('Lokale Daten gelöscht.');
@@ -585,9 +630,9 @@
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
-    if (action === 'view') { const nextView = button.dataset.view || 'today'; if (!VALID_VIEWS.has(nextView)) return; view = nextView; history.replaceState(null, '', `${location.pathname}${location.search}#${view}`); render(); return; }
-    if (action === 'account-menu') { view = 'accounts'; render(); showToast('Accountverwaltung geöffnet.'); return; }
-    if (action === 'select-tier') { const tier = button.dataset.tier; if (!TIER_PRICING[tier]) return; state.tier = tier; persist(); render(); showToast(`${TIER_PRICING[tier].name} ist jetzt aktiv.`); return; }
+    if (action === 'view') { const nextView = button.dataset.view || 'today'; if (!VALID_VIEWS.has(nextView)) return; view = nextView; planFocus = null; history.replaceState(null, '', `${location.pathname}${location.search}#${view}`); render(); return; }
+    if (action === 'account-menu') { view = 'accounts'; planFocus = null; history.replaceState(null, '', `${location.pathname}${location.search}#accounts`); render(); showToast('Accountverwaltung geöffnet.'); return; }
+    if (action === 'select-tier') { const tier = button.dataset.tier; if (!TIER_PRICING[tier]) return; state.tier = tier; planFocus = null; persist(); render(); showToast(`${TIER_PRICING[tier].name} ist jetzt aktiv.`); return; }
     if (action === 'start-free-trial') { startFreeTrial(); return; }
     if (action === 'unlock-audio') { unlockAudio(); return; }
     if (action === 'new-alarm') { openEditor(null, button.dataset.template || 'custom'); return; }
@@ -621,7 +666,7 @@
   document.addEventListener('click', handleClick);
   document.addEventListener('change', handleChange);
   document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && modalMode) closeModal(); if (event.key === 'Escape' && overlayRoot.classList.contains('show')) dismissAlert(); });
-  window.addEventListener('hashchange', () => { const nextView = viewFromLocation(); if (nextView !== view) { view = nextView; render(); } });
+  window.addEventListener('hashchange', () => { const nextView = viewFromLocation(); if (nextView !== view) { view = nextView; planFocus = null; render(); } });
   window.addEventListener('focus', fireDueMoments);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) fireDueMoments(); });
   state = loadState();
