@@ -34,9 +34,13 @@ App Store Connect benötigt Privacy Nutrition Labels, Datenschutz-URL, Support-U
 
 ## Monetarisierung
 
-Die vorhandene Tarifmatrix ist ein lokales Produktmodell und kein Store-Entitlement. Vor kostenpflichtiger Veröffentlichung muss für jeden bezahlten Tarif eine echte Google-Play-Billing- beziehungsweise Apple-StoreKit-Produkt-ID eingerichtet werden. Erforderlich sind Kauf, Pending-Status, Wiederherstellung, Ablauf, Kündigung, Refund, Revocation, Sandbox-/Lizenztest und eine vertrauenswürdige Entitlement-Prüfung.
+Die Tarifmatrix ist jetzt mit 25 kanonischen Store-Produkt-IDs verbunden: 20 Abonnements für Woche, Monat, sechs Monate und Jahr sowie fünf Lifetime-Produkte. `src/billing/BillingPanel.tsx` ruft beide Store-Kataloge ab, startet plattformspezifische Käufe, behandelt Pending-Zustände, verifiziert neue und wiederhergestellte Transaktionen über IAPKit und schließt die Transaktion erst nach erfolgreicher Verifikation ab. Der bestätigte höchste Tarif wird anschließend in den App-State übernommen.
 
-Bis diese Integration abgeschlossen ist, dürfen kostenpflichtige Tarife nicht als tatsächlich käufliche oder dauerhaft geschützte Store-Funktionen beworben werden. Ein kostenloser Store-Launch ist technisch und rechtlich der sichere Zwischenstand.
+Für den produktiven Betrieb muss in der Expo-Build-Konfiguration ein gültiger IAPKit-Verifikationsschlüssel über `extra.iapkitApiKey` bereitgestellt werden. Dieser Schlüssel darf nicht als fest eingebrannter Dummywert im Repository liegen. Ohne gültigen Schlüssel verweigert die App absichtlich den Entitlement-Grant, damit keine ungeprüften Käufe freigeschaltet werden. In Google Play und App Store Connect müssen die 25 IDs exakt mit dem Katalog übereinstimmen; Abonnementprodukte benötigen zusätzlich die jeweiligen Base Plans beziehungsweise Subscription Groups.
+
+Erforderlich bleiben Kauf, Pending-Status, Wiederherstellung, Ablauf, Kündigung, Refund, Revocation, Sandbox-/Lizenztest und eine vertrauenswürdige Entitlement-Prüfung. Der Client implementiert den Store-Lifecycle und ruft die Verifikation auf; die eigentliche Produkt- und Kontokonfiguration erfolgt in den beiden Stores.
+
+Die technische Integration ist abgeschlossen. Vor der Veröffentlichung müssen noch die echten Produktdatensätze in Google Play und App Store Connect angelegt, der IAPKit-Schlüssel als Build-Konfiguration gesetzt und die Sandbox-/Lizenztests auf physischen Geräten bestanden werden.
 
 ## Rechtliche Prüfung
 

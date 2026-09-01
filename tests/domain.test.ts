@@ -15,6 +15,7 @@ import {
   validateDateTime,
 } from '../src/domain/alarm';
 import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFamilyAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
+import { highestTier, productForId, STORE_LIFETIME_IDS, STORE_PRODUCT_IDS, STORE_SUBSCRIPTION_IDS } from '../src/billing/catalog';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -134,6 +135,16 @@ test('keeps the six-tier commercial ladder and all currency periods synchronized
     assert.deepEqual(Object.keys(tier.usdStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
     assert.deepEqual(Object.keys(tier.jpyStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
   }
+});
+
+test('maps every paid store product to a valid tier and period', () => {
+  assert.equal(STORE_PRODUCT_IDS.length, 25);
+  assert.equal(STORE_SUBSCRIPTION_IDS.length, 20);
+  assert.equal(STORE_LIFETIME_IDS.length, 5);
+  assert.equal(productForId('com.tgm.alarmcenter.underboss_yearly')?.tier, 'underboss');
+  assert.equal(productForId('com.tgm.alarmcenter.godfather_lifetime')?.kind, 'lifetime');
+  assert.equal(highestTier(['com.tgm.alarmcenter.street_boss_monthly', 'com.tgm.alarmcenter.boss_yearly']), 'boss');
+  assert.equal(highestTier(['unrecognized.product']), 'free');
 });
 
 test('does not resurface a completed one-off occurrence', () => {

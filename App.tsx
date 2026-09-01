@@ -20,6 +20,7 @@ import {
   Alarm,
   AlarmTemplate,
   AppState,
+  Tier,
   TEMPLATES,
   TIER_LIMITS,
   alarmTypeLabel,
@@ -34,6 +35,7 @@ import {
   validateDateTime,
 } from './src/domain/alarm';
 import { effectiveTierForAccount } from './src/domain/pricing';
+import { BillingPanel } from './src/billing/BillingPanel';
 import { exportBackup, restoreBackup } from './src/backup/backup';
 import { emptyState, loadState, saveState } from './src/storage/store';
 import {
@@ -205,6 +207,9 @@ export default function App() {
     .sort((a, b) => a.event.getTime() - b.event.getTime())[0] ?? null, [state.alarms, now]);
 
   const activeAccount = state.accounts.find((account) => account.id === state.activeAccountId) ?? null;
+  const confirmStoreTier = useCallback((tier: Tier): void => {
+    setState((current) => current.tier === tier ? current : { ...current, tier });
+  }, []);
   const effectiveAppTier = effectiveTierForAccount(state.tier, activeAccount?.name ?? '');
   const tierLimit = TIER_LIMITS[effectiveAppTier].alarms;
   const alarmLimitText = Number.isFinite(tierLimit) ? `${state.alarms.length}/${tierLimit}` : `${state.alarms.length}`;
@@ -431,6 +436,7 @@ export default function App() {
               <SettingRow label="Vibration" value={state.notificationPreferences.vibration} onValueChange={(value) => updatePreference('vibration', value)} />
               <SettingRow label="Zeitkritische Hinweise" value={state.notificationPreferences.criticalAlerts} onValueChange={(value) => updatePreference('criticalAlerts', value)} />
             </View>
+            {Platform.OS !== 'web' ? <BillingPanel currentTier={state.tier} onTierConfirmed={confirmStoreTier} /> : null}
             <View style={styles.actionRowFooter}>
               <Pressable accessibilityRole="button" onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>

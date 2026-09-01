@@ -14,6 +14,7 @@ requireValue(expo?.android?.package === 'com.tgm.alarmcenter', 'Android applicat
 requireValue(expo?.ios?.bundleIdentifier === 'com.tgm.alarmcenter', 'iOS bundle identifier mismatch.');
 requireValue(expo?.android?.permissions?.includes('POST_NOTIFICATIONS'), 'POST_NOTIFICATIONS permission is missing.');
 requireValue(expo?.android?.permissions?.includes('SCHEDULE_EXACT_ALARM'), 'SCHEDULE_EXACT_ALARM permission is missing.');
+requireValue(expo?.plugins?.some((plugin) => plugin === 'expo-iap'), 'expo-iap config plugin is missing.');
 const buildProperties = expo?.plugins?.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties')?.[1];
 requireValue(buildProperties?.android?.compileSdkVersion === 36, 'Android compile SDK must be 36.');
 requireValue(buildProperties?.android?.targetSdkVersion === 36, 'Android target SDK must be 36.');
