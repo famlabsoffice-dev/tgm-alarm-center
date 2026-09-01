@@ -116,6 +116,11 @@ test('keeps the six-tier commercial ladder and all currency periods synchronized
   assert.equal(TIER_PRICING.godfather.usdStore.lifetime, 899.99);
   assert.deepEqual(TEMPLATES.individual.type, 'individual');
   assert.deepEqual(TEMPLATES.rss.type, 'rss');
+  assert.equal(TEMPLATES.bubble.sound, 'siren');
+  assert.equal(TEMPLATES.gwBubble.sound, 'siren');
+  assert.equal(TEMPLATES.custom.sound, 'pulse');
+  assert.equal(TEMPLATES.individual.sound, 'pulse');
+  assert.equal(TEMPLATES.rss.sound, 'chime');
   for (const tier of Object.values(TIER_PRICING)) {
     assert.deepEqual(Object.keys(tier.eur), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
     assert.deepEqual(Object.keys(tier.usdStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
