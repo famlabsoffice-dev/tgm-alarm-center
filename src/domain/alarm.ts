@@ -68,11 +68,11 @@ export interface NotificationMoment {
   endAt?: Date;
 }
 
-export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number }> = {
-  free: { accounts: 1, alarms: 1, events: 1 },
-  streetBoss: { accounts: 2, alarms: 2, events: 2 },
-  caporegime: { accounts: 3, alarms: 3, events: 3 },
-  godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY },
+export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number } }> = {
+  free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+  streetBoss: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+  caporegime: { accounts: 3, alarms: 6, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+  godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY } },
 };
 
 export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom', AlarmTemplate> = {

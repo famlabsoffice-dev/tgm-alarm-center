@@ -32,6 +32,14 @@ for (const needle of [
   'account-menu',
   'select-tier',
   'renderPlansView',
+  'BILLING_PERIODS',
+  'BILLING_LABELS',
+  '1 Woche',
+  '6 Monate',
+  'Lifetime',
+  'perAccount',
+  'bubbleAlarms',
+  'eventAlarms',
   'viewFromLocation',
   'history.replaceState',
   'Bubble- und GW-Zeiten im Blick.',
@@ -44,11 +52,14 @@ for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstelle
   assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
 }
 assert(!js.includes('Keine Bubble mehr verpassen.'), 'Commercial hero copy is still present.');
+for (const price of ['weekly: 1.99', 'sixMonth: 32.99', 'yearly: 54.99', 'lifetime: 99.99']) {
+  assert(js.includes(price), `Tier pricing value is missing: ${price}`);
+}
 for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
   assert(!new RegExp(marker, 'i').test(js + html + css), `Placeholder marker found: ${marker}`);
 }
 
-assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=6'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=9'), 'Offline shell does not cache the versioned application files.');
 assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');

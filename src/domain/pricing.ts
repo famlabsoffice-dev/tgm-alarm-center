@@ -1,6 +1,6 @@
 import type { Tier } from './alarm';
 
-export type BillingPeriod = 'monthly' | 'yearly' | 'lifetime';
+export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 
 export interface TierPricing {
   tier: Tier;
@@ -9,6 +9,7 @@ export interface TierPricing {
     accounts: number;
     alarms: number;
     events: number;
+    perAccount: { bubbleAlarms: number; eventAlarms: number };
   };
   eur: Record<BillingPeriod, number>;
   usdDirect: Record<BillingPeriod, number>;
@@ -25,28 +26,28 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
   free: {
     tier: 'free',
     name: 'Free',
-    limits: { accounts: 1, alarms: 1, events: 1 },
-    eur: { monthly: 0, yearly: 0, lifetime: 0 },
-    usdDirect: { monthly: 0, yearly: 0, lifetime: 0 },
-    usdStore: { monthly: 0, yearly: 0, lifetime: 0 },
+    limits: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+    eur: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
+    usdDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
+    usdStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
     annualSavingPercent: null,
   },
   streetBoss: {
     tier: 'streetBoss',
     name: 'Street Boss',
-    limits: { accounts: 2, alarms: 2, events: 2 },
-    eur: { monthly: 4.99, yearly: 39.99, lifetime: 79.99 },
-    usdDirect: { monthly: 5.79, yearly: 46.39, lifetime: 92.79 },
-    usdStore: { monthly: 4.99, yearly: 44.99, lifetime: 89.99 },
+    limits: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+    eur: { weekly: 1.99, monthly: 5.99, sixMonth: 32.99, yearly: 54.99, lifetime: 99.99 },
+    usdDirect: { weekly: 2.31, monthly: 6.95, sixMonth: 38.27, yearly: 63.79, lifetime: 115.99 },
+    usdStore: { weekly: 1.99, monthly: 6.99, sixMonth: 34.99, yearly: 59.99, lifetime: 104.99 },
     annualSavingPercent: 25,
   },
   caporegime: {
     tier: 'caporegime',
     name: 'Caporegime',
-    limits: { accounts: 3, alarms: 3, events: 3 },
-    eur: { monthly: 7.99, yearly: 69.99, lifetime: 129.99 },
-    usdDirect: { monthly: 9.27, yearly: 81.19, lifetime: 150.79 },
-    usdStore: { monthly: 9.99, yearly: 79.99, lifetime: 149.99 },
+    limits: { accounts: 3, alarms: 6, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+    eur: { weekly: 2.99, monthly: 8.99, sixMonth: 49.99, yearly: 79.99, lifetime: 149.99 },
+    usdDirect: { weekly: 3.47, monthly: 10.43, sixMonth: 57.99, yearly: 92.79, lifetime: 173.99 },
+    usdStore: { weekly: 2.99, monthly: 9.99, sixMonth: 54.99, yearly: 89.99, lifetime: 159.99 },
     annualSavingPercent: 33,
   },
   godfather: {
@@ -56,10 +57,11 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
       accounts: Number.POSITIVE_INFINITY,
       alarms: Number.POSITIVE_INFINITY,
       events: Number.POSITIVE_INFINITY,
+      perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY },
     },
-    eur: { monthly: 12.99, yearly: 99.99, lifetime: 199.99 },
-    usdDirect: { monthly: 15.07, yearly: 115.99, lifetime: 231.99 },
-    usdStore: { monthly: 14.99, yearly: 119.99, lifetime: 229.99 },
+    eur: { weekly: 4.99, monthly: 14.99, sixMonth: 89.99, yearly: 119.99, lifetime: 229.99 },
+    usdDirect: { weekly: 5.79, monthly: 17.39, sixMonth: 104.39, yearly: 139.19, lifetime: 266.79 },
+    usdStore: { weekly: 4.99, monthly: 16.99, sixMonth: 94.99, yearly: 129.99, lifetime: 239.99 },
     annualSavingPercent: 33,
   },
 };
@@ -67,7 +69,7 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
 export const STORE_PRICING_NOTES = {
   usdStorePricing:
     'Recommended conversion-optimized USD list prices for App Store / Google Play.',
-  streetBossMonthlyAlternativeUsd: 5.99,
+  streetBossMonthlyAlternativeUsd: 6.99,
   streetBossMonthlyAlternativeReason:
     'Optional alternative when the USD list price should stay closer to the EUR equivalent.',
   eurAuthority:
