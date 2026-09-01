@@ -11,7 +11,7 @@ Alle weiteren Arbeitsstände, lokalen Kopien und ZIP-Archive sind gegenüber `ma
 
 ## Branch-Entscheidung
 
-`main` enthält den vollständigen Stand des Produktions-Core-Branches und liegt gegenüber `feature/tgm-alarm-center-production-core` um 17 Commits voraus, ohne Rückstand.
+`main` enthält den vollständigen Stand des Produktions-Core-Branches und liegt gegenüber `feature/tgm-alarm-center-production-core` um 18 Commits voraus, ohne Rückstand.
 
 Daraus folgt:
 
@@ -25,9 +25,9 @@ Daraus folgt:
 
 Aktueller verbindlicher HEAD zum Zeitpunkt dieser Festlegung:
 
-`3d84e38b4f41bc948355cf9198884c64cda1b815`
+`34171e8deec07df1f936d45243fba8aafae7a301`
 
-Commit: `docs: establish main as repository source of truth`
+Commit: `docs: synchronize repository source-of-truth with current main`
 
 ## Geltungsbereich
 
