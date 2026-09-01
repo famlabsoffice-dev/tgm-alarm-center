@@ -1,5 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { resolve, relative, extname } from 'node:path';
+import { readdir } from 'node:fs/promises';
+import { extname, relative, resolve } from 'node:path';
 
 const root = process.cwd();
 const outputRoot = resolve(root, 'dist/web');
@@ -49,12 +50,12 @@ const stack = [outputRoot];
 let fileCount = 0;
 while (stack.length) {
   const dir = stack.pop();
-  for (const name of (await import('node:fs/promises')).readdir(dir, { withFileTypes: true })) {
-    const path = resolve(dir, name.name);
-    if (name.isDirectory()) stack.push(path);
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const path = resolve(dir, entry.name);
+    if (entry.isDirectory()) stack.push(path);
     else {
       fileCount += 1;
-      const ext = extname(name.name).toLowerCase();
+      const ext = extname(entry.name).toLowerCase();
       if (!allowedExtensions.has(ext)) throw new Error(`Unexpected packaged file: ${relative(outputRoot, path)}`);
     }
   }
