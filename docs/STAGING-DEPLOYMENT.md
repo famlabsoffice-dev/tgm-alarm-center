@@ -105,3 +105,42 @@ export TGM_PRODUCTION_CONFIRM='DEPLOY'
 ```
 
 Bei einem fehlgeschlagenen Health-Check wird die vorherige Version atomar wieder aktiviert und erneut geprüft. Exit-Code `0` bedeutet erfolgreich aktiviert, Exit-Code `1` bedeutet erfolgreich zurückgerollt und Exit-Code `2` bedeutet, dass eine Sicherheits-, Installations- oder Rollback-Prüfung manuelle Intervention benötigt. Das Produktionsskript wurde nur implementiert und lokal gegen seine Schutzlogik geprüft; ein echter Produktions-Deploy wurde nicht ausgeführt.
+
+## Einmaliger Monitoring-Check für Cron und CI/CD
+
+`scripts/monitor-staging-health.sh` führt genau einen Health-Check aus und ist damit für Cron, systemd-Timer oder eine CI/CD-Nachprüfung geeignet. Das Skript verwendet denselben lokalen und HTTP-basierten Health-Check wie der Deployment-Wrapper, schreibt den letzten Zustand atomar als JSON und verändert weder den aktiven Symlink noch Release-Dateien.
+
+```bash
+export TGM_STAGING_URL='https://staging.example.com'
+export TGM_STAGING_ROOT='/var/www/tgm-alarm-center-staging'
+export TGM_EXPECTED_COMMIT='416c98ca64028d4501b8230844deb03a8a118223'
+./scripts/monitor-staging-health.sh
+```
+
+Der Standardpfad für den Zustand lautet `$TGM_STAGING_ROOT/.monitoring/staging-health-state.json`. Mit `TGM_MONITOR_STATE_FILE` kann ein zentraler, vom Service-Benutzer beschreibbarer Pfad gesetzt werden. Der Check liefert Exit-Code `0` bei PASS, `1` bei einem technischen Health-Fehler und `2` bei Konfigurations- oder Monitoringfehlern. Für einen automatisierten Alarm kann `TGM_ALERT_WEBHOOK_URL` auf eine HTTPS-Webhook-Adresse gesetzt werden. Der Webhook erhält ausschließlich ein JSON-Ereignis für `failure` oder — sofern `TGM_ALERT_ON_RECOVERY=1` — für `recovery`; das Skript protokolliert keine Zugangsdaten.
+
+Ein Cron-Eintrag für einen fünfminütigen Check wird mit einem dedizierten Service-Benutzer und geschützten Environment-Variablen eingerichtet. Die konkrete Webhook-Adresse gehört in die Secret-Verwaltung des Zielsystems und nicht in das Repository:
+
+```cron
+*/5 * * * * . /etc/tgm-alarm-center/staging-health.env && /var/www/tgm-alarm-center/scripts/monitor-staging-health.sh >>/var/log/tgm-alarm-center/staging-health.log 2>&1
+```
+
+Die Datei `/etc/tgm-alarm-center/staging-health.env` muss mindestens `TGM_STAGING_URL`, `TGM_STAGING_ROOT` und `TGM_EXPECTED_COMMIT` enthalten und für andere Benutzer unlesbar sein. Bei einem fehlgeschlagenen Check bleibt der Exit-Code `1` erhalten, auch wenn die optionale Alarmzustellung ebenfalls fehlschlägt. Dadurch kann ein Monitoring-System den Ausfall nicht fälschlich als gesund bewerten.
+
+## Deterministische Web-Archivierung
+
+`pnpm run package:web` erzeugt aus dem geprüften `dist/web`-Verzeichnis ein ZIP-Archiv und die zugehörige SHA-256-Datei. Die Archivierung normalisiert Dateizeitstempel auf den ZIP-kompatiblen Epoch-Wert, verwendet eine byte-stabile, lexikografisch sortierte Dateiliste und schließt ZIP-Zusatzattribute aus. Dadurch liefern wiederholte Archivläufe bei identischem Build-Inhalt dieselbe SHA-256-Prüfsumme.
+
+```bash
+pnpm run build:web
+pnpm run verify:packaging
+pnpm run package:web
+(cd dist && sha256sum -c tgm-alarm-center-web.zip.sha256)
+unzip -tq dist/tgm-alarm-center-web.zip
+```
+
+Der deterministische Archivschritt ist Bestandteil von `pnpm run verify:release` und darf in der Release-Pipeline nicht übersprungen werden. Für den veröffentlichten Release bleibt das bestehende Asset `tgm-alarm-center-v0.0.1-web.zip` maßgeblich; die neue Archivroutine wird für nachfolgende Releases und reproduzierbare Rebuild-Nachweise verwendet.
+
+## Offener Realbetriebsnachweis
+
+Die Skripte und Gates sind repositoryseitig implementiert und lokal verifiziert. Ein echter Staging- oder Produktionsnachweis entsteht erst nach Ausführung auf dem jeweiligen Zielserver mit einer gültigen HTTPS-URL, einem beschreibbaren Installationspfad und den geschützten Release-Lesezugängen. Ohne diese Infrastruktur werden keine erfundenen Betriebs- oder Monitoring-Erfolge ausgewiesen.
