@@ -44,6 +44,9 @@ import {
   scheduleAlarm,
   scheduleLocalNotificationTest,
 } from './src/native/notifications';
+import { Paywall } from './src/billing/Paywall';
+import { createBillingService, getBillingCatalog, getBillingConfiguration } from './src/billing';
+import { BillingState, initialBillingState } from './src/billing/service';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -131,7 +134,20 @@ export default function App() {
   const [now, setNow] = useState(Date.now());
   const [storageError, setStorageError] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
+  const [paywallVisible, setPaywallVisible] = useState(false);
+  const [billing, setBilling] = useState<BillingState>(() => initialBillingState());
+  const billingService = useMemo(() => createBillingService(), []);
+  const billingCatalog = useMemo(() => getBillingCatalog(), []);
+  const billingConfiguration = useMemo(() => getBillingConfiguration(), []);
   const initialized = useRef(false);
+
+  useEffect(() => {
+    let mounted = true;
+    billingService.loadPersistedEntitlement().then((entitlement) => {
+      if (mounted) setBilling((current) => ({ ...current, entitlement }));
+    }).catch(() => undefined);
+    return () => { mounted = false; };
+  }, [billingService]);
 
   useEffect(() => {
     let mounted = true;
@@ -346,6 +362,44 @@ export default function App() {
     setState((current) => ({ ...current, notificationPreferences: { ...current.notificationPreferences, [key]: value } }));
   };
 
+  const openPaywall = async (): Promise<void> => {
+    setPaywallVisible(true);
+    if (!billingConfiguration.configured || !billingCatalog.configured) return;
+    setBilling((current) => ({ ...current, loading: true, error: null }));
+    try {
+      await billingService.connect();
+      const products = await billingService.fetchProducts();
+      setBilling((current) => ({ ...current, connected: true, loading: false, products, error: null }));
+    } catch (error: unknown) {
+      setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Store-Produkte konnten nicht geladen werden.' }));
+    }
+  };
+
+  const purchaseProduct = async (productKey: string): Promise<void> => {
+    setBilling((current) => ({ ...current, loading: true, error: null }));
+    try {
+      const entitlement = await billingService.purchase(productKey);
+      setBilling((current) => ({ ...current, loading: false, entitlement, error: null }));
+      setState((current) => ({ ...current, tier: entitlement.tier }));
+      Alert.alert('Kauf bestätigt', 'Dein serverseitig verifiziertes Entitlement ist jetzt aktiv.');
+    } catch (error: unknown) {
+      setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Der Kauf konnte nicht abgeschlossen werden.' }));
+    }
+  };
+
+  const restorePurchases = async (): Promise<void> => {
+    setBilling((current) => ({ ...current, loading: true, error: null }));
+    try {
+      const restored = await billingService.restorePurchases();
+      const tierRank = (tier: typeof state.tier): number => ({ free: 0, streetBoss: 1, caporegime: 2, underboss: 3, boss: 4, godfather: 5 }[tier]);
+      const entitlement = [...restored].sort((a, b) => tierRank(b.tier) - tierRank(a.tier))[0];
+      setBilling((current) => ({ ...current, loading: false, entitlement: entitlement ?? current.entitlement, error: entitlement ? null : 'Es wurde kein gültiges Entitlement gefunden.' }));
+      if (entitlement) setState((current) => ({ ...current, tier: entitlement.tier }));
+    } catch (error: unknown) {
+      setBilling((current) => ({ ...current, loading: false, error: error instanceof Error ? error.message : 'Käufe konnten nicht wiederhergestellt werden.' }));
+    }
+  };
+
   const runDeviceTest = async (): Promise<void> => {
     if (!readiness.supported || !readiness.permission) {
       Alert.alert('Benachrichtigungen nicht bereit', 'Aktiviere zuerst die Benachrichtigungsberechtigung in den Geräteeinstellungen.');
@@ -430,6 +484,7 @@ export default function App() {
             <View style={styles.topRow}>
               <View style={styles.flex}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.subtitle}>Persönliche Alarmzentrale</Text></View>
               <View style={styles.accountPill}><View style={styles.accountDot} /><Text style={styles.accountText}>{activeAccount?.name ?? 'Kein Account'}</Text></View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Pläne und Abonnements öffnen" onPress={openPaywall} style={({ pressed }) => [styles.planButton, pressed && styles.pressed]}><Text style={styles.planButtonText}>Pläne</Text></Pressable>
             </View>
             <View style={styles.heroCard}>
               <Text style={styles.eyebrow}>ALS NÄCHSTES</Text>
@@ -487,6 +542,21 @@ export default function App() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      <Modal visible={paywallVisible} animationType="slide" onRequestClose={() => setPaywallVisible(false)}>
+        <SafeAreaView style={styles.paywallRoot}>
+          <Paywall
+            catalog={billingCatalog.products}
+            products={billing.products}
+            entitlement={billing.entitlement}
+            loading={billing.loading}
+            configured={billingConfiguration.configured && billingCatalog.configured}
+            error={billing.error}
+            onPurchase={purchaseProduct}
+            onRestore={restorePurchases}
+            onClose={() => setPaywallVisible(false)}
+          />
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -506,6 +576,9 @@ const styles = StyleSheet.create({
   accountPill: { flexDirection: 'row', alignItems: 'center', gap: 7, borderColor: COLORS.border, borderWidth: 1, borderRadius: 20, paddingHorizontal: 10, paddingVertical: 8, maxWidth: 150 },
   accountDot: { width: 8, height: 8, borderRadius: 8, backgroundColor: COLORS.gold },
   accountText: { color: COLORS.text, fontSize: 11, fontWeight: '700', flexShrink: 1 },
+  planButton: { backgroundColor: COLORS.gold, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9 },
+  planButtonText: { color: '#1B160D', fontSize: 12, fontWeight: '900' },
+  paywallRoot: { flex: 1, backgroundColor: COLORS.background },
   heroCard: { backgroundColor: COLORS.panel, borderColor: '#5A4A2C', borderWidth: 1, borderRadius: 18, padding: 20, marginBottom: 12 },
   eyebrow: { color: COLORS.muted, fontSize: 10, fontWeight: '900', letterSpacing: 1.2 },
   nextTitle: { color: COLORS.text, fontSize: 24, fontWeight: '900', marginTop: 8 },

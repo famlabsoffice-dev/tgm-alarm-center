@@ -54,3 +54,11 @@ Die erfolgreiche Antwort muss mindestens diese Struktur erfüllen:
 Die Billing-Domäne enthält bewusst noch keinen produktiven Store-Adapter. Vor der Freischaltung müssen ein Expo-Custom-Development-Build, reale Store-Produkte, der HTTPS-Verifikationsservice, Restore Purchases, Pending- und Refund-Fälle sowie Testkäufe mit Sandbox-/License-Tester-Konten abgenommen werden. Google weist für neue Apps und Updates ab dem 31. August 2026 auf Billing Library 8 oder höher hin. [Google Play Billing – Testing](https://developer.android.com/google/play/billing/test)
 
 Die lokale Billing-Schicht meldet bei fehlender Konfiguration einen sicheren Unavailable-Zustand. Dieser Zustand ist beabsichtigt und verhindert, dass die App eine Store-Funktion oder ein Premium-Entitlement vortäuscht.
+
+## Paywall- und Kaufprozess-UI
+
+Die Native-App enthält nun eine wiederverwendbare `Paywall`-Komponente. Sie gruppiert die Produktkarten nach Kommandoebene, zeigt ausschließlich vom Store gelieferte Preise, bietet `Kaufen` und `Käufe wiederherstellen` an und unterscheidet Lade-, Fehler-, nicht verfügbare und aktivierte Zustände.
+
+Die Paywall wird über den Button `Pläne` geöffnet. Beim Öffnen werden Store-Produkte nur dann geladen, wenn der Katalog vollständig konfiguriert ist. Ohne Konfiguration zeigt die UI einen klaren Vorbereitungsstatus; sämtliche Kaufaktionen bleiben deaktiviert. Nach einem Kauf aktualisiert die App den lokalen Tierstatus erst nach erfolgreicher serverseitiger Entitlement-Prüfung und erfolgreichem Abschluss der Store-Transaktion.
+
+Der Kauf- und Restore-Ablauf folgt den Store-Lebenszyklusanforderungen. Pending-, abgelaufene, widerrufene oder nicht verifizierte Zustände werden nicht als aktiver Premiumzugang dargestellt. Die Store-Produktpreise sind die maßgebliche Anzeigequelle; lokale Preislisten dienen nur der Produktdefinition und nicht als Beleg für einen erfolgten Kauf.

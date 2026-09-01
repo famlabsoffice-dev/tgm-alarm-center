@@ -23,6 +23,11 @@ const source = fs.readFileSync(new URL('../src/native/notifications.ts', import.
 if (!source.includes('scheduleLocalNotificationTest')) failures.push('Native notification test function is not wired.');
 if (!source.includes('exactAlarm: false')) failures.push('Exact-alarm readiness must not be reported as verified by Expo alone.');
 
+const paywall = fs.readFileSync(new URL('../src/billing/Paywall.tsx', import.meta.url), 'utf8');
+for (const requiredMarker of ['onPurchase', 'onRestore', 'Nicht verfügbar', 'Käufe wiederherstellen']) {
+  if (!paywall.includes(requiredMarker)) failures.push(`Paywall is missing required purchase state or action: ${requiredMarker}`);
+}
+
 if (failures.length > 0) {
   console.error(['TGM ALARM CENTER native configuration validation: FAIL', ...failures.map((failure) => `- ${failure}`)].join('\n'));
   process.exit(1);
