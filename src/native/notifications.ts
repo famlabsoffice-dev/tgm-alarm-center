@@ -31,7 +31,10 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
   if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) {
     permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
   }
-  return { supported: true, permission, exactAlarm: Platform.OS === 'android', channel };
+  // expo-notifications does not expose the Android SCHEDULE_EXACT_ALARM app-op
+  // state. Do not present the platform declaration itself as a runtime check.
+  const exactAlarm = false;
+  return { supported: true, permission, exactAlarm, channel };
 }
 
 export async function cancelAllScheduled(): Promise<void> {
@@ -79,6 +82,26 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
     ids.push(id);
   }
   return ids;
+}
+
+export async function scheduleLocalTestNotification(): Promise<string> {
+  if (!Device.isDevice || Platform.OS === 'web') throw new Error('Der lokale Gerätetest ist nur auf einem echten Android- oder iOS-Gerät verfügbar.');
+  return Notifications.scheduleNotificationAsync({
+    content: {
+      title: 'TGM ALARM CENTER · Gerätetest',
+      body: 'Lokale Benachrichtigung erfolgreich ausgelöst.',
+      sound: soundFor('pulse'),
+      vibrate: [0, 250, 150, 250],
+      data: { kind: 'local-test' },
+      categoryIdentifier: 'tgm-event',
+      interruptionLevel: 'timeSensitive',
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + 1500),
+      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
+    },
+  });
 }
 
 export async function registerCategories(): Promise<void> {
