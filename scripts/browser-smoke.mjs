@@ -97,18 +97,18 @@ try {
 
   await page.evaluate(() => { localStorage.clear(); location.hash = ''; });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.locator('button[data-action="new-alarm"][data-template="bubble"]').click();
+  await page.locator('section').first().locator('button[data-action="new-alarm"][data-template="bubble"]').click();
   await page.locator('#modalRoot .modal').waitFor({ state: 'visible' });
   await page.locator('#eTitle').fill('CI Smoke Bubble');
   const future = new Date(Date.now() + 10 * 60 * 1000);
   await page.locator('#eDate').fill(`${future.getFullYear()}-${String(future.getMonth() + 1).padStart(2, '0')}-${String(future.getDate()).padStart(2, '0')}`);
   await page.locator('#eTime').fill(`${String(future.getHours()).padStart(2, '0')}:${String(future.getMinutes()).padStart(2, '0')}`);
   await page.locator('#modalRoot button[data-action="save-alarm"]').click();
-  await page.getByText('CI Smoke Bubble', { exact: true }).waitFor({ state: 'visible' });
+  await page.locator('article').filter({ hasText: 'CI Smoke Bubble' }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: alarm editor + create/save passed.');
 
   await page.reload({ waitUntil: 'networkidle' });
-  await page.getByText('CI Smoke Bubble', { exact: true }).waitFor({ state: 'visible' });
+  await page.locator('article').filter({ hasText: 'CI Smoke Bubble' }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: reload persistence passed.');
 
   await page.locator('button[data-action="view"][data-view="settings"]').click();
@@ -127,7 +127,8 @@ try {
   await page.locator('button[data-action="view"][data-view="settings"]').click();
   await page.getByText('Backup & Wiederherstellung', { exact: true }).waitFor({ state: 'visible' });
   await page.locator('#backupFile').setInputFiles(backupFile);
-  await page.getByText('CI Smoke Bubble', { exact: true }).waitFor({ state: 'visible' });
+  await page.locator('button[data-action="view"][data-view="today"]').click();
+  await page.locator('article').filter({ hasText: 'CI Smoke Bubble' }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: backup import passed.');
 
   if (consoleErrors.length) throw new Error(`Console error(s): ${consoleErrors.join(' | ')}`);
