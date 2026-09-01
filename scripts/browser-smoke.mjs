@@ -138,6 +138,7 @@ let serverProcess;
 let browserProcess;
 let cdp;
 let sessionId;
+let devtoolsWebSocketUrl;
 const consoleErrors = [];
 const exceptions = [];
 
@@ -150,25 +151,25 @@ try {
     catch { return false; }
   }, 'packaged web server', 10000);
 
-  const debugPort = await freePort();
   browserProcess = spawn(chromium, [
     '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
     '--disable-background-networking', '--disable-default-apps', '--disable-extensions',
     '--no-first-run', '--no-default-browser-check', '--remote-allow-origins=*',
-    `--remote-debugging-port=${debugPort}`, `--user-data-dir=${userData}`, 'about:blank',
+    '--remote-debugging-address=127.0.0.1', '--remote-debugging-port=0',
+    `--user-data-dir=${userData}`, 'about:blank',
   ], { cwd: root, stdio: ['ignore', 'pipe', 'pipe'] });
   browserProcess.stderr.on('data', (chunk) => {
     const text = String(chunk);
-    if (/DevTools listening on/i.test(text)) process.stdout.write(text);
-    else process.stderr.write(`[chromium] ${text}`);
+    const match = text.match(/DevTools listening on (ws:\/\/[^\s]+)/i);
+    if (match) devtoolsWebSocketUrl = match[1];
+    if (text.trim()) process.stderr.write(`[chromium] ${text}`);
+  });
+  browserProcess.on('exit', (code, signal) => {
+    if (!devtoolsWebSocketUrl) console.error(`Browser smoke: Chromium exited before exposing DevTools (code=${code}, signal=${signal}).`);
   });
 
-  const version = await waitFor(async () => {
-    try { const response = await fetch(`http://127.0.0.1:${debugPort}/json/version`); return response.ok ? response.json() : null; }
-    catch { return null; }
-  }, 'Chromium DevTools endpoint', 15000);
-
-  cdp = new CdpClient(version.webSocketDebuggerUrl);
+  await waitFor(() => devtoolsWebSocketUrl, 'Chromium DevTools websocket', 15000);
+  cdp = new CdpClient(devtoolsWebSocketUrl);
   await cdp.connect();
   const target = await cdp.send('Target.createTarget', { url: 'about:blank' });
   const attached = await cdp.send('Target.attachToTarget', { targetId: target.targetId, flatten: true });
