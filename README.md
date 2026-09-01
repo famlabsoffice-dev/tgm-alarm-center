@@ -8,13 +8,13 @@ Die Web-App besteht aus reinem HTML, CSS und JavaScript. Sie bietet Accounts, Al
 
 Die Daten werden ausschließlich lokal im Browser gespeichert. Der Offline-App-Shell-Service-Worker hält Oberfläche und Tondateien für die lokale Nutzung verfügbar. Browser-Audio wird aus Sicherheitsgründen einmalig durch eine bewusste Nutzeraktion aktiviert.
 
-## Tier-Pläne
+## Pläne und Preise
 
-Es gibt fünf klar getrennte Tiers von Free bis Godfather. Die zentrale EUR-Preisliste befindet sich in `src/domain/pricing.ts`; die Tier-Limits befinden sich in `src/domain/alarm.ts`. USD- und JPY-Preise werden als stabile lokale Listenpreise aus der EUR-Basis abgeleitet und nicht bei jedem Checkout live umgerechnet.
+Die Pläne unterscheiden sich beim verfügbaren Umfang für Accounts und Alarme. Die zentrale Preisübersicht befindet sich in `app.js`; USD- und JPY-Preise sind als feste Store-Listenpreise hinterlegt und werden nicht bei jeder Anzeige neu umgerechnet.
 
-### EUR-Zielpreise
+### Preise in Euro
 
-| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+| Plan | Woche | Monat | 6 Monate | Jahr | Lifetime |
 |---|---:|---:|---:|---:|---:|
 | Free | 0,00 € | 0,00 € | 0,00 € | 0,00 € | 0,00 € |
 | Street Boss | 4,99 € | 14,99 € | 79,99 € | 129,99 € | 199,99 € |
@@ -22,9 +22,9 @@ Es gibt fünf klar getrennte Tiers von Free bis Godfather. Die zentrale EUR-Prei
 | Underboss | 9,99 € | 34,99 € | 179,99 € | 299,99 € | 449,99 € |
 | Godfather | 19,99 € | 69,99 € | 399,99 € | 599,99 € | 799,99 € |
 
-### USD-Store-Listenpreise
+### Preise in US-Dollar (Store)
 
-| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+| Plan | Woche | Monat | 6 Monate | Jahr | Lifetime |
 |---|---:|---:|---:|---:|---:|
 | Free | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 |
 | Street Boss | $5.99 | $16.99 | $89.99 | $149.99 | $214.99 |
@@ -32,9 +32,9 @@ Es gibt fünf klar getrennte Tiers von Free bis Godfather. Die zentrale EUR-Prei
 | Underboss | $11.99 | $39.99 | $199.99 | $349.99 | $479.99 |
 | Godfather | $22.99 | $79.99 | $449.99 | $699.99 | $899.99 |
 
-### JPY-Store-Listenpreise
+### Preise in japanischen Yen (Store)
 
-| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+| Plan | Woche | Monat | 6 Monate | Jahr | Lifetime |
 |---|---:|---:|---:|---:|---:|
 | Free | ¥0 | ¥0 | ¥0 | ¥0 | ¥0 |
 | Street Boss | ¥1,000 | ¥2,800 | ¥14,800 | ¥24,000 | ¥37,000 |
@@ -44,21 +44,21 @@ Es gibt fünf klar getrennte Tiers von Free bis Godfather. Die zentrale EUR-Prei
 
 Die hinterlegte Referenzumrechnung nutzt den ECB-Euro-Referenzkurs vom **31.08.2026**: 1 EUR = 1,1596 USD und 1 EUR = 185,22 JPY. Die ECB veröffentlicht diese Referenzkurse werktäglich und weist darauf hin, dass sie primär Informationszwecken dienen. citeturn897252search2
 
-### Klare Stufen
+### Funktionsumfang
 
-Fünf Tiers von Free bis Godfather decken jeden Spielerbedarf ab – vom Gelegenheitsspieler bis zum Multi-Account-Profi. Underboss bildet die mittlere Profi-Stufe mit fünf Accounts, zehn Alarmen und fünf Events.
+Die fünf Pläne reichen vom kostenlosen Grundumfang bis zur unbegrenzten Nutzung. Der Plan Underboss umfasst fünf Accounts, zehn Alarme und fünf Events.
 
-### Flexible Laufzeiten
+### Laufzeiten
 
-Wöchentliche Einstiege bis hin zur Lifetime-Absicherung bieten maximale Flexibilität bei der Buchung.
+Verfügbar sind Laufzeiten von einer Woche, einem Monat, sechs Monaten, einem Jahr sowie eine zeitlich unbegrenzte Nutzung.
 
-### Ehrliches Billing
+### Abrechnung
 
-Klare Abgrenzung zwischen lokaler Planwahl und realer Store-Abrechnung. Keine versteckten Kosten und keine serverseitige Kontenpflicht.
+Die Planwahl wird lokal auf dem Gerät gespeichert. Preise mit dem Hinweis „Store“ dienen als Store-Listenpreise; die tatsächliche Abrechnung erfolgt über den jeweiligen Store.
 
-### Datensicherheit
+### Speicherung der Daten
 
-Alle Daten bleiben lokal. Der Trial-Ablauf respektiert die Einrichtung des Nutzers und löscht niemals Informationen.
+Accounts, Alarme und Einstellungen bleiben lokal im Browser gespeichert. Das Ende der kostenlosen Testphase löscht keine vorhandenen Daten.
 
 ## Lokale Gaming-Töne
 

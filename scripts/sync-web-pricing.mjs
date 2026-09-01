@@ -19,7 +19,7 @@ const tierFeatures = {
   streetBoss: ['2 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'GW-Schutzfenster mit Vorwarnungen'],
   caporegime: ['3 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'GW-Zyklen und vollständige Backup-Funktionen'],
   underboss: ['5 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Multi-Account-Profi-Stufe mit mehr Alarm-/Event-Spielraum'],
-  godfather: ['Unbegrenzte Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Die vollständige lokale Alarmzentrale'],
+  godfather: ['Unbegrenzte Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Vollständiger Funktionsumfang für die Alarmplanung'],
 };
 
 const sourceTierOrder = source.match(/const TIER_ORDER = \[[^\]]+\];/s);

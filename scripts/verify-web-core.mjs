@@ -46,7 +46,7 @@ for (const needle of [
   'freeTrialStartedAt',
   'freeTrialEndsAt',
   'start-free-trial',
-  '3-Tage-Free-Trial',
+  '72 Stunden kostenlos testen',
   'viewFromLocation',
   'history.replaceState',
   'Bubble- und GW-Zeiten im Blick.',
@@ -59,9 +59,9 @@ for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstelle
   assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
 }
 assert(!js.includes('Keine Bubble mehr verpassen.'), 'Commercial hero copy is still present.');
-assert(js.includes('3 * DAY_MS') && js.includes('3 Tage testen'), 'Three-day free trial is not configured correctly.');
+assert(js.includes('3 * DAY_MS') && js.includes('Testphase starten'), 'Three-day free trial is not configured correctly.');
 assert(!js.includes('Kommando'), 'Visible command terminology remains in the frontend.');
-for (const price of ['weekly: 4.99', 'sixMonth: 129.99', 'yearly: 199.99', 'lifetime: 299.99', 'lifetime: 499.99']) {
+for (const price of ['weekly:4.99', 'sixMonth:129.99', 'yearly:199.99', 'lifetime:299.99', 'lifetime:799.99']) {
   assert(js.includes(price), `Tier pricing value is missing: ${price}`);
 }
 for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
