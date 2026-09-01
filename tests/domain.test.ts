@@ -12,7 +12,7 @@ import {
   upcomingMoments,
   validateDateTime,
 } from '../src/domain/alarm';
-import { FOUNDER_ACCESS_TIER, FOUNDER_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFounderAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
+import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFamilyAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -70,15 +70,15 @@ test('supports one-time three-day free trial activation and expiry', () => {
   assert.equal(effectiveTier('free', trial, started + FREE_TRIAL_DURATION_MS), 'free');
 });
 
-test('recognizes every founder account and grants the permanent Godfather tier', () => {
-  assert.deepEqual(FOUNDER_ACCOUNT_NAMES, ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']);
-  for (const name of FOUNDER_ACCOUNT_NAMES) {
-    assert.equal(isFounderAccountName(name), true);
-    assert.equal(effectiveTierForAccount('free', name), FOUNDER_ACCESS_TIER);
+test('recognizes every Family account and grants the permanent Godfather tier', () => {
+  assert.deepEqual(FAMILY_ACCOUNT_NAMES, ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']);
+  for (const name of FAMILY_ACCOUNT_NAMES) {
+    assert.equal(isFamilyAccountName(name), true);
+    assert.equal(effectiveTierForAccount('free', name), FAMILY_ACCESS_TIER);
   }
-  assert.equal(isFounderAccountName(' tgmack '), true);
-  assert.equal(effectiveTierForAccount('underboss', 'TGMj9'), FOUNDER_ACCESS_TIER);
-  assert.equal(isFounderAccountName('TGMack2'), false);
+  assert.equal(isFamilyAccountName(' tgmack '), true);
+  assert.equal(effectiveTierForAccount('underboss', 'TGMj9'), FAMILY_ACCESS_TIER);
+  assert.equal(isFamilyAccountName('TGMack2'), false);
   assert.equal(effectiveTierForAccount('free', 'TGMack2'), 'free');
 });
 

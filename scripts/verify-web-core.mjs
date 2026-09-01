@@ -53,14 +53,14 @@ for (const needle of [
   'Plane deine Bubble-Zeiten',
   'localStorage',
   'AudioContext',
-  'FOUNDER_ACCOUNT_NAMES',
-  'FOUNDER_ACCESS_TIER',
-  'founderAccessForAccount',
+  'FAMILY_ACCOUNT_NAMES',
+  'FAMILY_ACCESS_TIER',
+  'familyAccessForAccount',
   'GODFATHER LIFETIME · KOSTENFREI',
   'Dauerhaft freigeschaltet',
 ]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
-for (const founderName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
-  assert(js.includes(founderName), `Founder account is missing: ${founderName}`);
+for (const familyName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
+  assert(js.includes(familyName), `Family account is missing: ${familyName}`);
 }
 
 for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
