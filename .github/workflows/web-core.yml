@@ -1,4 +1,5 @@
 name: TGM Release Verification
+run-name: TGM Release Verification · ${{ github.sha }}
 
 on:
   push:
