@@ -10,27 +10,55 @@ Die Daten werden ausschließlich lokal im Browser gespeichert. Der Offline-App-S
 
 ## Tier-Pläne
 
-Die Limits und Preise sind zentral in `src/domain/alarm.ts` und `src/domain/pricing.ts` definiert. Die EUR-Zielpreise sind die zentrale Preis-Konfiguration. Für USD sind direkte Kursäquivalente sowie empfohlene, verkaufsfähige Store-Listenpreise hinterlegt.
+Es gibt fünf klar getrennte Tiers von Free bis Godfather. Die zentrale EUR-Preisliste befindet sich in `src/domain/pricing.ts`; die Tier-Limits befinden sich in `src/domain/alarm.ts`. USD- und JPY-Preise werden als stabile lokale Listenpreise aus der EUR-Basis abgeleitet und nicht bei jedem Checkout live umgerechnet.
 
-| Tier | Accounts | Alarme | Events | Monat EUR | Jahr EUR | Lifetime EUR | Monat USD Store | Jahr USD Store | Lifetime USD Store |
-|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| Free | 1 | 1 | 1 | 0,00 € | 0,00 € | 0,00 € | $0.00 | $0.00 | $0.00 |
-| Street Boss | 2 | 2 | 2 | 4,99 € | 39,99 € | 79,99 € | $4.99 | $44.99 | $89.99 |
-| Caporegime | 3 | 3 | 3 | 7,99 € | 69,99 € | 129,99 € | $9.99 | $79.99 | $149.99 |
-| Godfather | unbegrenzt | unbegrenzt | unbegrenzt | 12,99 € | 99,99 € | 199,99 € | $14.99 | $119.99 | $229.99 |
+### EUR-Zielpreise
 
-### Direkte USD-Kursäquivalente
+| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+|---|---:|---:|---:|---:|---:|
+| Free | 0,00 € | 0,00 € | 0,00 € | 0,00 € | 0,00 € |
+| Street Boss | 4,99 € | 14,99 € | 79,99 € | 129,99 € | 199,99 € |
+| Caporegime | 7,99 € | 24,99 € | 129,99 € | 199,99 € | 299,99 € |
+| Underboss | 9,99 € | 34,99 € | 179,99 € | 299,99 € | 449,99 € |
+| Godfather | 19,99 € | 69,99 € | 399,99 € | 599,99 € | 799,99 € |
 
-| Tier | Monat USD | Jahr USD | Lifetime USD |
-|---|---:|---:|---:|
-| Free | $0.00 | $0.00 | $0.00 |
-| Street Boss | $5.79 | $46.39 | $92.79 |
-| Caporegime | $9.27 | $81.19 | $150.79 |
-| Godfather | $15.07 | $115.99 | $231.99 |
+### USD-Store-Listenpreise
 
-Die empfohlene Store-Staffelung verwendet übliche psychologische Preisanker. Street Boss kann beim Monatsabo optional mit $5.99 statt $4.99 positioniert werden, wenn die USD-Position näher am EUR-Äquivalent bleiben soll. Die gespeicherten Jahresersparnisse gegenüber 12 Monatszahlungen betragen für Street Boss ca. 25 %, für Caporegime ca. 33 % und für Godfather ca. 33 %.
+| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+|---|---:|---:|---:|---:|---:|
+| Free | $0.00 | $0.00 | $0.00 | $0.00 | $0.00 |
+| Street Boss | $5.99 | $16.99 | $89.99 | $149.99 | $214.99 |
+| Caporegime | $9.99 | $27.99 | $149.99 | $229.99 | $319.99 |
+| Underboss | $11.99 | $39.99 | $199.99 | $349.99 | $479.99 |
+| Godfather | $22.99 | $79.99 | $449.99 | $699.99 | $899.99 |
 
-Die in `src/domain/pricing.ts` hinterlegten Nutzwert- und Business-Wert-Richtwerte dienen der Produkt- und Preisplanung: Free $0 Kaufpreis bei einem geschätzten vermiedenen Incident-Wert von häufig $5–50+, Street Boss typischer Monatsnutzen $8–20, Caporegime $15–40, Godfather $25–80+; subjektive Godfather-Lifetime-Amortisation bei intensiver Nutzung ca. 3–9 Monate. Die ARR-Skizze rechnet konservativ mit 15–30 % Store-Gebühren und den Szenarien 1.500, 4.000 und 10.000 zahlende Nutzer mit starkem Jahresabo-Mix sowie den hinterlegten LTV-Richtwerten.
+### JPY-Store-Listenpreise
+
+| Tier | Woche | Monat | 6 Monate | Jahr | Lifetime |
+|---|---:|---:|---:|---:|---:|
+| Free | ¥0 | ¥0 | ¥0 | ¥0 | ¥0 |
+| Street Boss | ¥1,000 | ¥2,800 | ¥14,800 | ¥24,000 | ¥37,000 |
+| Caporegime | ¥1,500 | ¥4,600 | ¥24,000 | ¥37,000 | ¥55,000 |
+| Underboss | ¥1,900 | ¥6,500 | ¥33,000 | ¥56,000 | ¥83,000 |
+| Godfather | ¥3,700 | ¥13,000 | ¥74,000 | ¥111,000 | ¥148,000 |
+
+Die hinterlegte Referenzumrechnung nutzt den ECB-Euro-Referenzkurs vom **31.08.2026**: 1 EUR = 1,1596 USD und 1 EUR = 185,22 JPY. Die ECB veröffentlicht diese Referenzkurse werktäglich und weist darauf hin, dass sie primär Informationszwecken dienen. citeturn897252search2
+
+### Klare Stufen
+
+Fünf Tiers von Free bis Godfather decken jeden Spielerbedarf ab – vom Gelegenheitsspieler bis zum Multi-Account-Profi. Underboss bildet die mittlere Profi-Stufe mit fünf Accounts, zehn Alarmen und fünf Events.
+
+### Flexible Laufzeiten
+
+Wöchentliche Einstiege bis hin zur Lifetime-Absicherung bieten maximale Flexibilität bei der Buchung.
+
+### Ehrliches Billing
+
+Klare Abgrenzung zwischen lokaler Planwahl und realer Store-Abrechnung. Keine versteckten Kosten und keine serverseitige Kontenpflicht.
+
+### Datensicherheit
+
+Alle Daten bleiben lokal. Der Trial-Ablauf respektiert die Einrichtung des Nutzers und löscht niemals Informationen.
 
 ## Lokale Gaming-Töne
 
