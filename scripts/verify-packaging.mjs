@@ -45,7 +45,7 @@ for (const asset of ['alarm-pulse.wav', 'alarm-siren.wav', 'alarm-chime.wav']) {
 const placeholders = /\b(?:TODO|FIXME)\b|Lorem ipsum/i;
 if (placeholders.test(`${html}\n${js}\n${sw}`)) throw new Error('Placeholder marker found in packaged web application.');
 
-const allowedExtensions = new Set(['.html', '.js', '.mjs', '.css', '.json', '.png', '.wav']);
+const allowedExtensions = new Set(['.html', '.js', '.mjs', '.css', '.json', '.webmanifest', '.png', '.wav']);
 const stack = [outputRoot];
 let fileCount = 0;
 while (stack.length) {
