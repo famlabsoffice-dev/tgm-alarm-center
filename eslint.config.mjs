@@ -1,9 +1,22 @@
-export default [
+import { defineConfig } from 'eslint/config';
+
+export default defineConfig([
   {
-    ignores: ['node_modules/**', 'dist/**', 'src/**/*.ts', 'tests/**/*.ts', 'App.tsx'],
+    ignores: [
+      'node_modules/**',
+      '.expo/**',
+      'android/**',
+      'ios/**',
+      'dist/**',
+      'build/**',
+      'coverage/**',
+      'src/**/*.ts',
+      'tests/**/*.ts',
+      'App.tsx',
+    ],
   },
   {
-    files: ['**/*.js', '**/*.mjs'],
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
@@ -33,7 +46,12 @@ export default [
       'no-constant-condition': 'error',
       'no-debugger': 'error',
       'no-duplicate-case': 'error',
+      'no-constant-binary-expression': 'error',
+      'no-dupe-keys': 'error',
+      'no-unexpected-multiline': 'error',
       'no-unreachable': 'error',
+      'no-undef': 'error',
+      'no-unused-vars': ['error', { args: 'none', caughtErrors: 'none' }],
     },
   },
-];
+]);
