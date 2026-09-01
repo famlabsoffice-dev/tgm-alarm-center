@@ -252,6 +252,7 @@ try {
   const query = await cdp.send('DOM.querySelector', { nodeId: documentTree.root.nodeId, selector: '#backupFile' }, sessionId);
   if (!query.nodeId) throw new Error('Backup file input was not found.');
   await cdp.send('DOM.setFileInputFiles', { nodeId: query.nodeId, files: [backupFile] }, sessionId);
+  await evaluate('document.querySelector("#backupFile")?.dispatchEvent(new Event("change", { bubbles: true }))');
   await waitText('CI Smoke Bubble');
   console.log('Browser smoke: backup import passed.');
 
