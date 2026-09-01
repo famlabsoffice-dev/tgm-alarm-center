@@ -48,6 +48,7 @@ import {
 import { Paywall } from './src/billing/Paywall';
 import { createBillingService, getBillingCatalog, getBillingConfiguration } from './src/billing';
 import { getBillingAccountId } from './src/billing/account';
+import { telemetry } from './src/telemetry/telemetry';
 import { BillingState, initialBillingState } from './src/billing/service';
 
 Notifications.setNotificationHandler({
@@ -142,12 +143,17 @@ export default function App() {
   const billingCatalog = useMemo(() => getBillingCatalog(), []);
   const billingConfiguration = useMemo(() => getBillingConfiguration(), []);
   const [billingAccountId, setBillingAccountId] = useState<string | null>(null);
+  const [telemetryEnabled, setTelemetryEnabled] = useState(false);
   const billingRestoreInFlight = useRef(false);
   const lastAutomaticRestoreAt = useRef(0);
   const initialized = useRef(false);
 
   useEffect(() => {
     let mounted = true;
+    telemetry.initialize().then(() => {
+      setTelemetryEnabled(telemetry.isEnabled());
+      return telemetry.startSession();
+    }).catch(() => undefined);
     Promise.all([billingService.loadPersistedEntitlementState(), getBillingAccountId()]).then(([loadedEntitlement, accountId]) => {
       if (!mounted) return;
       setBilling((current) => ({ ...current, entitlement: loadedEntitlement.entitlement, cacheStatus: loadedEntitlement.status, cachedAt: loadedEntitlement.cachedAt }));
@@ -191,7 +197,13 @@ export default function App() {
       await cancelAllScheduled();
       if (cancelled) return;
       for (const alarm of state.alarms.filter((item) => item.active)) {
-        await scheduleAlarm(alarm, state.notificationPreferences);
+        try {
+          await scheduleAlarm(alarm, state.notificationPreferences);
+          await telemetry.track('alarm_scheduled', { alarm_type: alarm.type, repeat_mode: alarm.repeat, warning_count: alarm.warnings.length });
+        } catch (error: unknown) {
+          await telemetry.log('error', 'alarm_scheduling_failed', { alarm_type: alarm.type });
+          throw error;
+        }
         if (cancelled) return;
       }
     })().catch(() => setStorageError('Benachrichtigungen konnten nicht neu geplant werden.'));
@@ -206,6 +218,7 @@ export default function App() {
       return;
     }
     if (response?.actionIdentifier !== 'done' || typeof data?.alarmId !== 'string' || typeof data.eventTime !== 'string') return;
+    void telemetry.track('alarm_confirmed', { action: 'done' });
     const event = new Date(data.eventTime);
     if (!Number.isFinite(event.getTime())) return;
     setState((current) => ({
@@ -223,6 +236,7 @@ export default function App() {
     Notifications.getLastNotificationResponseAsync().then(completeFromNotification).catch(() => undefined);
     const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
       const data = notification.request.content.data as { kind?: unknown } | undefined;
+      if (typeof data?.kind === 'string' && data.kind !== 'local-test') void telemetry.track('alarm_delivery_received', { occurrence_kind: data.kind });
       if (data?.kind === 'local-test') {
         setTestStatus('success');
         setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
@@ -335,6 +349,10 @@ export default function App() {
       const alarm = buildAlarm(template, ensured.accountId, editor.date, editor.time);
       return { ...ensured.state, alarms: [...ensured.state.alarms, alarm] };
     });
+    if (!editingId) {
+      void telemetry.trackOnce('first-alarm', 'activation_completed', { alarm_type: editor.type, repeat_mode: editor.repeat });
+      void telemetry.track('alarm_created', { alarm_type: editor.type, repeat_mode: editor.repeat, warning_count: editor.warnings.length });
+    }
     setEditorVisible(false);
   };
 
@@ -393,7 +411,10 @@ export default function App() {
     if (!ready) return;
     void restorePurchases(true);
     const subscription = NativeAppState.addEventListener('change', (nextState) => {
-      if (nextState === 'active') void restorePurchases(true);
+      if (nextState === 'active') {
+        void telemetry.startSession();
+        void restorePurchases(true);
+      }
     });
     return () => subscription.remove();
   }, [ready, restorePurchases]);
@@ -440,7 +461,7 @@ export default function App() {
   };
 
   const exportCurrentBackup = (): void => {
-    exportBackup(state).catch((error: unknown) => Alert.alert('Backup fehlgeschlagen', error instanceof Error ? error.message : 'Backup konnte nicht erstellt werden.'));
+    exportBackup(state).then(() => telemetry.track('backup_exported')).catch((error: unknown) => Alert.alert('Backup fehlgeschlagen', error instanceof Error ? error.message : 'Backup konnte nicht erstellt werden.'));
   };
 
   const importBackup = async (): Promise<void> => {
@@ -452,6 +473,7 @@ export default function App() {
       const payload = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.UTF8 });
       const restored = restoreBackup(payload);
       setState(restored);
+      void telemetry.track('backup_restored', { alarm_count: restored.alarms.length, account_count: restored.accounts.length });
       setEditorVisible(false);
       Alert.alert('Backup importiert', `${restored.alarms.length} Alarm${restored.alarms.length === 1 ? '' : 'e'} und ${restored.accounts.length} Account${restored.accounts.length === 1 ? '' : 's'} wurden wiederhergestellt.`);
     } catch (error: unknown) {
@@ -536,13 +558,14 @@ export default function App() {
               <SettingRow label="Hauptereignisse mit Ton" value={state.notificationPreferences.eventSound} onValueChange={(value) => updatePreference('eventSound', value)} />
               <SettingRow label="Vibration" value={state.notificationPreferences.vibration} onValueChange={(value) => updatePreference('vibration', value)} />
               <SettingRow label="Zeitkritische Hinweise" value={state.notificationPreferences.criticalAlerts} onValueChange={(value) => updatePreference('criticalAlerts', value)} />
+              <SettingRow label="Nutzungsanalyse (optional)" value={telemetryEnabled} onValueChange={(value) => { setTelemetryEnabled(value); void telemetry.setEnabled(value); if (value) void telemetry.startSession(); }} />
             </View>
             <View style={styles.actionRowFooter}>
               <Pressable accessibilityRole="button" onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
               <Pressable accessibilityRole="button" onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>{testStatus === 'success' ? 'Gerätetest bestätigt' : testStatus === 'pending' ? 'Test wartet …' : 'Gerätetest'}</Text></Pressable>
             </View>
-            <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1</Text>
+            <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1 · Nutzungsanalyse bleibt optional</Text>
           </View>
         }
       />

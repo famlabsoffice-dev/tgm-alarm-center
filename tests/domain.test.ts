@@ -18,6 +18,7 @@ import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_
 import { getBillingCatalog } from '../src/billing/catalog';
 import { effectiveVerifiedTier, isEntitlementUsable } from '../src/billing/entitlements';
 import { OFFLINE_ENTITLEMENT_MAX_AGE_MS, offlineEntitlementResult } from '../src/billing/offlineCache';
+import { retentionDay } from '../src/telemetry/telemetry';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
@@ -155,6 +156,12 @@ test('does not use an offline entitlement after its store expiry', () => {
   const result = offlineEntitlementResult({ entitlement, cachedAt: '2030-01-07T12:00:00.000Z' }, now);
   assert.equal(result.status, 'expired');
   assert.equal(result.entitlement.tier, 'free');
+});
+
+test('calculates retention days from the first app open', () => {
+  assert.equal(retentionDay('2030-01-01T10:00:00.000Z', '2030-01-01T10:00:01.000Z'), 0);
+  assert.equal(retentionDay('2030-01-01T10:00:00.000Z', '2030-01-08T10:00:00.000Z'), 7);
+  assert.equal(retentionDay('2030-01-01T10:00:00.000Z', '2029-12-31T10:00:00.000Z'), null);
 });
 
 test('recognizes every Family account and grants the permanent Godfather tier', () => {
