@@ -3,13 +3,21 @@
   "version": "1.0.0",
   "private": true,
   "main": "index.js",
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs"
+    "test": "tsx --test tests/*.test.ts && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs",
+    "verify:javascript": "node scripts/verify-javascript.mjs",
+    "verify:whitespace": "node scripts/verify-whitespace.mjs",
+    "build:web": "node scripts/build-web.mjs",
+    "verify:packaging": "node scripts/verify-packaging.mjs",
+    "serve:web": "node scripts/serve-web.mjs",
+    "browser:smoke": "node scripts/browser-smoke.mjs",
+    "verify:release": "node scripts/verify-release.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",

@@ -1,23 +1,54 @@
-name: TGM Web Core
+name: TGM Release Verification
 
 on:
   push:
-    branches: ["main", "feature/**"]
+    branches: ["main"]
   pull_request:
     branches: ["main"]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: tgm-release-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  validate:
+  verify:
+    name: Release verification
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
         with:
-          node-version: 20
-      - name: Validate web core
-        run: node scripts/verify-web-core.mjs
-      - name: Check working-tree whitespace
-        run: git diff --check
+          fetch-depth: 1
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Enable pinned pnpm
+        run: corepack enable
+
+      - name: Install dependencies from lockfile
+        run: pnpm install --frozen-lockfile
+
+      - name: Run canonical local-equivalent release verification
+        run: pnpm run verify:release
+        env:
+          CI: true
+          GITHUB_SHA: ${{ github.sha }}
+
+      - name: Upload smoke evidence on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgm-release-verification-${{ github.sha }}
+          path: |
+            dist/web/BUILD-MANIFEST.json
+            /tmp/tgm-alarm-smoke-*/
+          if-no-files-found: ignore
