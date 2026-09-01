@@ -1,0 +1,31 @@
+name: TGM Migration Gates
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgm-migration-gates-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migration-preflight:
+    name: Migration preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Run database-neutral migration status and preflight
+        run: pnpm run verify:migrations
+        env:
+          CI: true
+          TGM_BACKEND_ENABLED: "0"
