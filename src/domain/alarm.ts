@@ -76,11 +76,11 @@ export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; event
 };
 
 export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
-  bubble: { title: 'Bubble-Zeitfenster', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'siren', protected: true },
-  gwBubble: { title: 'GW-Zeitfenster', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'once', sound: 'siren', protected: true },
-  custom: { title: 'Mein TGM-Event', type: 'custom', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
-  individual: { title: 'Individual-Alarm', type: 'individual', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
-  rss: { title: 'RSS-Alarm', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
+  bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'siren', protected: true },
+  gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'once', sound: 'siren', protected: true },
+  custom: { title: 'Event Alarm', type: 'custom', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
+  individual: { title: 'Individual Timer', type: 'individual', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
+  rss: { title: 'RSS Timer', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
 };
 
 const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
@@ -232,22 +232,22 @@ export function soundForAlarmType(type: AlarmType): SoundProfile {
 }
 
 export function alarmTypeLabel(type: AlarmType): string {
-  if (type === 'bubble') return 'Bubble';
-  if (type === 'gwBubble') return 'GW Bubble';
-  if (type === 'individual') return 'Individual-Alarm';
-  if (type === 'rss') return 'RSS-Alarm';
-  return 'Eigenes Event';
+  if (type === 'bubble') return 'Bubble Alarm';
+  if (type === 'gwBubble') return 'Massacre Alarm';
+  if (type === 'individual') return 'Individual Timer';
+  if (type === 'rss') return 'RSS Timer';
+  return 'Event Alarm';
 }
 
 export function repeatLabel(repeat: RepeatMode): string {
   if (repeat === 'daily') return 'Täglich';
-  if (repeat === 'gw5d') return 'GW-Zyklus · alle 5 Tage';
+  if (repeat === 'gw5d') return 'Massacre Alarm · alle 5 Tage';
   return 'Einmalig';
 }
 
 export function momentLabel(moment: NotificationMoment): string {
   if (moment.kind === 'warning') return `${moment.warningMinutes} Min. Vorwarnung`;
-  if (moment.kind === 'end-warning') return 'Bubble-Ende-Warnung';
-  if (moment.kind === 'end') return 'Bubble endet';
+  if (moment.kind === 'end-warning') return 'Bubble Alarm-Ende-Warnung';
+  if (moment.kind === 'end') return 'Bubble Alarm endet';
   return 'Hauptereignis';
 }

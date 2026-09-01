@@ -397,15 +397,15 @@ export default function App() {
           <View>
             <View style={styles.topRow}>
               <View style={styles.flex}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.subtitle}>Persönliche Alarmzentrale</Text></View>
-              <View style={styles.accountPill}><View style={styles.accountDot} /><Text style={styles.accountText}>{activeAccount?.name ?? 'Kein Kommando'}</Text></View>
+              <View style={styles.accountPill}><View style={styles.accountDot} /><Text style={styles.accountText}>{activeAccount?.name ?? 'Kein Account'}</Text></View>
             </View>
             <View style={styles.heroCard}>
               <Text style={styles.eyebrow}>ALS NÄCHSTES</Text>
-              {next ? <><Text style={styles.nextTitle}>{next.alarm.title}</Text><Text style={styles.nextTime}>{formatDateTime(next.event)}</Text><Text style={styles.countdown}>{formatCountdown(next.event, now)}</Text><Text style={styles.muted}>{alarmTypeLabel(next.alarm.type)} · {next.alarm.repeat === 'gw5d' ? 'Bubble aktiv ab Beginn' : 'Vorwarnungen aktiv'}</Text></> : <><Text style={styles.nextTitle}>Keine offenen Termine</Text><Text style={styles.muted}>Lege deinen nächsten TGM-Alarm an.</Text></>}
+              {next ? <><Text style={styles.nextTitle}>{next.alarm.title}</Text><Text style={styles.nextTime}>{formatDateTime(next.event)}</Text><Text style={styles.countdown}>{formatCountdown(next.event, now)}</Text><Text style={styles.muted}>{alarmTypeLabel(next.alarm.type)} · {next.alarm.repeat === 'gw5d' ? 'Bubble Alarm aktiv ab Beginn' : 'Vorwarnungen aktiv'}</Text></> : <><Text style={styles.nextTitle}>Keine offenen Termine</Text><Text style={styles.muted}>Lege deinen nächsten TGM-Alarm an.</Text></>}
             </View>
             <View style={styles.statsRow}>
               <View style={styles.statCard}><Text style={styles.eyebrow}>ALARME</Text><Text style={styles.statValue}>{alarmLimitText}</Text><Text style={styles.muted}>im aktuellen Plan</Text></View>
-              <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE-SCHUTZ</Text><Text style={styles.statValue}>{state.alarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>GW-Zyklen aktiv</Text></View>
+              <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE ALARM</Text><Text style={styles.statValue}>{state.alarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>Massacre Alarm-Zyklen aktiv</Text></View>
               <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Lokaler Gerätetest'}</Text></View>
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
@@ -415,7 +415,7 @@ export default function App() {
             <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{state.alarms.length} gespeichert</Text></View>
           </View>
         }
-        ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart oder erstelle ein eigenes Event.</Text></View>}
+        ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart oder erstelle einen Event Alarm.</Text></View>}
         ListFooterComponent={
           <View>
             {storageError ? <View style={styles.errorBanner}><Text style={styles.errorText}>{storageError}</Text></View> : null}
@@ -444,7 +444,7 @@ export default function App() {
               {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} onPress={() => setEditor((current) => ({ ...current, ...defaultEditor(TEMPLATES[key]), title: current.title }))} style={[styles.choice, editor.type === TEMPLATES[key].type && styles.choiceActive]}><Text style={styles.choiceText}>{alarmTypeLabel(TEMPLATES[key].type)}</Text></Pressable>)}
             </View>
             <Text style={styles.fieldLabel}>BEZEICHNUNG</Text>
-            <TextInput value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />
+            <TextInput value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble Alarm" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />
             <View style={styles.twoColumns}><View style={styles.column}><Text style={styles.fieldLabel}>DATUM</Text><TextInput value={editor.date} onChangeText={(date) => setEditor((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View><View style={styles.column}><Text style={styles.fieldLabel}>UHRZEIT</Text><TextInput value={editor.time} onChangeText={(time) => setEditor((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View></View>
             <Text style={styles.fieldLabel}>VORWARNUNGEN</Text>
             <View style={styles.choiceRow}>{[60, 30, 15].map((minutes) => <Pressable key={minutes} onPress={() => setEditor((current) => ({ ...current, warnings: current.warnings.includes(minutes) ? current.warnings.filter((item) => item !== minutes) : [...current.warnings, minutes] }))} style={[styles.choice, editor.warnings.includes(minutes) && styles.choiceActive]}><Text style={styles.choiceText}>{minutes} Min.</Text></Pressable>)}</View>

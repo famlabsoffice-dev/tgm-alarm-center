@@ -49,8 +49,8 @@ for (const needle of [
   '72 Stunden kostenlos testen',
   'viewFromLocation',
   'history.replaceState',
-  'Bubble- und GW-Zeiten im Blick.',
-  'Plane deine Bubble-Zeiten',
+  'Bubble Alarm und Massacre Alarm im Blick.',
+  'Plane deinen Bubble Alarm',
   'localStorage',
   'AudioContext',
   'FAMILY_ACCOUNT_NAMES',
@@ -76,7 +76,7 @@ for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
   assert(!new RegExp(marker, 'i').test(js + html + css), `Placeholder marker found: ${marker}`);
 }
 
-assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=15'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=17'), 'Offline shell does not cache the versioned application files.');
 assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');

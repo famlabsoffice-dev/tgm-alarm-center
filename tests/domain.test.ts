@@ -3,6 +3,8 @@ import test from 'node:test';
 import {
   TEMPLATES,
   TIER_LIMITS,
+  alarmTypeLabel,
+  repeatLabel,
   buildAlarm,
   localDateTimeToUtc,
   localInputFromUtc,
@@ -121,6 +123,12 @@ test('keeps the six-tier commercial ladder and all currency periods synchronized
   assert.equal(TEMPLATES.custom.sound, 'pulse');
   assert.equal(TEMPLATES.individual.sound, 'pulse');
   assert.equal(TEMPLATES.rss.sound, 'chime');
+  assert.equal(alarmTypeLabel('bubble'), 'Bubble Alarm');
+  assert.equal(alarmTypeLabel('gwBubble'), 'Massacre Alarm');
+  assert.equal(alarmTypeLabel('custom'), 'Event Alarm');
+  assert.equal(alarmTypeLabel('individual'), 'Individual Timer');
+  assert.equal(alarmTypeLabel('rss'), 'RSS Timer');
+  assert.equal(repeatLabel('gw5d'), 'Massacre Alarm · alle 5 Tage');
   for (const tier of Object.values(TIER_PRICING)) {
     assert.deepEqual(Object.keys(tier.eur), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);
     assert.deepEqual(Object.keys(tier.usdStore), ['weekly', 'monthly', 'sixMonth', 'yearly', 'lifetime']);

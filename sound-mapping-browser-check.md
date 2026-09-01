@@ -1,0 +1,1 @@
+Browserprüfung: Die Gaming-Töne-Ansicht zeigt Pulse mit Badge EVENT und Beschreibung „Klarer Doppelimpuls für Event-Alarme“, Siren mit Badge BUBBLE und Beschreibung „Durchdringender Alarmton für Bubble-Alarme“ sowie Chime mit Badge RSS und Beschreibung „Dreistufiger Klang für RSS-Alarme“. Der DOM-Test wurde ohne Laufzeitfehler bestanden.

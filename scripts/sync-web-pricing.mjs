@@ -16,12 +16,12 @@ const tiers = {
 
 const tierOrder = ['free', 'streetBoss', 'caporegime', 'underboss', 'boss', 'godfather'];
 const tierFeatures = {
-  free: ['1 Account', '1 Bubble-Alarm', '1 Event-Alarm: Individual oder Hellcat', 'Keine Individual- oder RSS-Alarme'],
-  streetBoss: ['2 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Keine Individual- oder RSS-Alarme'],
-  caporegime: ['3 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Je 1 Individual-Alarm: Investment, Building oder Training'],
-  underboss: ['5 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 1 Event-Alarm pro Account', 'Je 1 Individual-Alarm und je 1 RSS-Alarm: Tiles, Trucks oder Schmuggler'],
-  boss: ['10 Accounts', 'Je 1 Bubble-Alarm pro Account', 'Je 2 Event-Alarme pro Account', 'Je 2 Individual- und 2 RSS-Alarme pro Account'],
-  godfather: ['Unbegrenzte Accounts', 'Unbegrenzte Alarme', 'Bubble-, Event-, Individual- und RSS-Alarme ohne Limit', 'Vollständiger Funktionsumfang für die Alarmplanung'],
+  free: ['1 Account', '1 Bubble Alarm', '1 Event Alarm', 'Keine Timer'],
+  streetBoss: ['2 Accounts', 'Je 1 Bubble Alarm pro Account', 'Je 1 Event Alarm pro Account', 'Keine Timer'],
+  caporegime: ['3 Accounts', 'Je 1 Bubble Alarm pro Account', 'Je 1 Event Alarm pro Account', 'Je 1 Individual Timer: Investment, Building oder Training'],
+  underboss: ['5 Accounts', 'Je 1 Bubble Alarm pro Account', 'Je 1 Event Alarm pro Account', 'Je 1 Individual Timer und je 1 RSS Timer: Tiles, Trucks oder Schmuggler'],
+  boss: ['10 Accounts', 'Je 1 Bubble Alarm pro Account', 'Je 2 Event Alarm pro Account', 'Je 2 Individual Timer und 2 RSS Timer pro Account'],
+  godfather: ['Unbegrenzte Accounts', 'Unbegrenzte Alarme', 'Bubble Alarm, Event Alarm, Individual Timer und RSS Timer ohne Limit', 'Vollständiger Funktionsumfang für die Alarmplanung'],
 };
 
 const sourceTierOrder = source.match(/const TIER_ORDER = \[[^\]]+\];/s);

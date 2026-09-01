@@ -39,7 +39,7 @@ export async function cancelAllScheduled(): Promise<void> {
 }
 
 function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: NotificationPreferences): Notifications.NotificationContentInput {
-  const eventLabel = alarm.type === 'gwBubble' ? 'GW Bubble' : alarm.type === 'bubble' ? 'Bubble' : 'Event';
+  const eventLabel = alarm.type === 'gwBubble' ? 'Massacre Alarm' : alarm.type === 'bubble' ? 'Bubble Alarm' : alarm.type === 'custom' ? 'Event Alarm' : alarm.type === 'individual' ? 'Individual Timer' : 'RSS Timer';
   const isWarning = moment.kind === 'warning';
   const isEndWarning = moment.kind === 'end-warning';
   const isEnd = moment.kind === 'end';
@@ -47,7 +47,7 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
   const body = isEndWarning
     ? `${alarm.title}: Der Schutz endet um ${moment.endAt?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
     : isEnd
-      ? `${alarm.title}: Das Bubble-Schutzfenster endet jetzt.`
+      ? `${alarm.title}: Der Bubble Alarm endet jetzt.`
       : isWarning
         ? `${eventLabel} beginnt um ${moment.eventTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
         : `Termin ${moment.eventTime.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}.`;
