@@ -1,7 +1,7 @@
 export type AlarmType = 'bubble' | 'gwBubble' | 'custom';
 export type RepeatMode = 'once' | 'daily' | 'gw5d';
 export type SoundProfile = 'pulse' | 'siren' | 'chime';
-export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'godfather';
+export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'godfather';
 export type OccurrenceKind = 'warning' | 'main' | 'end-warning' | 'end';
 
 export interface Account {
@@ -16,10 +16,8 @@ export interface Alarm {
   accountId: string;
   title: string;
   type: AlarmType;
-  /** Original local input, retained for daily recurrence editing. */
   date: string;
   time: string;
-  /** Absolute event instant. All one-off and GW-cycle instants are derived from this UTC value. */
   eventAtUtc: string;
   warnings: number[];
   repeat: RepeatMode;
@@ -72,6 +70,7 @@ export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; event
   free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
   streetBoss: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
   caporegime: { accounts: 3, alarms: 6, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
+  underboss: { accounts: 5, alarms: 10, events: 5, perAccount: { bubbleAlarms: 1, eventAlarms: 1 } },
   godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY } },
 };
 
@@ -98,14 +97,9 @@ export function validateDateTime(date: string, time: string): boolean {
   const hour = Number(time.slice(0, 2));
   const minute = Number(time.slice(3, 5));
   const candidate = new Date(year, month - 1, day, hour, minute, 0, 0);
-  return candidate.getFullYear() === year
-    && candidate.getMonth() === month - 1
-    && candidate.getDate() === day
-    && candidate.getHours() === hour
-    && candidate.getMinutes() === minute;
+  return candidate.getFullYear() === year && candidate.getMonth() === month - 1 && candidate.getDate() === day && candidate.getHours() === hour && candidate.getMinutes() === minute;
 }
 
-/** Converts a validated device-local calendar input into the absolute UTC value used by persistence. */
 export function localDateTimeToUtc(date: string, time: string): string | null {
   if (!validateDateTime(date, time)) return null;
   const year = Number(date.slice(0, 4));
