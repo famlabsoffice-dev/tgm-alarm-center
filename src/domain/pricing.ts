@@ -5,6 +5,17 @@ export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
 
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
+export const FOUNDER_ACCESS_TIER: Tier = 'godfather';
+export const FOUNDER_ACCOUNT_NAMES = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'] as const;
+const FOUNDER_ACCOUNT_NAME_KEYS = new Set(FOUNDER_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
+
+export function isFounderAccountName(accountName: string): boolean {
+  return FOUNDER_ACCOUNT_NAME_KEYS.has(accountName.trim().toLowerCase());
+}
+
+export function effectiveTierForAccount(tier: Tier, accountName: string): Tier {
+  return isFounderAccountName(accountName) ? FOUNDER_ACCESS_TIER : tier;
+}
 
 export interface FreeTrialState {
   startedAt: string | null;

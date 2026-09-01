@@ -33,6 +33,7 @@ import {
   upcomingMoments,
   validateDateTime,
 } from './src/domain/alarm';
+import { effectiveTierForAccount } from './src/domain/pricing';
 import { exportBackup, restoreBackup } from './src/backup/backup';
 import { emptyState, loadState, saveState } from './src/storage/store';
 import {
@@ -199,7 +200,8 @@ export default function App() {
     .sort((a, b) => a.event.getTime() - b.event.getTime())[0] ?? null, [state.alarms, now]);
 
   const activeAccount = state.accounts.find((account) => account.id === state.activeAccountId) ?? null;
-  const tierLimit = TIER_LIMITS[state.tier].alarms;
+  const effectiveAppTier = effectiveTierForAccount(state.tier, activeAccount?.name ?? '');
+  const tierLimit = TIER_LIMITS[effectiveAppTier].alarms;
   const alarmLimitText = Number.isFinite(tierLimit) ? `${state.alarms.length}/${tierLimit}` : `${state.alarms.length}`;
 
   const openEdit = (alarm: Alarm): void => {

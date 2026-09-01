@@ -11,7 +11,7 @@ const isIso = (value: unknown): value is string => typeof value === 'string' && 
 const validType = (value: unknown): value is AlarmType => value === 'bubble' || value === 'gwBubble' || value === 'custom';
 const validRepeat = (value: unknown): value is RepeatMode => value === 'once' || value === 'daily' || value === 'gw5d';
 const validSound = (value: unknown): value is SoundProfile => value === 'pulse' || value === 'siren' || value === 'chime';
-const validTier = (value: unknown): value is Tier => value === 'free' || value === 'streetBoss' || value === 'caporegime' || value === 'godfather';
+const validTier = (value: unknown): value is Tier => value === 'free' || value === 'streetBoss' || value === 'caporegime' || value === 'underboss' || value === 'godfather';
 const validColor = (value: unknown): value is string => typeof value === 'string' && /^(#[0-9A-Fa-f]{6}|[a-zA-Z]{1,24})$/.test(value);
 
 function validateAccount(value: unknown, ids: Set<string>): void {

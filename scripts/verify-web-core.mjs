@@ -53,7 +53,15 @@ for (const needle of [
   'Plane deine Bubble-Zeiten',
   'localStorage',
   'AudioContext',
+  'FOUNDER_ACCOUNT_NAMES',
+  'FOUNDER_ACCESS_TIER',
+  'founderAccessForAccount',
+  'GODFATHER LIFETIME · KOSTENFREI',
+  'Dauerhaft freigeschaltet',
 ]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
+for (const founderName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
+  assert(js.includes(founderName), `Founder account is missing: ${founderName}`);
+}
 
 for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
   assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
