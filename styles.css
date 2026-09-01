@@ -181,9 +181,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .plan-limit { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; color: var(--text-soft); background: var(--bg-soft); border: 1px solid var(--line); border-radius: 10px; font-size: 12px; }
 .plan-limit strong { color: var(--text); font-variant-numeric: tabular-nums; }
 .plan-price-list { display: grid; gap: 7px; margin-top: 15px; }
-.plan-price-row { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; color: var(--muted); font-size: 11px; }
-.plan-price-row strong { color: var(--text-soft); font-size: 13px; }
+.plan-price-row { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(54px, .75fr) minmax(64px, .9fr); align-items: baseline; gap: 8px; color: var(--muted); font-size: 11px; }
+.plan-price-row strong { color: var(--text-soft); font-size: 13px; text-align: right; }
 .plan-price-row.featured strong { color: var(--gold); }
+.plan-price-head { padding-bottom: 3px; color: var(--muted); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+.plan-price-head span:not(:first-child) { text-align: right; }
 .plan-note { margin-top: 14px; color: var(--muted); font-size: 11px; }
 
 .modal-wrap { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 18px; background: rgba(0, 0, 0, .78); backdrop-filter: blur(8px); }
@@ -239,6 +241,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
   .alarm-actions .alarm-action { flex: 1 1 auto; }
   .modal-wrap { align-items: end; padding: 0; }
   .modal { max-height: 94vh; border-radius: 22px 22px 0 0; }
+  .plan-price-row { grid-template-columns: minmax(0, 1.1fr) minmax(48px, .75fr) minmax(58px, .9fr); gap: 5px; font-size: 10px; }
+  .plan-price-row strong { font-size: 11px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
