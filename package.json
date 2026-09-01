@@ -20,6 +20,8 @@
     "browser:smoke": "npx --yes playwright@1.55.0 install chromium && npx --yes -p playwright@1.55.0 node scripts/browser-smoke.mjs",
     "verify:store-config": "node scripts/verify-store-config.mjs",
     "verify:release": "node scripts/verify-release.mjs",
+    "build:android:aab": "node scripts/build-store.mjs android",
+    "build:ios:ipa": "node scripts/build-store.mjs ios",
     "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight"
   },
   "dependencies": {
