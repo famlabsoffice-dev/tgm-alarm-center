@@ -1,3 +1,4 @@
+import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -24,20 +25,71 @@ const tierFeatures = {
   godfather: ['Unbegrenzte Accounts', 'Unbegrenzte Alarme', 'Bubble Alarm, Event Alarm, Individual Timer und RSS Timer ohne Limit', 'Vollständiger Funktionsumfang für die Alarmplanung'],
 };
 
-const sourceTierOrder = source.match(/const TIER_ORDER = \[[^\]]+\];/s);
-if (!sourceTierOrder) throw new Error('TIER_ORDER block not found in app.js');
-const sourcePricing = source.match(/const TIER_PRICING = \{.*?const TIER_FEATURES/s);
-if (!sourcePricing) throw new Error('TIER_PRICING block not found in app.js');
-const sourceFeatures = source.match(/const TIER_FEATURES = \{.*?\n  \};/s);
-if (!sourceFeatures) throw new Error('TIER_FEATURES block not found in app.js');
+const runtimeScaffold = [
+  'const app = document.getElementById(\'app\');',
+  'const modalRoot = document.getElementById(\'modalRoot\');',
+  'const toastRoot = document.getElementById(\'toast\');',
+  'const overlayRoot = document.getElementById(\'alarmOverlay\');',
+  'const now = () => Date.now();',
+  'const iso = (ms) => new Date(ms).toISOString();',
+  'const uid = () =>',
+  'const esc = (value)',
+  'const formatDateInput = (ms)',
+  'const formatTimeInput = (ms)',
+  'const countdown = (ms)',
+];
+
+function assertRuntimeScaffold(value, label) {
+  for (const marker of runtimeScaffold) assert(value.includes(marker), `${label}: runtime scaffold missing: ${marker}`);
+}
+
+function replaceDeclaration(input, name, replacement) {
+  const marker = `const ${name} =`;
+  const start = input.indexOf(marker);
+  if (start < 0) throw new Error(`${name} declaration not found in app.js`);
+  const opening = input.indexOf('{', start) >= 0 && input.indexOf('{', start) < input.indexOf('[', start) ? '{' : '[';
+  const closing = opening === '{' ? '}' : ']';
+  const bodyStart = input.indexOf(opening, start);
+  if (bodyStart < 0) throw new Error(`${name} declaration body not found in app.js`);
+  let depth = 0;
+  let quote = null;
+  let escaped = false;
+  for (let index = bodyStart; index < input.length; index += 1) {
+    const character = input[index];
+    if (quote) {
+      if (escaped) escaped = false;
+      else if (character === '\\') escaped = true;
+      else if (character === quote) quote = null;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === opening) depth += 1;
+    if (character === closing) {
+      depth -= 1;
+      if (depth === 0) {
+        const semicolon = input.indexOf(';', index);
+        if (semicolon < 0) throw new Error(`${name} declaration terminator not found in app.js`);
+        return `${input.slice(0, start)}${replacement}${input.slice(semicolon + 1)}`;
+      }
+    }
+  }
+  throw new Error(`${name} declaration is not balanced in app.js`);
+}
 
 const js = (value) => JSON.stringify(value).replace(/"/g, "'").replace(/'([A-Za-z_$][\w$]*)':/g, '$1:').replace(/: 'Infinity'/g, ': Infinity');
-
 const nextOrder = `const TIER_ORDER = ${js(tierOrder)};`;
-const nextPricing = `const TIER_PRICING = ${js(tiers).replace(/Infinity/g, 'Infinity')};\n  const TIER_FEATURES`;
+const nextPricing = `const TIER_PRICING = ${js(tiers).replace(/Infinity/g, 'Infinity')};`;
 const nextFeatures = `const TIER_FEATURES = ${js(tierFeatures)};`;
 
-let next = source.replace(sourceTierOrder[0], nextOrder).replace(sourcePricing[0], nextPricing).replace(sourceFeatures[0], nextFeatures);
+assertRuntimeScaffold(source, 'Input');
+let next = replaceDeclaration(source, 'TIER_ORDER', nextOrder);
+next = replaceDeclaration(next, 'TIER_PRICING', nextPricing);
+next = replaceDeclaration(next, 'TIER_FEATURES', nextFeatures);
+assertRuntimeScaffold(next, 'Output');
+new Function(next);
 if (next === source) process.exit(0);
 fs.writeFileSync(appPath, next);
 console.log('Synchronized web pricing: six tiers, four alarm categories, EUR/USD/JPY price data.');

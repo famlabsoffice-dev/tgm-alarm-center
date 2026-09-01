@@ -15,6 +15,19 @@ assert(html.includes('alarmOverlay'), 'Alarm overlay root is missing.');
 assert(css.includes('.alarm-overlay'), 'Alarm overlay styles are missing.');
 new Function(js);
 new Function(sw);
+for (const runtimeMarker of [
+  "const app = document.getElementById('app');",
+  "const modalRoot = document.getElementById('modalRoot');",
+  "const toastRoot = document.getElementById('toast');",
+  "const overlayRoot = document.getElementById('alarmOverlay');",
+  'const now = () => Date.now();',
+  'const iso = (ms) => new Date(ms).toISOString();',
+  'const uid = () =>',
+  'const esc = (value)',
+  'const formatDateInput = (ms)',
+  'const formatTimeInput = (ms)',
+  'const countdown = (ms)',
+]) assert(js.includes(runtimeMarker), `Missing web runtime scaffold: ${runtimeMarker}`);
 
 for (const needle of [
   "const SOUNDS",
