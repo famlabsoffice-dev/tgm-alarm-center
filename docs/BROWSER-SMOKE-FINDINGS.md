@@ -40,3 +40,5 @@ Finaler Pricing-Live-Test: Die aktualisierte App-Shell Version 9 zeigt Free, Str
 
 Trial-Aktivierung Live-Check: Der Klick auf „3 Tage testen“ aktiviert den Trial lokal. Die Ansicht zeigt danach „TRIAL · Godfather“, „3-Tage-Free-Trial aktiv“, „Alle lokalen Alarmfunktionen sind freigeschaltet“ sowie einen Countdown von „Noch 2 Tage · 23 Std.“. Die Godfather-Karte wird als „AKTUELL“ markiert; die Bestätigung „3-Tage-Free-Trial aktiviert. Alle lokalen Alarmfunktionen sind freigeschaltet.“ erscheint als Toast.
 
+Preis-/Account-Live-Check: Die Vorschau zeigt durchgehend „Accounts“ statt „Kommandos“, einschließlich Limitzeilen, Featurelisten und „Account wechseln“. Der weiterhin lokal aktive Trial wird nach Reload als „TRIAL · Godfather“ mit „Noch 2 Tage · 23 Std.“ angezeigt. Neue sichtbare Preise: Street Boss 14,99 € monatlich / 199,99 € Lifetime sowie 16,99 $ monatlich / 214,99 $ Lifetime; Caporegime 24,99 € monatlich / 299,99 € Lifetime sowie 27,99 $ monatlich / 319,99 $ Lifetime; Godfather 39,99 € monatlich / 499,99 € Lifetime sowie 44,99 $ monatlich / 529,99 $ Lifetime.
+
