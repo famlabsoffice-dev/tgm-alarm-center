@@ -2,7 +2,7 @@ name: TGM Web Core
 
 on:
   push:
-    branches: ["main", "feature/**"]
+    branches: ["main", "feature/**", "fix/**"]
   pull_request:
     branches: ["main"]
 
@@ -14,10 +14,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+          run_install: false
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
       - name: Validate web core
         run: node scripts/verify-web-core.mjs
+      - name: Run unit and regression tests
+        run: pnpm test
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Validate JavaScript syntax
+        run: |
+          node --check app.js
+          node --check sw.js
+      - name: Validate Expo configuration
+        run: pnpm exec expo config --json > /dev/null
       - name: Check working-tree whitespace
         run: git diff --check
