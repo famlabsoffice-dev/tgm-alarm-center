@@ -12,6 +12,7 @@ const steps = [
   ['Whitespace', ['run', 'verify:whitespace']],
   ['Web build/package', ['run', 'build:web']],
   ['Packaged web verification', ['run', 'verify:packaging']],
+  ['Deterministic web archive', ['run', 'package:web']],
   ['Browser smoke', ['run', 'browser:smoke']],
 ];
 

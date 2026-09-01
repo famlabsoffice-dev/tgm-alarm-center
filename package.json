@@ -14,6 +14,7 @@
     "verify:javascript": "node scripts/verify-javascript.mjs",
     "verify:whitespace": "node scripts/verify-whitespace.mjs",
     "build:web": "node scripts/build-web.mjs",
+    "package:web": "node scripts/package-web.mjs",
     "verify:packaging": "node scripts/verify-packaging.mjs",
     "serve:web": "node scripts/serve-web.mjs",
     "browser:smoke": "npx --yes playwright@1.55.0 install chromium && npx --yes -p playwright@1.55.0 node scripts/browser-smoke.mjs",
