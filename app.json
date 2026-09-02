@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "TGM ALARM CENTER",
+    "slug": "tgm-alarm-center",
+    "version": "1.0.0",
+    "orientation": "landscape",
+    "userInterfaceStyle": "dark",
+    "scheme": "tgm-alarm-center",
+    "icon": "./icon.png",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tgm.alarmcenter",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "TGM ALARM CENTER benötigt Benachrichtigungen, damit deine Alarmzeiten zuverlässig angekündigt werden."
+      }
+    },
+    "android": {
+      "package": "com.tgm.alarmcenter",
+      "edgeToEdgeEnabled": false,
+      "permissions": ["POST_NOTIFICATIONS", "SCHEDULE_EXACT_ALARM", "VIBRATE", "RECEIVE_BOOT_COMPLETED"],
+      "adaptiveIcon": {"foregroundImage": "./icon.png", "backgroundColor": "#090C12"}
+    },
+    "plugins": [
+      "expo-iap",
+      ["expo-notifications", {"sounds": ["./assets/notifications/alarm-pulse.wav", "./assets/notifications/alarm-siren.wav", "./assets/notifications/alarm-chime.wav"]}],
+      ["expo-build-properties", {"android": {"compileSdkVersion": 36, "targetSdkVersion": 36, "buildToolsVersion": "36.0.0"}, "ios": {"deploymentTarget": "15.1"}}]
+    ]
+  }
+}

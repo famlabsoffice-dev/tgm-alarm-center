@@ -1,0 +1,54 @@
+{
+  "appName": "TGM ALARM CENTER",
+  "packageId": "com.tgm.alarmcenter",
+  "bundleId": "com.tgm.alarmcenter",
+  "category": "Tools",
+  "businessModel": "Free base app with optional subscriptions and lifetime purchases",
+  "localizations": {
+    "de-DE": {
+      "googlePlay": {
+        "title": "TGM ALARM CENTER",
+        "shortDescription": "Gaming-Alarme, Vorwarnungen und Zyklen – kein wichtiges Event verpassen.",
+        "keywords": ["Gaming Alarm", "Event Timer", "Bubble Alarm", "Massacre Alarm", "GW Timer", "Countdown", "Benachrichtigung", "Spiel Timer", "Reminder", "Gaming Kalender"]
+      },
+      "appStore": {
+        "name": "TGM ALARM CENTER",
+        "subtitle": "Gaming-Alarme ohne Stress",
+        "promotionalText": "Plane Vorwarnungen, Zyklen und lokale Benachrichtigungen für deine wichtigsten Gaming-Events.",
+        "keywords": "Gaming,Alarm,Timer,Reminder,Event,Countdown,Notifications,Bubble,GW,Schedule"
+      }
+    },
+    "en-US": {
+      "googlePlay": {
+        "title": "TGM ALARM CENTER",
+        "shortDescription": "Gaming alarms, reminders and cycles — never miss an important event.",
+        "keywords": ["Gaming alarm", "event timer", "reminder", "countdown", "notification", "game timer", "schedule", "recurring alarm"]
+      },
+      "appStore": {
+        "name": "TGM ALARM CENTER",
+        "subtitle": "Gaming alarms, made simple",
+        "promotionalText": "Plan warnings, cycles and local notifications for your most important gaming events.",
+        "keywords": "Gaming,Alarm,Timer,Reminder,Event,Countdown,Notifications,Bubble,GW,Schedule"
+      }
+    }
+  },
+  "assets": {
+    "icon": "tgm-alarm-center-icon.png",
+    "googlePlayFeatureGraphic": "google-play-feature-graphic.png",
+    "screenshots": [
+      "screenshot-01-dashboard.png",
+      "screenshot-02-warnings.png",
+      "screenshot-03-gw-cycle.png",
+      "screenshot-04-backup.png"
+    ]
+  },
+  "compliance": {
+    "independentUtilityStatement": true,
+    "advertising": false,
+    "localDataProcessing": true,
+    "privacyUrlRequiredBeforeSubmission": true,
+    "supportUrlRequiredBeforeSubmission": true,
+    "trademarkClearanceRequiredBeforeSubmission": true,
+    "screenshotsMustMatchFinalBinary": true
+  }
+}
