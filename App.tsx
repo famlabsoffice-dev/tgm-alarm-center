@@ -7,6 +7,8 @@ import {
   Platform,
   Pressable,
   SafeAreaView,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Switch,
   Text,
@@ -123,6 +125,20 @@ function isOccurrenceCompleted(alarm: Alarm, event: Date): boolean {
   return alarm.completedOccurrences[occurrenceKey(alarm.id, event)] === true;
 }
 
+function alarmCategory(alarm: Alarm): 'funk' | 'feuer' | 'technik' | 'sonstige' {
+  if (alarm.type === 'bubble' || alarm.type === 'gwBubble') return 'feuer';
+  if (alarm.type === 'custom' || alarm.type === 'individual' || alarm.type === 'rss') return 'technik';
+  return 'sonstige';
+}
+
+function categoryLabel(category: 'funk' | 'feuer' | 'technik' | 'sonstige'): string {
+  return ({ funk: 'FUNK', feuer: 'FEUER', technik: 'TECHNIK', sonstige: 'SONSTIGE' })[category];
+}
+
+function categoryIcon(category: 'funk' | 'feuer' | 'technik' | 'sonstige'): string {
+  return ({ funk: '◉', feuer: '♨', technik: '⚙', sonstige: '✦' })[category];
+}
+
 export default function App() {
   const [state, setState] = useState<AppState>(emptyState());
   const [ready, setReady] = useState(false);
@@ -134,6 +150,9 @@ export default function App() {
   const [storageError, setStorageError] = useState<string | null>(null);
   const initialized = useRef(false);
   const notificationGeneration = useRef(0);
+  const [nativeView, setNativeView] = useState<'alarms' | 'dashboard'>('alarms');
+  const [alarmQuery, setAlarmQuery] = useState('');
+  const [alarmFilter, setAlarmFilter] = useState<'all' | 'active' | 'inactive' | 'funk' | 'feuer' | 'technik' | 'sonstige'>('all');
 
   useEffect(() => {
     let mounted = true;
@@ -409,6 +428,15 @@ export default function App() {
     }
   };
 
+  const activeAlarms = state.alarms.filter((alarm) => alarm.active);
+  const visibleAlarms = useMemo(() => state.alarms.filter((alarm) => {
+    const query = alarmQuery.trim().toLocaleLowerCase('de-DE');
+    const matchesQuery = !query || alarm.title.toLocaleLowerCase('de-DE').includes(query) || alarmTypeLabel(alarm.type).toLocaleLowerCase('de-DE').includes(query);
+    const category = alarmCategory(alarm);
+    const matchesFilter = alarmFilter === 'all' || alarmFilter === 'active' && alarm.active || alarmFilter === 'inactive' && !alarm.active || alarmFilter === category;
+    return matchesQuery && matchesFilter;
+  }).sort((a, b) => (nextOccurrence(a, new Date(now))?.getTime() ?? 0) - (nextOccurrence(b, new Date(now))?.getTime() ?? 0)), [alarmFilter, alarmQuery, now, state.alarms]);
+
   const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {
     const event = nextOccurrence(item, new Date(now));
     const moments = upcomingMoments(item, new Date(now));
@@ -444,10 +472,24 @@ export default function App() {
     );
   };
 
-  if (!ready) return <SafeAreaView style={styles.root}><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></SafeAreaView>;
+  if (!ready) return <SafeAreaView style={styles.root}><StatusBar hidden /><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></SafeAreaView>;
 
-  return (
+  return nativeView === 'alarms' ? <AlarmListScreen
+    alarms={visibleAlarms}
+    activeCount={activeAlarms.length}
+    query={alarmQuery}
+    filter={alarmFilter}
+    onQueryChange={setAlarmQuery}
+    onFilterChange={setAlarmFilter}
+    onOpenEdit={openEdit}
+    onToggle={toggleAlarm}
+    onComplete={completeAlarm}
+    onDelete={deleteAlarm}
+    onCreate={quickCreate}
+    onNavigateDashboard={() => setNativeView('dashboard')}
+  /> : (
     <SafeAreaView style={styles.root}>
+      <StatusBar hidden />
       <FlatList
         data={state.alarms}
         keyExtractor={(item) => item.id}
@@ -523,6 +565,96 @@ export default function App() {
 function SettingRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }): React.ReactElement {
   return <View style={styles.settingRow}><Text style={styles.settingLabel}>{label}</Text><Switch value={value} onValueChange={onValueChange} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={value ? COLORS.mint : '#D0D6DB'} /></View>;
 }
+
+type AlarmListScreenProps = {
+  alarms: Alarm[];
+  activeCount: number;
+  query: string;
+  filter: 'all' | 'active' | 'inactive' | 'funk' | 'feuer' | 'technik' | 'sonstige';
+  onQueryChange: (value: string) => void;
+  onFilterChange: (value: AlarmListScreenProps['filter']) => void;
+  onOpenEdit: (alarm: Alarm) => void;
+  onToggle: (alarm: Alarm) => void;
+  onComplete: (alarm: Alarm) => void;
+  onDelete: (alarm: Alarm) => void;
+  onCreate: (key: TemplateKey) => void;
+  onNavigateDashboard: () => void;
+};
+
+function AlarmListScreen({ alarms, activeCount, query, filter, onQueryChange, onFilterChange, onOpenEdit, onToggle, onComplete, onDelete, onCreate, onNavigateDashboard }: AlarmListScreenProps): React.ReactElement {
+  const tab = (value: AlarmListScreenProps['filter'], label: string, count: number, tone: 'selected' | 'active' | 'muted'): React.ReactElement => (
+    <Pressable accessibilityRole="tab" accessibilityState={{ selected: filter === value }} onPress={() => onFilterChange(value)} style={modernStyles.tabButton}>
+      <Text style={[modernStyles.tabText, tone === 'selected' && modernStyles.tabSelected, tone === 'active' && modernStyles.tabActive, tone === 'muted' && modernStyles.tabMuted]}>{label} ({count})</Text>
+      {filter === value ? <View style={modernStyles.tabUnderline} /> : null}
+    </Pressable>
+  );
+  const filterChip = (value: AlarmListScreenProps['filter'], icon: string, label: string): React.ReactElement => (
+    <Pressable accessibilityRole="button" accessibilityState={{ selected: filter === value }} onPress={() => onFilterChange(filter === value ? 'all' : value)} style={[modernStyles.filterChip, filter === value && modernStyles.filterChipSelected]}>
+      <Text style={modernStyles.filterIcon}>{icon}</Text><Text style={modernStyles.filterLabel}>{label}</Text>
+    </Pressable>
+  );
+  return (
+    <SafeAreaView style={modernStyles.screen}>
+      <StatusBar hidden />
+      <View style={modernStyles.header}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Dashboard öffnen" onPress={onNavigateDashboard} style={modernStyles.headerButton}><Text style={modernStyles.eagle}>♜</Text></Pressable>
+        <Text style={modernStyles.headerTitle}>TGM ALARM-CENTER</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Live-Status" style={modernStyles.liveButton}><View style={modernStyles.liveDot} /><Text style={modernStyles.liveText}>LIVE</Text></Pressable>
+      </View>
+      <ScrollView contentContainerStyle={modernStyles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+        <View style={modernStyles.tabs}>{tab('all', 'ALLE', alarms.length, 'selected')}{tab('active', 'AKTIV', activeCount, 'active')}{tab('inactive', 'INAKTIV', alarms.length - activeCount, 'muted')}</View>
+        <View style={modernStyles.searchRow}><Text style={modernStyles.searchIcon}>⌕</Text><TextInput value={query} onChangeText={onQueryChange} placeholder="Suche Alarme…" placeholderTextColor={MODERN_COLORS.mutedGold} style={modernStyles.searchInput} returnKeyType="search" /></View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={modernStyles.chipRow}>{filterChip('funk', '◉', 'FUNK')}{filterChip('feuer', '♨', 'FEUER')}{filterChip('technik', '⚙', 'TECHNIK')}{filterChip('sonstige', '✦', 'SONSTIGE')}</ScrollView>
+        <Pressable accessibilityRole="button" onPress={() => onFilterChange('active')} style={modernStyles.alertBanner}><Text style={modernStyles.warningIcon}>△</Text><Text style={modernStyles.alertText}>{activeCount} AKTIVE ALARME</Text><Text style={modernStyles.bannerChevron}>›</Text></Pressable>
+        <View style={modernStyles.listHeader}><Text style={modernStyles.listTitle}>ALARME</Text><Pressable onPress={() => onCreate('bubble')}><Text style={modernStyles.addText}>+ NEUER ALARM</Text></Pressable></View>
+        {alarms.length ? alarms.map((alarm) => {
+          const category = alarmCategory(alarm);
+          const event = nextOccurrence(alarm);
+          return <Pressable key={alarm.id} accessibilityRole="button" accessibilityLabel={`${alarm.title} öffnen`} onPress={() => onOpenEdit(alarm)} style={[modernStyles.alarmCard, alarm.active ? modernStyles.activeCard : modernStyles.inactiveCard]}>
+            <View style={modernStyles.cardTop}><View style={modernStyles.cardStatus}><View style={[modernStyles.statusPill, alarm.active ? modernStyles.statusActive : modernStyles.statusInactive]}><Text style={modernStyles.statusLabel}>{alarm.active ? 'AKTIV' : 'INAKTIV'}</Text></View><View style={modernStyles.countBadge}><Text style={modernStyles.countText}>0</Text></View></View><Text style={modernStyles.cardTime}>{event ? localTime(event) : '--:--'}</Text></View>
+            <Text style={modernStyles.cardTitle}>{alarm.title}</Text>
+            <View style={modernStyles.cardBottom}><View style={modernStyles.miniPills}><Text style={modernStyles.miniPill}>{categoryIcon(category)}  {categoryLabel(category)}</Text><Text style={modernStyles.miniPill}>{alarm.type === 'bubble' || alarm.type === 'gwBubble' ? 'F 1400' : alarm.type === 'individual' ? 'T 2200' : 'S 0100'}</Text><Text style={modernStyles.miniPill}>WACHE {alarm.accountId.slice(-1) || '1'}</Text><Text style={modernStyles.miniPill}>GW 8/24</Text></View><Text style={modernStyles.cardChevron}>›</Text></View>
+            <View style={modernStyles.cardActions}><Pressable accessibilityRole="button" onPress={() => onToggle(alarm)}><Text style={modernStyles.actionText}>{alarm.active ? 'Pausieren' : 'Aktivieren'}</Text></Pressable>{event ? <Pressable accessibilityRole="button" onPress={() => onComplete(alarm)}><Text style={modernStyles.actionText}>Erledigt</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={() => onDelete(alarm)}><Text style={modernStyles.deleteText}>Löschen</Text></Pressable></View>
+          </Pressable>;
+        }) : <View style={modernStyles.emptyCard}><Text style={modernStyles.emptyIcon}>+</Text><Text style={modernStyles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={modernStyles.emptyText}>Lege deinen ersten Alarm an, um Vorwarnungen und Ereignisse sicher im Blick zu behalten.</Text><Pressable accessibilityRole="button" onPress={() => onCreate('bubble')} style={modernStyles.primaryButton}><Text style={modernStyles.primaryButtonText}>ALARM ANLEGEN</Text></Pressable></View>}
+      </ScrollView>
+      <View style={modernStyles.bottomNav}><Pressable accessibilityRole="button" onPress={onNavigateDashboard} style={modernStyles.navItem}><Text style={modernStyles.navIcon}>⌂</Text><Text style={modernStyles.navLabel}>DASHBOARD</Text></Pressable><Pressable accessibilityRole="button" accessibilityState={{ selected: true }} style={modernStyles.navItem}><View style={modernStyles.navIconWrap}><Text style={modernStyles.navIconSelected}>♧</Text><View style={modernStyles.navBadge}><Text style={modernStyles.navBadgeText}>{activeCount}</Text></View></View><Text style={modernStyles.navLabelSelected}>ALARME</Text></Pressable><Pressable accessibilityRole="button" onPress={onNavigateDashboard} style={modernStyles.navItem}><Text style={modernStyles.navIcon}>⌖</Text><Text style={modernStyles.navLabel}>KARTE</Text></Pressable><Pressable accessibilityRole="button" onPress={onNavigateDashboard} style={modernStyles.navItem}><Text style={modernStyles.navIcon}>◉</Text><Text style={modernStyles.navLabel}>FUNK</Text></Pressable><Pressable accessibilityRole="button" onPress={onNavigateDashboard} style={modernStyles.navItem}><Text style={modernStyles.navIcon}>▦</Text><Text style={modernStyles.navLabel}>SYSTEM</Text></Pressable></View>
+    </SafeAreaView>
+  );
+}
+
+const MODERN_COLORS = { background: '#020406', card: '#0A0E11', gold: '#E8B54A', green: '#3CA659', crimson: '#A8212E', cream: '#F1E5C9', mutedGold: '#9F8760', line: '#54411F', muted: '#687079', nav: '#080C10' };
+
+const modernStyles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: MODERN_COLORS.background },
+  header: { height: 78, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, borderBottomColor: '#17130D', borderBottomWidth: 1 },
+  headerButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  eagle: { color: MODERN_COLORS.gold, fontSize: 26 },
+  headerTitle: { color: MODERN_COLORS.gold, fontSize: 14, fontWeight: '900', letterSpacing: 2, flex: 1, textAlign: 'center' },
+  liveButton: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 54, justifyContent: 'flex-end' },
+  liveDot: { width: 8, height: 8, borderRadius: 8, backgroundColor: MODERN_COLORS.crimson },
+  liveText: { color: MODERN_COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 1 },
+  content: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 22, gap: 13 },
+  tabs: { flexDirection: 'row', alignItems: 'center', gap: 25, height: 44 },
+  tabButton: { height: 44, justifyContent: 'center', position: 'relative' },
+  tabText: { color: MODERN_COLORS.gold, fontSize: 12, fontWeight: '900', letterSpacing: 1 },
+  tabSelected: { color: MODERN_COLORS.cream }, tabActive: { color: MODERN_COLORS.gold }, tabMuted: { color: MODERN_COLORS.muted },
+  tabUnderline: { position: 'absolute', left: 0, right: 0, bottom: 0, height: 2, backgroundColor: MODERN_COLORS.gold },
+  searchRow: { height: 48, borderRadius: 14, borderColor: MODERN_COLORS.gold, borderWidth: StyleSheet.hairlineWidth, backgroundColor: MODERN_COLORS.card, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 13 },
+  searchIcon: { color: MODERN_COLORS.gold, fontSize: 26, marginRight: 7, lineHeight: 28 },
+  searchInput: { flex: 1, color: MODERN_COLORS.cream, fontSize: 14, paddingVertical: 0 },
+  chipRow: { gap: 8 },
+  filterChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, height: 34, borderRadius: 18, borderWidth: 1.5, borderColor: MODERN_COLORS.gold, backgroundColor: MODERN_COLORS.card },
+  filterChipSelected: { backgroundColor: '#1B160C' }, filterIcon: { color: MODERN_COLORS.gold, fontSize: 15 }, filterLabel: { color: MODERN_COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
+  alertBanner: { minHeight: 52, borderRadius: 13, borderColor: MODERN_COLORS.crimson, borderWidth: 1, backgroundColor: '#120A0C', flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, gap: 10, shadowColor: MODERN_COLORS.crimson, shadowOpacity: 0.35, shadowRadius: 12, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
+  warningIcon: { color: MODERN_COLORS.gold, fontSize: 24 }, alertText: { color: '#DC9F45', fontSize: 13, fontWeight: '900', letterSpacing: 0.7, flex: 1 }, bannerChevron: { color: MODERN_COLORS.gold, fontSize: 25 },
+  listHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 3 }, listTitle: { color: MODERN_COLORS.cream, fontSize: 13, fontWeight: '900', letterSpacing: 1.8 }, addText: { color: MODERN_COLORS.gold, fontSize: 10, fontWeight: '900', letterSpacing: 0.7 },
+  alarmCard: { backgroundColor: MODERN_COLORS.card, borderRadius: 15, borderColor: '#283038', borderWidth: 1, padding: 15, paddingLeft: 19, overflow: 'hidden', position: 'relative', shadowColor: MODERN_COLORS.crimson, shadowOpacity: 0.3, shadowRadius: 15, shadowOffset: { width: 0, height: 3 }, elevation: 3 },
+  activeCard: { borderLeftColor: MODERN_COLORS.crimson, borderLeftWidth: 4 }, inactiveCard: { borderLeftColor: MODERN_COLORS.gold, borderLeftWidth: 4, shadowOpacity: 0 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }, cardStatus: { flexDirection: 'row', alignItems: 'center', gap: 8 }, statusPill: { borderRadius: 7, paddingHorizontal: 9, paddingVertical: 5 }, statusActive: { backgroundColor: MODERN_COLORS.crimson }, statusInactive: { backgroundColor: 'transparent', borderColor: MODERN_COLORS.gold, borderWidth: 1 }, statusLabel: { color: MODERN_COLORS.cream, fontSize: 9, fontWeight: '900', letterSpacing: 0.8 }, countBadge: { width: 23, height: 23, borderRadius: 12, backgroundColor: '#14191D', borderColor: '#434C52', borderWidth: 1, alignItems: 'center', justifyContent: 'center' }, countText: { color: MODERN_COLORS.cream, fontSize: 11, fontWeight: '900' }, cardTime: { color: MODERN_COLORS.muted, fontSize: 12, fontWeight: '800' }, cardTitle: { color: MODERN_COLORS.cream, fontSize: 17, fontWeight: '900', marginTop: 12, marginBottom: 11 }, cardBottom: { flexDirection: 'row', alignItems: 'center' }, miniPills: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }, miniPill: { color: MODERN_COLORS.gold, backgroundColor: '#11161A', borderColor: MODERN_COLORS.line, borderWidth: 1, borderRadius: 9, paddingHorizontal: 7, paddingVertical: 4, fontSize: 9, fontWeight: '900', letterSpacing: 0.25 }, cardChevron: { color: MODERN_COLORS.gold, fontSize: 28, paddingLeft: 10 }, cardActions: { flexDirection: 'row', gap: 15, borderTopColor: '#22292D', borderTopWidth: StyleSheet.hairlineWidth, paddingTop: 10, marginTop: 12 }, actionText: { color: MODERN_COLORS.gold, fontSize: 11, fontWeight: '800' }, deleteText: { color: '#D16A63', fontSize: 11, fontWeight: '800' },
+  emptyCard: { backgroundColor: MODERN_COLORS.card, borderColor: '#283038', borderWidth: 1, borderRadius: 15, padding: 24, alignItems: 'center' }, emptyIcon: { color: MODERN_COLORS.gold, fontSize: 28 }, emptyTitle: { color: MODERN_COLORS.cream, fontSize: 17, fontWeight: '900', marginTop: 8 }, emptyText: { color: MODERN_COLORS.muted, textAlign: 'center', fontSize: 12, lineHeight: 18, marginTop: 7 }, primaryButton: { marginTop: 17, backgroundColor: MODERN_COLORS.gold, borderRadius: 11, paddingHorizontal: 22, paddingVertical: 12 }, primaryButtonText: { color: '#171108', fontSize: 12, fontWeight: '900', letterSpacing: 0.8 },
+  bottomNav: { height: 80, backgroundColor: MODERN_COLORS.nav, borderTopColor: '#1B2025', borderTopWidth: 1, flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center', paddingBottom: 8 }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 4 }, navIconWrap: { position: 'relative' }, navIcon: { color: '#667079', fontSize: 20 }, navIconSelected: { color: MODERN_COLORS.gold, fontSize: 21 }, navLabel: { color: '#667079', fontSize: 8, fontWeight: '900', letterSpacing: 0.45 }, navLabelSelected: { color: MODERN_COLORS.gold, fontSize: 8, fontWeight: '900', letterSpacing: 0.45 }, navBadge: { position: 'absolute', top: -7, right: -11, backgroundColor: MODERN_COLORS.crimson, minWidth: 15, height: 15, borderRadius: 8, alignItems: 'center', justifyContent: 'center' }, navBadgeText: { color: '#FFF1E0', fontSize: 9, fontWeight: '900' },
+});
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
