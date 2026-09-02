@@ -482,7 +482,7 @@ export default function App() {
     onQueryChange={setAlarmQuery}
     onFilterChange={setAlarmFilter}
     onOpenEdit={openEdit}
-    onToggle={toggleAlarm}
+    onToggle={(alarm) => toggleAlarm(alarm.id)}
     onComplete={completeAlarm}
     onDelete={deleteAlarm}
     onCreate={quickCreate}
@@ -500,6 +500,7 @@ export default function App() {
             <View style={styles.topRow}>
               <View style={styles.flex}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.subtitle}>Persönliche Alarmzentrale</Text></View>
               <View style={styles.accountPill}><View style={styles.accountDot} /><Text style={styles.accountText}>{activeAccount?.name ?? 'Kein Account'}</Text></View>
+              <Pressable accessibilityRole="button" accessibilityLabel="Alarme öffnen" onPress={() => setNativeView('alarms')} style={modernStyles.headerButton}><Text style={modernStyles.addText}>ALARME</Text></Pressable>
             </View>
             <View style={styles.heroCard}>
               <Text style={styles.eyebrow}>ALS NÄCHSTES</Text>
