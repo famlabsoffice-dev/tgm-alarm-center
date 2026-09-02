@@ -232,6 +232,21 @@
 
   function activeAccount() { return state.accounts.find((account) => account.id === state.activeAccountId) || null; }
   function accountAlarms(accountId) { return state.alarms.filter((alarm) => alarm.accountId === accountId); }
+  function enforceCapacity({ accountId, type, excludeId = null }) {
+    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
+    const counts = { bubble: 0, gw: 0, custom: 0, individual: 0, rss: 0 };
+    accountAlarms(accountId).forEach((alarm) => {
+      if (alarm.id !== excludeId && Object.prototype.hasOwnProperty.call(counts, alarm.type)) counts[alarm.type] += 1;
+    });
+    const limitKey = type === 'bubble' || type === 'gw' ? 'bubbleAlarms' : `${type}Alarms`;
+    const limit = plan.limits.perAccount[limitKey] ?? Number.POSITIVE_INFINITY;
+    const count = type === 'bubble' || type === 'gw' ? counts.bubble + counts.gw : counts[type];
+    if (count < limit) return true;
+    const labels = { bubble: 'Bubble Alarm', gw: 'Massacre Alarm', custom: 'Event Alarm', individual: 'Individual Timer', rss: 'RSS Timer' };
+    const plural = limit === 1 ? '' : 'e';
+    showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(limit)} ${labels[type]}${plural}. Öffne „Pläne und Preise“, um den verfügbaren Umfang zu vergleichen.`);
+    return false;
+  }
   function ensureAccount() {
     const current = activeAccount();
     if (current) return current;
@@ -502,20 +517,7 @@
     if (!SOUNDS[sound]) return showToast('Alarmton ist ungültig.');
     if (!warnings.length) return showToast('Bitte mindestens eine Vorwarnung wählen.');
     const existing = id ? state.alarms.find((alarm) => alarm.id === id) : null;
-    const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
-    const accountAlarmList = accountAlarms(account.id).filter((alarm) => alarm.id !== id);
-    const bubbleAlarms = accountAlarmList.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gw').length;
-    const eventAlarms = accountAlarmList.filter((alarm) => alarm.type === 'custom').length;
-    const individualAlarms = accountAlarmList.filter((alarm) => alarm.type === 'individual').length;
-    const rssAlarms = accountAlarmList.filter((alarm) => alarm.type === 'rss').length;
-    const bubbleLimit = plan.limits.perAccount.bubbleAlarms ?? Number.POSITIVE_INFINITY;
-    const eventLimit = plan.limits.perAccount.eventAlarms ?? Number.POSITIVE_INFINITY;
-    const individualLimit = plan.limits.perAccount.individualAlarms ?? Number.POSITIVE_INFINITY;
-    const rssLimit = plan.limits.perAccount.rssAlarms ?? Number.POSITIVE_INFINITY;
-    if ((type === 'bubble' || type === 'gw') && bubbleAlarms >= bubbleLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.bubbleAlarms)} Bubble Alarm${plan.limits.perAccount.bubbleAlarms === 1 ? '' : 'e'}.`);
-    if (type === 'custom' && eventAlarms >= eventLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.eventAlarms)} Event Alarm${plan.limits.perAccount.eventAlarms === 1 ? '' : 'e'}.`);
-    if (type === 'individual' && individualAlarms >= individualLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.individualAlarms)} Individual Timer${plan.limits.perAccount.individualAlarms === 1 ? '' : 'e'}.`);
-    if (type === 'rss' && rssAlarms >= rssLimit) return showToast(`${plan.name} erlaubt je Account ${formatPlanLimit(plan.limits.perAccount.rssAlarms)} RSS Timer${plan.limits.perAccount.rssAlarms === 1 ? '' : 'e'}.`);
+    if (!enforceCapacity({ accountId: account.id, type, excludeId: existing?.id || null })) return;
     const record = {
       id: existing?.id || uid(), accountId: account.id, title, type, eventAt, date, time, repeat, sound: soundForAlarmType(type), warnings,
       protected: document.getElementById('eProtected')?.checked === true, active: document.getElementById('eActive')?.checked !== false,
@@ -564,6 +566,7 @@
   function duplicateAlarm(id) {
     const source = state.alarms.find((item) => item.id === id);
     if (!source) return;
+    if (!enforceCapacity({ accountId: source.accountId, type: source.type })) return;
     const copy = { ...source, id: uid(), title: `${source.title} Kopie`.slice(0, MAX_TITLE_LENGTH), active: false, createdAt: iso(now()), updatedAt: iso(now()), completedOccurrences: {} };
     state.alarms.push(copy);
     persist(); render(); showToast('Alarm dupliziert und pausiert gespeichert.');
