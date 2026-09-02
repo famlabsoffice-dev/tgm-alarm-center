@@ -1,14 +1,29 @@
-export default [
+import { defineConfig } from 'eslint/config';
+
+export default defineConfig([
   {
-    ignores: ['node_modules/**', 'dist/**', 'src/**/*.ts', 'tests/**/*.ts', 'App.tsx'],
+    ignores: [
+      'node_modules/**',
+      '.expo/**',
+      'android/**',
+      'ios/**',
+      'dist/**',
+      'build/**',
+      'coverage/**',
+      'src/**/*.ts',
+      'tests/**/*.ts',
+      'App.tsx',
+    ],
   },
   {
-    files: ['**/*.js', '**/*.mjs'],
+    files: ['**/*.js', '**/*.mjs', '**/*.cjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       globals: {
+        Audio: 'readonly',
         AudioContext: 'readonly',
+        Buffer: 'readonly',
         Blob: 'readonly',
         Date: 'readonly',
         Intl: 'readonly',
@@ -23,17 +38,29 @@ export default [
         history: 'readonly',
         localStorage: 'readonly',
         location: 'readonly',
+        module: 'readonly',
         navigator: 'readonly',
         setInterval: 'readonly',
         setTimeout: 'readonly',
         window: 'readonly',
+        caches: 'readonly',
+        clearTimeout: 'readonly',
+        console: 'readonly',
+        fetch: 'readonly',
+        process: 'readonly',
+        self: 'readonly',
       },
     },
     rules: {
       'no-constant-condition': 'error',
       'no-debugger': 'error',
       'no-duplicate-case': 'error',
+      'no-constant-binary-expression': 'error',
+      'no-dupe-keys': 'error',
+      'no-unexpected-multiline': 'error',
       'no-unreachable': 'error',
+      'no-undef': 'error',
+      'no-unused-vars': ['warn', { args: 'none', caughtErrors: 'none' }],
     },
   },
-];
+]);

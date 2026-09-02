@@ -4,7 +4,7 @@
 
 Der native Release ist auf die gemeinsame App-ID `com.tgm.alarmcenter` konfiguriert. Android verwendet Compile SDK 36, Target SDK 36 und Build Tools 36.0.0. Drei Notification-Sounds, die App-ID, Bundle-Identifier, Icon und die erforderlichen Notification-Permissions werden durch `pnpm verify:store-config` geprüft.
 
-Die Anwendung arbeitet derzeit lokal. Accounts, Alarme, Einstellungen und Backups werden auf dem Gerät gespeichert. Es gibt keinen Server, keine Synchronisation und keine erkennbare Google-Play-Billing- oder Apple-StoreKit-Integration.
+Die Anwendung arbeitet bei Alarmdaten, Accounts, Einstellungen und Backups lokal auf dem Gerät. Es gibt keine Synchronisation für diese Daten. Die Google-Play-Billing- und Apple-StoreKit-Integration ist im nativen Client technisch implementiert; produktive Store-Produkte, IAPKit-Schlüssel, signierte Builds und Sandbox-/Lizenztests bleiben externe Aktivierungsschritte.
 
 ## Erledigte technische Gates
 
@@ -42,10 +42,14 @@ Erforderlich bleiben Kauf, Pending-Status, Wiederherstellung, Ablauf, Kündigung
 
 Die technische Integration ist abgeschlossen. Vor der Veröffentlichung müssen noch die echten Produktdatensätze in Google Play und App Store Connect angelegt, der IAPKit-Schlüssel als Build-Konfiguration gesetzt und die Sandbox-/Lizenztests auf physischen Geräten bestanden werden.
 
+## Repository-interne Gesamtprüfung
+
+Der verbindliche Orchestrator `pnpm verify:full-release` führt Typecheck, Lint, Tests, JavaScript- und Whitespace-Prüfung, Expo-Konfigurationsauflösung, Store-Konfigurationsgate und die vollständige Release-Verifikation in einer Stop-on-first-failure-Kette aus. Ein fehlgeschlagener Schritt beendet den Lauf mit Exit-Code ungleich null.
+
 ## Rechtliche Prüfung
 
 Vor der Einreichung müssen Rechte an der Bezeichnung *The Grand Mafia*, an Spielbegriffen, Logos, Screenshots und sonstigen markenbezogenen Assets geklärt werden. Die App darf keine offizielle Partnerschaft suggerieren, wenn keine schriftliche Autorisierung besteht. Datenschutz- und Support-Seiten müssen unter öffentlich erreichbaren HTTPS-URLs verfügbar sein.
 
 ## Finales Release-Gate
 
-Der Store-Launch ist erst dann `GO`, wenn ein real signierter Android- und iOS-Build erzeugt, auf physischen Geräten geprüft, in den jeweiligen Testprogrammen validiert, mit korrekten Store-Daten beschrieben und ohne offene Billing-, Datenschutz- oder Markenrisiken eingereicht wurde. Die automatische Repository-Prüfung ersetzt keine Play-Console-, App-Store-Connect- oder Gerätefreigabe.
+Der Store-Launch ist erst dann `GO`, wenn ein real signierter Android- und iOS-Build erzeugt, auf physischen Geräten geprüft, in den jeweiligen Testprogrammen validiert, mit korrekten Store-Daten beschrieben und ohne offene Billing-, Datenschutz- oder Markenrisiken eingereicht wurde. Die automatische Repository-Prüfung ersetzt keine Play-Console-, App-Store-Connect- oder Gerätefreigabe. Der lokale Gesamtstatus wird ausschließlich über `pnpm verify:full-release` beurteilt; externe Store-, Geräte-, Signierungs- und Rechtefreigaben bleiben separat dokumentiert.
