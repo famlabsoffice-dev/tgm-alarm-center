@@ -21,6 +21,10 @@ export interface PurchaseVerificationPayload {
   purchaseToken?: string;
 }
 
+function isTier(value: unknown): value is Tier {
+  return value === 'free' || value === 'streetBoss' || value === 'caporegime' || value === 'underboss' || value === 'boss' || value === 'godfather';
+}
+
 export async function verifyPurchaseWithServer(endpoint: string, payload: PurchaseVerificationPayload): Promise<ServerVerifiedEntitlement> {
   const response = await fetch(`${endpoint}/v1/verify/purchase`, {
     method: 'POST',
@@ -37,6 +41,6 @@ export async function verifyPurchaseWithServer(endpoint: string, payload: Purcha
   const value = (body as Record<string, unknown>).entitlement;
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Verifikationsdienst lieferte kein Entitlement.');
   const entitlement = value as Record<string, unknown>;
-  if (entitlement.status !== 'active' || typeof entitlement.tier !== 'string' || typeof entitlement.productId !== 'string' || typeof entitlement.transactionId !== 'string' || (entitlement.platform !== 'ios' && entitlement.platform !== 'android') || (entitlement.environment !== 'sandbox' && entitlement.environment !== 'production') || (entitlement.expiresAt !== null && typeof entitlement.expiresAt !== 'string') || typeof entitlement.updatedAt !== 'string') throw new Error('Verifikationsdienst lieferte ein ungültiges Entitlement.');
-  return entitlement as ServerVerifiedEntitlement;
+  if (entitlement.status !== 'active' || !isTier(entitlement.tier) || typeof entitlement.productId !== 'string' || typeof entitlement.transactionId !== 'string' || (entitlement.platform !== 'ios' && entitlement.platform !== 'android') || (entitlement.environment !== 'sandbox' && entitlement.environment !== 'production') || (entitlement.expiresAt !== null && typeof entitlement.expiresAt !== 'string') || typeof entitlement.updatedAt !== 'string') throw new Error('Verifikationsdienst lieferte ein ungültiges Entitlement.');
+  return entitlement as unknown as ServerVerifiedEntitlement;
 }
