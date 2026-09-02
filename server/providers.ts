@@ -113,9 +113,11 @@ export class GooglePurchaseVerifier {
 
   async verifyOneTime(productId: string, purchaseToken: string, userId: string): Promise<VerifiedPurchase> {
     const product = findProduct(productId);
-    const payload = await googleApi(config => config, '');
-    void payload;
-    throw new Error(`Google-One-Time-Verifikation für ${product.id} ist ohne konfigurierten Store-Provider nicht aktiviert.`);
+    const payload = await googleApi(this.config, `purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}`);
+    if (payload.consumptionState !== 0 || payload.purchaseState !== 0) throw new SecurityError('Google-One-Time-Kauf ist nicht aktiv.');
+    assertUserBinding(userId, stringClaim(payload.obfuscatedExternalAccountId, 'obfuscatedExternalAccountId'));
+    const transactionId = typeof payload.orderId === 'string' ? payload.orderId : purchaseToken;
+    return { userId, platform: 'android', product, transactionId, status: 'active', environment: 'production', expiresAt: null };
   }
 }
 
