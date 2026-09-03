@@ -45,10 +45,21 @@ test('calculates daily recurrence from the local clock after a restart', () => {
   assert.ok(next.getTime() > Date.now());
 });
 
+test('uses the production templates for all core alarm types', () => {
+  assert.deepEqual(TEMPLATES.bubble.warnings, [60, 15]);
+  assert.equal(TEMPLATES.bubble.sound, 'pulse');
+  assert.equal(TEMPLATES.gwBubble.repeat, 'gw5d');
+  assert.deepEqual(TEMPLATES.gwBubble.warnings, [60, 30, 15]);
+  assert.equal(TEMPLATES.gwBubble.sound, 'siren');
+  assert.deepEqual(TEMPLATES.custom.warnings, [15]);
+  assert.equal(TEMPLATES.custom.sound, 'chime');
+});
+
 test('calculates the five-day GW cycle and both end moments', () => {
   const base = new Date();
   base.setDate(base.getDate() - 6);
-  const alarm = buildAlarm({ ...TEMPLATES.gwBubble, repeat: 'gw5d' }, 'account-1', localDate(base), localTime(base), base);
+  const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', localDate(base), localTime(base), base);
+  assert.equal(alarm.repeat, 'gw5d');
   const next = nextOccurrence(alarm, new Date());
   assert.ok(next);
   assert.equal((next.getTime() - new Date(alarm.eventAtUtc).getTime()) % (5 * 24 * 60 * 60 * 1000), 0);
@@ -56,6 +67,7 @@ test('calculates the five-day GW cycle and both end moments', () => {
   assert.ok(end);
   assert.equal(end.getTime() - next.getTime(), 24 * 60 * 60 * 1000);
   const moments = upcomingMoments(alarm, new Date());
+  assert.deepEqual(moments.filter((moment) => moment.kind === 'warning').map((moment) => moment.warningMinutes), [60, 30, 15]);
   assert.ok(moments.some((moment) => moment.kind === 'end-warning'));
   assert.ok(moments.some((moment) => moment.kind === 'end'));
 });
@@ -119,9 +131,9 @@ test('keeps the six-tier commercial ladder and all currency periods synchronized
   assert.equal(TIER_PRICING.godfather.usdStore.lifetime, 899.99);
   assert.deepEqual(TEMPLATES.individual.type, 'individual');
   assert.deepEqual(TEMPLATES.rss.type, 'rss');
-  assert.equal(TEMPLATES.bubble.sound, 'siren');
+  assert.equal(TEMPLATES.bubble.sound, 'pulse');
   assert.equal(TEMPLATES.gwBubble.sound, 'siren');
-  assert.equal(TEMPLATES.custom.sound, 'pulse');
+  assert.equal(TEMPLATES.custom.sound, 'chime');
   assert.equal(TEMPLATES.individual.sound, 'pulse');
   assert.equal(TEMPLATES.rss.sound, 'chime');
   assert.equal(alarmTypeLabel('bubble'), 'Bubble Alarm');
