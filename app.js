@@ -60,6 +60,44 @@
   let toastTimer = null;
   let alertTimer = null;
   let navScrollLeft = 0;
+  let language = localStorage.getItem('tgm-alarm-center-language') || (navigator.language && navigator.language.toLowerCase().startsWith('en') ? 'en' : 'de');
+  const ENGLISH_TEXT = new Map([
+    ['Lokale Gaming-Alarmzentrale für The Grand Mafia', 'Local gaming alarm center for The Grand Mafia'],
+    ['Audio aktivieren', 'Enable audio'], ['Gaming-Töne aktiv', 'Gaming sounds active'], ['Account wechseln', 'Switch account'],
+    ['Übersicht', 'Overview'], ['Alarme', 'Alarms'], ['Accounts', 'Accounts'], ['Gaming-Töne', 'Gaming sounds'], ['Pläne & Preise', 'Plans & pricing'], ['Einstellungen', 'Settings'],
+    ['DEIN GAMING-ALARM CENTER', 'YOUR GAMING ALARM CENTER'], ['Bubble Alarm und Massacre Alarm im Blick.', 'Keep Bubble and Massacre Alarms in view.'],
+    ['Plane deinen Bubble Alarm, Massacre Alarm und Event Alarm. Die Daten bleiben auf diesem Gerät, die Alarmtöne ertönen lokal.', 'Plan your Bubble Alarm, Massacre Alarm and Event Alarm. Data stays on this device and alarm sounds play locally.'],
+    ['Bereit für deine nächste Spielzeit.', 'Ready for your next gaming session.'], ['Lege einen Bubble Alarm, einen Massacre Alarm oder einen Event Alarm an.', 'Create a Bubble Alarm, Massacre Alarm or Event Alarm.'],
+    ['Bubble Alarm anlegen', 'Create Bubble Alarm'], ['Massacre Alarm', 'Massacre Alarm'], ['Event Alarm', 'Event Alarm'], ['Individual Timer', 'Individual Timer'], ['RSS Timer', 'RSS Timer'],
+    ['ALS NÄCHSTES', 'UP NEXT'], ['Keine offenen Termine', 'No open events'], ['Deine Alarmzentrale wartet.', 'Your alarm center is waiting.'],
+    ['AKTIVE ALARME', 'ACTIVE ALARMS'], ['auf diesem Gerät', 'on this device'], ['GESCHÜTZT', 'PROTECTED'], ['markierte Alarme', 'protected alarms'], ['MASSACRE ALARM', 'MASSACRE ALARM'], ['mit 24h Massacre-Alarm-Schutz', 'with 24-hour Massacre protection'], ['AUDIO-ENGINE', 'AUDIO ENGINE'], ['OFF', 'OFF'], ['Aktivierung nötig', 'Activation required'],
+    ['Schnellstart', 'Quick start'], ['Vorlagen mit passenden Alarmtönen', 'Templates with matching alarm sounds'], ['Deine nächsten Alarme', 'Your next alarms'], ['gespeichert', 'saved'], ['Noch kein Gaming-Alarm', 'No gaming alarm yet'],
+    ['Deine Alarmzentrale wartet.', 'Your alarm center is waiting.'], ['lokale Speicherung', 'local storage'], ['lokale Gaming-Alarmtöne', 'local gaming sounds'],
+    ['Pläne & Preise', 'Plans & pricing'], ['Tier-Pläne', 'Plans & pricing'], ['Woche', 'Week'], ['Monat', 'Month'], ['6 Monate', '6 months'], ['Jahr', 'Year'], ['Lifetime', 'Lifetime'],
+    ['Einmaliger 3-Tage-Free-Trial', 'One-time 3-day free trial'], ['3 Tage testen', 'Try for 3 days'], ['3-Tage-Free-Trial aktiv', '3-day free trial active'], ['3-Tage-Free-Trial bereits genutzt', '3-day free trial already used'],
+    ['Keine offenen Termine', 'No open events'], ['Alarm speichern', 'Save alarm'], ['Änderungen speichern', 'Save changes'], ['Abbrechen', 'Cancel'], ['Bearbeiten', 'Edit'], ['Pausieren', 'Pause'], ['Aktivieren', 'Activate'], ['Erledigt', 'Done'], ['Duplizieren', 'Duplicate'], ['Löschen', 'Delete'],
+    ['Datum', 'Date'], ['Uhrzeit', 'Time'], ['Vorwarnungen', 'Warnings'], ['Wiederholung', 'Repeat'], ['Alarmton', 'Alarm sound'], ['Als geschützt markieren', 'Mark as protected'], ['Alarm aktiv', 'Alarm active'],
+    ['Einmalig', 'Once'], ['Täglich', 'Daily'], ['alle 5 Tage', 'every 5 days'], ['60 Minuten', '60 minutes'], ['30 Minuten', '30 minutes'], ['15 Minuten', '15 minutes'],
+    ['Backup exportieren', 'Export backup'], ['Backup importieren', 'Import backup'], ['Alle lokalen Daten löschen', 'Delete all local data'], ['Account anlegen', 'Create account'], ['Accountverwaltung geöffnet.', 'Account management opened.'],
+    ['Der Trial kann auf diesem Gerät nur einmal aktiviert werden.', 'The trial can only be activated once on this device.'], ['Alle lokalen Alarmfunktionen sind freigeschaltet.', 'All local alarm features are unlocked.'],
+  ]);
+  function translatePage() {
+    document.documentElement.lang = language;
+    if (language === 'de') return;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    for (const node of nodes) {
+      let value = node.nodeValue || '';
+      for (const [german, english] of ENGLISH_TEXT) value = value.split(german).join(english);
+      value = value.replace(/Noch (\d+) Tage? · (\d+) Std\./g, '($1 days · $2 hrs) remaining');
+      node.nodeValue = value;
+    }
+    for (const element of document.querySelectorAll('[aria-label]')) {
+      const label = ENGLISH_TEXT.get(element.getAttribute('aria-label'));
+      if (label) element.setAttribute('aria-label', label);
+    }
+  }
 
   const now = () => Date.now();
   const iso = (ms) => new Date(ms).toISOString();
@@ -442,7 +480,8 @@
   function render() {
     const previousNav = app.querySelector('.nav');
     if (previousNav) navScrollLeft = previousNav.scrollLeft;
-    app.innerHTML = `<div class="app-shell"><header class="topbar"><div class="toprow"><div class="brand"><div class="brand-mark" aria-hidden="true">TGM</div><div class="brand-copy"><strong>TGM ALARM CENTER</strong><span>Lokale Gaming-Alarmzentrale für The Grand Mafia</span></div></div><div class="toolbar"><button class="audio-state ${state.preferences.audioEnabled ? 'ready' : ''}" type="button" data-action="unlock-audio"><span class="audio-dot"></span>${state.preferences.audioEnabled ? 'Gaming-Töne aktiv' : 'Audio aktivieren'}</button>${activeAccount() ? `<button class="account-pill" type="button" data-action="account-menu" aria-label="Account wechseln"><span class="account-dot"></span>${esc(activeAccount().name)}<span class="account-chevron" aria-hidden="true">⌄</span></button>` : ''}</div></div><nav class="nav" aria-label="Hauptnavigation">${navButton('today', 'Übersicht')}${navButton('alarms', 'Alarme')}${navButton('accounts', 'Accounts')}${navButton('sounds', 'Gaming-Töne')}${navButton('plans', 'Pläne & Preise')}${navButton('settings', 'Einstellungen')}</nav></header><main class="main">${view === 'today' ? renderDashboard() : view === 'alarms' ? renderAlarmsView() : view === 'accounts' ? renderAccountsView() : view === 'sounds' ? renderSoundsView() : view === 'plans' ? renderPlansView() : renderSettingsView()}</main><footer class="footer">TGM ALARM CENTER · lokale Speicherung · lokale Gaming-Alarmtöne · ${SCHEMA_VERSION.toString()}</footer></div>`;
+    app.innerHTML = `<div class="app-shell"><header class="topbar"><div class="toprow"><div class="brand"><div class="brand-mark" aria-hidden="true">TGM</div><div class="brand-copy"><strong>TGM ALARM CENTER</strong><span>Lokale Gaming-Alarmzentrale für The Grand Mafia</span></div></div><div class="toolbar"><button class="language-toggle" type="button" data-action="toggle-language" aria-label="${language === 'de' ? 'Switch to English' : 'Auf Deutsch wechseln'}">${language === 'de' ? 'EN' : 'DE'}</button><button class="audio-state ${state.preferences.audioEnabled ? 'ready' : ''}" type="button" data-action="unlock-audio"><span class="audio-dot"></span>${state.preferences.audioEnabled ? 'Gaming-Töne aktiv' : 'Audio aktivieren'}</button>${activeAccount() ? `<button class="account-pill" type="button" data-action="account-menu" aria-label="Account wechseln"><span class="account-dot"></span>${esc(activeAccount().name)}<span class="account-chevron" aria-hidden="true">⌄</span></button>` : ''}</div></div><nav class="nav" aria-label="Hauptnavigation">${navButton('today', 'Übersicht')}${navButton('alarms', 'Alarme')}${navButton('accounts', 'Accounts')}${navButton('sounds', 'Gaming-Töne')}${navButton('plans', 'Pläne & Preise')}${navButton('settings', 'Einstellungen')}</nav></header><main class="main">${view === 'today' ? renderDashboard() : view === 'alarms' ? renderAlarmsView() : view === 'accounts' ? renderAccountsView() : view === 'sounds' ? renderSoundsView() : view === 'plans' ? renderPlansView() : renderSettingsView()}</main><footer class="footer">TGM ALARM CENTER · lokale Speicherung · lokale Gaming-Alarmtöne · ${SCHEMA_VERSION.toString()}</footer></div>`;
+    translatePage();
     const nextNav = app.querySelector('.nav');
     if (nextNav) {
       nextNav.scrollLeft = navScrollLeft;
@@ -633,6 +672,7 @@
     const button = event.target.closest('[data-action]');
     if (!button) return;
     const action = button.dataset.action;
+    if (action === 'toggle-language') { language = language === 'de' ? 'en' : 'de'; localStorage.setItem('tgm-alarm-center-language', language); render(); return; }
     if (action === 'view') { const nextView = button.dataset.view || 'today'; if (!VALID_VIEWS.has(nextView)) return; view = nextView; history.replaceState(null, '', `${location.pathname}${location.search}#${view}`); render(); return; }
     if (action === 'account-menu') { view = 'accounts'; render(); showToast('Accountverwaltung geöffnet.'); return; }
     if (action === 'select-tier') { const tier = button.dataset.tier; if (!TIER_PRICING[tier]) return; state.tier = tier; persist(); render(); showToast(`${TIER_PRICING[tier].name} ist jetzt aktiv.`); return; }

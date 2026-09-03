@@ -41,7 +41,9 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .brand-copy strong { display: block; overflow: hidden; color: var(--gold); font-size: 15px; letter-spacing: .09em; text-overflow: ellipsis; white-space: nowrap; }
 .brand-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
 .toolbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
-.audio-state, .account-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 12px; color: var(--text-soft); background: rgba(17, 24, 33, .86); border: 1px solid var(--line); border-radius: 999px; font-size: 12px; font-weight: 800; }
+.audio-state, .account-pill, .language-toggle { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 12px; color: var(--text-soft); background: rgba(17, 24, 33, .86); border: 1px solid var(--line); border-radius: 999px; font-size: 12px; font-weight: 800; }
+.language-toggle { cursor: pointer; appearance: none; color: var(--gold); }
+.language-toggle:hover { color: var(--text); background: var(--panel-raised); border-color: var(--line-strong); }
 .audio-state.ready { color: #a9f39d; border-color: #356c38; background: #122117; }
 .audio-dot, .account-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 0 4px rgba(232, 155, 87, .1); }
 .audio-state.ready .audio-dot { background: var(--mint); box-shadow: 0 0 0 4px rgba(121, 211, 107, .1); }
