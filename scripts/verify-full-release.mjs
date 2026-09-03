@@ -8,6 +8,7 @@ const checks = [
   ['whitespace', ['pnpm', 'verify:whitespace']],
   ['expo-config', ['pnpm', 'exec', 'expo', 'config', '--json']],
   ['store-config', ['pnpm', 'verify:store-config']],
+  ['mobile-build', ['pnpm', 'verify:mobile-build']],
   ['release-verification', ['pnpm', 'verify:release']],
 ];
 
