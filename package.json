@@ -23,6 +23,8 @@
     "verify:full-release": "node scripts/verify-full-release.mjs",
     "build:android:aab": "node scripts/build-store.mjs android",
     "build:ios:ipa": "node scripts/build-store.mjs ios",
+    "build:team:android": "node scripts/build-team.mjs android",
+    "build:team:ios": "node scripts/build-team.mjs ios",
     "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight"
   },
   "dependencies": {

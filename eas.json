@@ -22,6 +22,15 @@
       "ios": {
         "simulator": false
       }
+    },
+    "team": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "ios": {
+        "simulator": false
+      }
     }
   }
 }
