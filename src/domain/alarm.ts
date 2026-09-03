@@ -76,9 +76,9 @@ export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; event
 };
 
 export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
-  bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'siren', protected: true },
-  gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'once', sound: 'siren', protected: true },
-  custom: { title: 'Event Alarm', type: 'custom', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
+  bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'pulse', protected: true },
+  gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'gw5d', sound: 'siren', protected: true },
+  custom: { title: 'Event Alarm', type: 'custom', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
   individual: { title: 'Individual Timer', type: 'individual', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
   rss: { title: 'RSS Timer', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
 };
@@ -226,8 +226,9 @@ export function buildAlarm(template: AlarmTemplate, accountId: string, date: str
 }
 
 export function soundForAlarmType(type: AlarmType): SoundProfile {
-  if (type === 'bubble' || type === 'gwBubble') return 'siren';
-  if (type === 'custom' || type === 'individual') return 'pulse';
+  if (type === 'bubble' || type === 'gwBubble') return type === 'gwBubble' ? 'siren' : 'pulse';
+  if (type === 'custom') return 'chime';
+  if (type === 'individual') return 'pulse';
   return 'chime';
 }
 
