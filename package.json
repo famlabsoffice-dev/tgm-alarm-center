@@ -28,7 +28,7 @@
     "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight"
   },
   "dependencies": {
-    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "expo": "~53.0.20",
     "expo-application": "~6.1.5",
     "expo-build-properties": "~0.14.8",
@@ -43,13 +43,13 @@
     "expo-status-bar": "~2.2.3",
     "expo-system-ui": "~5.0.11",
     "react": "19.0.0",
-    "react-native": "0.79.5"
+    "react-native": "0.79.6"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
     "@types/react": "~19.0.10",
     "eslint": "^9.35.0",
-    "jest": "^30.0.5",
+    "jest": "^29.7.0",
     "tsx": "^4.23.13",
     "typescript": "~5.8.3"
   }
