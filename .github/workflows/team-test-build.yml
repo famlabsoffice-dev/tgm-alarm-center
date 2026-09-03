@@ -1,0 +1,207 @@
+name: team-test-build
+
+on:
+  workflow_dispatch:
+    inputs:
+      platforms:
+        description: "Platforms to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - android
+          - ios
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgm-team-test-build
+  cancel-in-progress: false
+
+jobs:
+  verify-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      project_id: ${{ steps.mobile_config.outputs.project_id }}
+    steps:
+      - name: Checkout main source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run complete source gates
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+          pnpm verify:mobile-build
+          pnpm verify:store-config
+          pnpm exec expo config --type public
+
+      - name: Verify EAS project binding
+        id: mobile_config
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo ?? {};
+          const projectId = app?.extra?.eas?.projectId;
+          if (typeof projectId !== 'string' || !/^[0-9a-f-]{20,}$/i.test(projectId)) {
+            console.error('EAS project binding is missing from app.json at expo.extra.eas.projectId.');
+            console.error('Refusing to create or select an unknown EAS project automatically.');
+            process.exit(1);
+          }
+          console.log(`EAS project binding present: ${projectId}`);
+          console.log(`project_id=${projectId}` >> process.env.GITHUB_OUTPUT)
+          NODE
+
+      - name: Verify EAS token is available
+        shell: bash
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo 'Missing required GitHub Actions secret: EXPO_TOKEN'
+            exit 1
+          fi
+
+      - name: Verify EAS account access
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest whoami
+
+  android:
+    needs: verify-source
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'android' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build signed Android team APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx --yes eas-cli@latest build \
+            --platform android \
+            --profile preview \
+            --non-interactive \
+            --wait 2>&1 | tee android-eas-build.log
+
+      - name: Write Android build identity
+        shell: bash
+        run: |
+          {
+            echo "TGM Alarm Center — Team Test Build"
+            echo "Platform: Android"
+            echo "Profile: preview"
+            echo "Distribution: internal"
+            echo "Artifact target: APK"
+            echo "Application ID: com.tgm.alarmcenter"
+            echo "Commit: $(git rev-parse HEAD)"
+            echo "Branch: main"
+          } > android-build-metadata.txt
+
+      - name: Upload Android build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgm-team-test-android
+          path: |
+            android-eas-build.log
+            android-build-metadata.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  ios:
+    needs: verify-source
+    if: ${{ inputs.platforms == 'all' || inputs.platforms == 'ios' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout main source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build signed iOS team build
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          npx --yes eas-cli@latest build \
+            --platform ios \
+            --profile preview \
+            --non-interactive \
+            --wait 2>&1 | tee ios-eas-build.log
+
+      - name: Write iOS build identity
+        shell: bash
+        run: |
+          {
+            echo "TGM Alarm Center — Team Test Build"
+            echo "Platform: iOS"
+            echo "Profile: preview"
+            echo "Distribution: internal"
+            echo "Artifact target: signed internal iOS build"
+            echo "Bundle Identifier: com.tgm.alarmcenter"
+            echo "Commit: $(git rev-parse HEAD)"
+            echo "Branch: main"
+          } > ios-build-metadata.txt
+
+      - name: Upload iOS build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgm-team-test-ios
+          path: |
+            ios-eas-build.log
+            ios-build-metadata.txt
+          if-no-files-found: error
+          retention-days: 30
