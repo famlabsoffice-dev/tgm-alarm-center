@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 
 export const CHANNEL_ID = 'time-critical-events';
-const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
+const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm_siren.wav' : sound === 'chime' ? 'alarm_chime.wav' : 'alarm_pulse.wav';
 
 export interface NotificationReadiness {
   supported: boolean;
@@ -20,7 +20,7 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
     await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
       name: 'Zeitkritische Ereignisse',
       importance: Notifications.AndroidImportance.MAX,
-      sound: 'alarm-pulse.wav',
+      sound: 'alarm_pulse.wav',
       vibrationPattern: [0, 250, 150, 250],
       lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });

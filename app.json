@@ -34,9 +34,9 @@
         "expo-notifications",
         {
           "sounds": [
-            "./assets/notifications/alarm-pulse.wav",
-            "./assets/notifications/alarm-siren.wav",
-            "./assets/notifications/alarm-chime.wav"
+            "./assets/notifications/alarm_pulse.wav",
+            "./assets/notifications/alarm_siren.wav",
+            "./assets/notifications/alarm_chime.wav"
           ]
         }
       ],
