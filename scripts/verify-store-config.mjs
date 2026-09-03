@@ -4,7 +4,9 @@ import { resolve } from 'node:path';
 const root = process.cwd();
 const configPath = resolve(root, 'app.json');
 const config = JSON.parse(readFileSync(configPath, 'utf8'));
+const packageJson = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
 const expo = config.expo;
+const packageExpo = packageJson.expo ?? {};
 const failures = [];
 const requireValue = (condition, message) => { if (!condition) failures.push(message); };
 
@@ -14,7 +16,9 @@ requireValue(expo?.android?.package === 'com.tgm.alarmcenter', 'Android applicat
 requireValue(expo?.ios?.bundleIdentifier === 'com.tgm.alarmcenter', 'iOS bundle identifier mismatch.');
 requireValue(expo?.android?.permissions?.includes('POST_NOTIFICATIONS'), 'POST_NOTIFICATIONS permission is missing.');
 requireValue(expo?.android?.permissions?.includes('SCHEDULE_EXACT_ALARM'), 'SCHEDULE_EXACT_ALARM permission is missing.');
-requireValue(expo?.plugins?.some((plugin) => plugin === 'expo-iap'), 'expo-iap config plugin is missing.');
+const storePluginEnabled = expo?.plugins?.some((plugin) => plugin === 'expo-iap') === true;
+const storeNativeModuleExcluded = packageExpo.autolinking?.exclude?.includes('expo-iap') === true;
+requireValue(storePluginEnabled || storeNativeModuleExcluded, 'Store mode must either enable expo-iap or explicitly exclude it for the internal team build.');
 const buildProperties = expo?.plugins?.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-build-properties')?.[1];
 requireValue(buildProperties?.android?.compileSdkVersion === 36, 'Android compile SDK must be 36.');
 requireValue(buildProperties?.android?.targetSdkVersion === 36, 'Android target SDK must be 36.');

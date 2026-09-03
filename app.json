@@ -30,7 +30,6 @@
     },
     "plugins": [
       "./plugins/withKotlinStdlibResolution",
-      "expo-iap",
       [
         "expo-notifications",
         {
