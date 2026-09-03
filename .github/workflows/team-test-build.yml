@@ -24,8 +24,6 @@ jobs:
   verify-source:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    outputs:
-      project_id: ${{ steps.mobile_config.outputs.project_id }}
     steps:
       - name: Checkout main source
         uses: actions/checkout@v4
@@ -57,10 +55,9 @@ jobs:
           pnpm exec expo config --type public
 
       - name: Verify EAS project binding
-        id: mobile_config
         shell: bash
         run: |
-          node <<'NODE'
+          node <<'NODE' > eas-project-id.txt
           const fs = require('node:fs');
           const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo ?? {};
           const projectId = app?.extra?.eas?.projectId;
@@ -69,9 +66,9 @@ jobs:
             console.error('Refusing to create or select an unknown EAS project automatically.');
             process.exit(1);
           }
-          console.log(`EAS project binding present: ${projectId}`);
-          console.log(`project_id=${projectId}` >> process.env.GITHUB_OUTPUT)
+          process.stdout.write(projectId);
           NODE
+          echo "EAS project binding present: $(cat eas-project-id.txt)"
 
       - name: Verify EAS token is available
         shell: bash
