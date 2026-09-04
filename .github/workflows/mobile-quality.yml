@@ -37,6 +37,9 @@ jobs:
       - name: Domain and repository tests
         run: pnpm test
 
+      - name: Android reliability contract
+        run: pnpm verify:android-reliability
+
       - name: Mobile configuration gate
         run: pnpm verify:mobile-build
 
