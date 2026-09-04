@@ -234,6 +234,7 @@
   function loadState() {
     try {
       const serialized = localStorage.getItem(STORE) || localStorage.getItem(PENDING_STORE) || 'null';
+      if (serialized.length > MAX_BACKUP_BYTES) throw new Error('Lokaler Speicherzustand ist zu groß.');
       return normalize(JSON.parse(serialized));
     } catch { return emptyState(); }
   }
@@ -646,9 +647,15 @@
     try {
       const serialized = await file.text();
       if (serialized.length > MAX_BACKUP_BYTES) return showToast('Backup ist zu groß. Maximal 512 KB sind erlaubt.');
-      const candidate = validateBackup(JSON.parse(serialized));
+      let parsed;
+      try {
+        parsed = JSON.parse(serialized);
+      } catch {
+        throw new Error('Backup enthält kein gültiges JSON.');
+      }
+      const candidate = validateBackup(parsed);
       state = candidate;
-      persist();
+      if (!persist()) return;
       render();
       showToast('Backup vollständig wiederhergestellt.');
     } catch (error) { showToast(error instanceof Error ? error.message : 'Backup konnte nicht importiert werden.'); }
