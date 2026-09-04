@@ -10,6 +10,7 @@ import {
   upcomingMoments,
 } from '../src/domain/alarm';
 import { findOwnedAlarm, ownsAlarm, updateOwnedAlarm } from '../src/domain/accountIsolation';
+import { findNotificationAlarm, updateNotificationAlarm } from '../src/domain/notificationOwnership';
 
 const withTimezone = <T>(timezone: string, run: () => T): T => {
   const previous = process.env.TZ;
@@ -159,4 +160,23 @@ test('ownership guard rejects missing or foreign ownership without invoking the 
   const updated = updateOwnedAlarm(alarms, accountOneAlarm.id, 'account-1', (alarm) => ({ ...alarm, title: 'Updated' }));
   assert.equal(updated[0]?.title, 'Updated');
   assert.equal(updated[1], accountTwoAlarm);
+});
+
+test('notification action requires payload account ownership and never falls back to selected account', () => {
+  const now = new Date('2029-01-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-08-01', '03:00', now);
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-08-01', '04:00', now);
+  const alarms = [accountOneAlarm, accountTwoAlarm];
+
+  assert.equal(findNotificationAlarm(alarms, { alarmId: accountOneAlarm.id, accountId: 'account-2' }), null);
+  assert.equal(findNotificationAlarm(alarms, { alarmId: accountOneAlarm.id }), null);
+  assert.equal(findNotificationAlarm(alarms, { alarmId: accountOneAlarm.id, accountId: 'account-1' })?.id, accountOneAlarm.id);
+
+  const rejected = updateNotificationAlarm(alarms, { alarmId: accountOneAlarm.id, accountId: 'account-2' }, (alarm) => ({ ...alarm, title: 'ILLEGAL' }));
+  assert.equal(rejected[0]?.title, accountOneAlarm.title);
+  assert.equal(rejected[1]?.title, accountTwoAlarm.title);
+
+  const updated = updateNotificationAlarm(alarms, { alarmId: accountTwoAlarm.id, accountId: 'account-2' }, (alarm) => ({ ...alarm, title: 'Done' }));
+  assert.equal(updated[0], accountOneAlarm);
+  assert.equal(updated[1]?.title, 'Done');
 });
