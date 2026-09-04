@@ -34,3 +34,4 @@ jobs:
             TGM-ALARM-CENTER-COMPLETE.zip
             TGM-ALARM-CENTER-SNAPSHOT.txt
           if-no-files-found: error
+          retention-days: 14
