@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { readdirSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
@@ -20,9 +20,6 @@ function filesIn(dir) {
 const files = filesIn(root).sort();
 if (!files.length) throw new Error('No JavaScript files found for syntax verification.');
 
-for (const file of files) {
-  if (!existsSync(file)) throw new Error(`JavaScript file disappeared during verification: ${file}`);
-  execFileSync(process.execPath, ['--check', file], { cwd: root, stdio: 'inherit' });
-}
+for (const file of files) execFileSync(process.execPath, ['--check', file], { cwd: root, stdio: 'inherit' });
 
 console.log(`TGM ALARM CENTER JavaScript syntax validation: PASS (${files.length} files)`);
