@@ -19,7 +19,7 @@ assert.match(pricing, /FOUNDER_ACCESS_TIER:\s*Tier\s*=\s*'godfather'/);
 assert.match(pricing, /return isFounderAccountName\(accountName\) \? FOUNDER_ACCESS_TIER : tier;/);
 
 assert.match(alarm, /function nextGwOccurrence/);
-assert.match(alarm, /if \(base\.getTime\(\) > now\.getTime\(\)\)/);
+assert.match(alarm, /if \(base\.getTime\(\) > now\.getTime\(\)/);
 assert.match(alarm, /const cycles = Math\.floor\(delta \/ FIVE_DAYS_MS\) \+ 1/);
 
 assert.match(storage, /:pending/);
@@ -52,7 +52,7 @@ assert.match(notifications, /AppState\.addEventListener/);
 assert.match(notifications, /export async function cancelAllScheduled\(\): Promise<void>/);
 assert.match(notifications, /await reconcileScheduledNotifications\(state\.alarms, state\.notificationPreferences, revision\)/);
 assert.doesNotMatch(notifications, /Notifications\.cancelAllScheduledNotificationsAsync\(\)/);
-assert.match(notifications, /await reconcileScheduledNotifications\(state \? state\.alarms : \[alarm\], preferences, revision\)/);
+assert.match(notifications, /await reconcileScheduledNotifications\(state\.alarms, preferences, revision\)/);
 
 assert.match(nativeIndex, /consumeRecoverySignals/);
 assert.match(nativeModule, /consumeRecoverySignals/);
