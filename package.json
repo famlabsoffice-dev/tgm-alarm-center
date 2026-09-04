@@ -25,7 +25,8 @@
     "verify:full-release": "node scripts/verify-full-release.mjs",
     "build:android:aab": "node scripts/build-store.mjs android",
     "build:ios:ipa": "node scripts/build-store.mjs ios",
-    "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight"
+    "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight",
+    "verify:regression": "node scripts/verify-regression.mjs"
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
