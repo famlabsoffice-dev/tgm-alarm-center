@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Platform, Pressable, Text, View } from 'react-native';
 import { useIAP, type Product, type ProductSubscription, type Purchase } from 'expo-iap';
 import { highestTier, productForId, STORE_LIFETIME_IDS, STORE_PRODUCT_IDS, STORE_SUBSCRIPTION_IDS } from './catalog';
+import { setVerifiedStoreTier } from '../domain/pricing';
 import type { Tier } from '../domain/alarm';
 
 type BillingPanelProps = { currentTier: Tier; onTierConfirmed: (tier: Tier) => void };
@@ -30,8 +31,11 @@ export function BillingPanel({ currentTier, onTierConfirmed }: BillingPanelProps
             : { apple: { jws: token } },
         });
         if (verification.iapkit?.isValid !== true || verification.iapkit.state !== 'entitled') throw new Error('Store-Transaktion konnte nicht verifiziert werden.');
+        const tier = highestTier(purchaseId(purchase));
+        if (tier === 'free') throw new Error('Store-Transaktion enthält kein gültiges Paid-Produkt.');
+        setVerifiedStoreTier(tier);
         await finishTransaction({ purchase, isConsumable: false });
-        onTierConfirmed(highestTier(purchaseId(purchase)));
+        onTierConfirmed(tier);
         setMessage('Kauf bestätigt und Tarif aktiviert.');
       } catch {
         setMessage('Der Kauf konnte nicht abgeschlossen werden. Bitte versuche es erneut.');
@@ -71,7 +75,10 @@ export function BillingPanel({ currentTier, onTierConfirmed }: BillingPanelProps
         }
       }
       const restoredTier = highestTier(verifiedIds);
-      if (active && restoredTier !== 'free') onTierConfirmed(restoredTier);
+      if (active && restoredTier !== 'free') {
+        setVerifiedStoreTier(restoredTier);
+        onTierConfirmed(restoredTier);
+      }
     })();
     return () => { active = false; };
   }, [availablePurchases, onTierConfirmed, verifyPurchaseWithProvider]);
@@ -123,7 +130,7 @@ export function BillingPanel({ currentTier, onTierConfirmed }: BillingPanelProps
     })}
     <Pressable onPress={() => void restore()} style={({ pressed }) => [styles.restore, pressed && styles.pressed]}><Text style={styles.restoreText}>Käufe wiederherstellen</Text></Pressable>
     {message ? <Text style={styles.message}>{message}</Text> : null}
-    <Text style={styles.footnote}>Käufe werden über den jeweiligen Store abgewickelt und können dort verwaltet werden.</Text>
+    <Text style={styles.footnote}>Käufe werden über den jeweiligen Store abgewickelt und erst nach erfolgreicher Store-Verifikation als Tarif berechtigt.</Text>
   </View>;
 }
 
