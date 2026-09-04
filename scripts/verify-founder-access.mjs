@@ -18,11 +18,12 @@ assert.match(founderCheck, /effectiveTierForAccount\('free', name\) !== 'godfath
 assert.match(founderCheck, /effectiveTierForAccount\('underboss', name\) !== 'godfather'/);
 assert.match(founderCheck, /TGMack2.*TGM.*TGMredx.*TGM-red.*Founder/s);
 
-// Backup/restore must preserve the persisted application state, while the canonical
-// effective-tier calculation restores Founder access from the account identity.
+// Founder access remains identity-derived for internal team testing. Backups never
+// carry a trusted paid entitlement and therefore cannot be used to grant a paid tier.
 assert.match(backup, /data\.accounts/);
-assert.match(backup, /data\.tier/);
-assert.match(backup, /return validateBackup\(parsed\)\.data;/);
+assert.match(backup, /stripEntitlement/);
+assert.match(backup, /data: stripEntitlement\(data\)/);
+assert.match(backup, /return stripEntitlement\(validateBackup\(parsed\)\.data\)/);
 
 assert.match(contract, /restart/i);
 assert.match(contract, /backup\/restore/i);

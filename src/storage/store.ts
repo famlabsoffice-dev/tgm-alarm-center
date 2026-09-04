@@ -14,12 +14,17 @@ import {
 
 export const STORAGE_KEY = 'tgm-alarm-center-v1';
 const TEMP_STORAGE_KEY = `${STORAGE_KEY}:pending`;
+const LAST_KNOWN_GOOD_STORAGE_KEY = `${STORAGE_KEY}:last-known-good`;
 const MAX_STORAGE_BYTES = 512 * 1024;
 const MAX_ACCOUNTS = 50;
 const MAX_ALARMS = 500;
 const MAX_WARNINGS = 16;
 const MAX_COMPLETED_OCCURRENCES = 500;
 const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
+
+let volatileState: AppState | null = null;
+let volatileStateRevision = 0;
+
 export const defaultPreferences: NotificationPreferences = {
   sound: 'pulse',
   warningSound: true,
@@ -38,6 +43,9 @@ export const emptyState = (): AppState => ({
   notificationPreferences: { ...defaultPreferences },
   testConfirmedAt: null,
 });
+
+export function getVolatileState(): AppState | null { return volatileState; }
+export function getVolatileStateRevision(): number { return volatileStateRevision; }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
@@ -112,36 +120,14 @@ function normalizeAlarm(value: unknown, accountIds: Set<string>): Alarm | null {
   let date = typeof value.date === 'string' ? value.date : '';
   let time = typeof value.time === 'string' ? value.time : '';
   let eventAtUtc = typeof value.eventAtUtc === 'string' ? value.eventAtUtc : '';
-  if (!Number.isFinite(new Date(eventAtUtc).getTime()) && validateDateTime(date, time)) {
-    eventAtUtc = localDateTimeToUtc(date, time) ?? '';
-  }
+  if (!Number.isFinite(new Date(eventAtUtc).getTime()) && validateDateTime(date, time)) eventAtUtc = localDateTimeToUtc(date, time) ?? '';
   if (!Number.isFinite(new Date(eventAtUtc).getTime())) return null;
   if (!validateDateTime(date, time)) {
-    try {
-      ({ date, time } = localInputFromUtc(eventAtUtc));
-    } catch {
-      return null;
-    }
+    try { ({ date, time } = localInputFromUtc(eventAtUtc)); } catch { return null; }
   }
   const createdAt = isoOr(value.createdAt, new Date().toISOString());
   const updatedAt = isoOr(value.updatedAt, createdAt);
-  return {
-    id,
-    accountId,
-    title,
-    type,
-    date,
-    time,
-    eventAtUtc: new Date(eventAtUtc).toISOString(),
-    warnings: validWarnings(value.warnings, defaultWarnings(type)),
-    repeat: validRepeat(value.repeat, type, value.gwCycle),
-    sound: validSound(value.sound),
-    active: value.active !== false,
-    protected: value.protected === true,
-    completedOccurrences: migrateCompleted(value.completedOccurrences, id),
-    createdAt,
-    updatedAt,
-  };
+  return { id, accountId, title, type, date, time, eventAtUtc: new Date(eventAtUtc).toISOString(), warnings: validWarnings(value.warnings, defaultWarnings(type)), repeat: validRepeat(value.repeat, type, value.gwCycle), sound: validSound(value.sound), active: value.active !== false, protected: value.protected === true, completedOccurrences: migrateCompleted(value.completedOccurrences, id), createdAt, updatedAt };
 }
 
 function normalizeState(value: unknown): AppState {
@@ -163,52 +149,86 @@ function normalizeState(value: unknown): AppState {
   const legacyTier = value.tierId === 'street' ? 'streetBoss' : value.tierId === 'caporegime' ? 'caporegime' : value.tierId === 'godfather' ? 'godfather' : value.tier;
   const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'underboss' || legacyTier === 'boss' || legacyTier === 'godfather' ? legacyTier : 'free';
   const rawPreferences = isRecord(value.notificationPreferences) ? value.notificationPreferences : isRecord(value.preferences) ? value.preferences : {};
-  const preferences: NotificationPreferences = {
-    sound: validSound(rawPreferences.sound),
-    warningSound: rawPreferences.warningSound !== false,
-    eventSound: rawPreferences.eventSound !== false && rawPreferences.alarmSound !== false,
-    vibration: rawPreferences.vibration !== false,
-    criticalAlerts: rawPreferences.criticalAlerts !== false && rawPreferences.criticalAlertsEnabled !== false,
-    preview: rawPreferences.preview !== false,
-  };
+  const preferences: NotificationPreferences = { sound: validSound(rawPreferences.sound), warningSound: rawPreferences.warningSound !== false, eventSound: rawPreferences.eventSound !== false && rawPreferences.alarmSound !== false, vibration: rawPreferences.vibration !== false, criticalAlerts: rawPreferences.criticalAlerts !== false && rawPreferences.criticalAlertsEnabled !== false, preview: rawPreferences.preview !== false };
   const requestedAccount = typeof value.activeAccountId === 'string' && accountIds.has(value.activeAccountId) ? value.activeAccountId : null;
   const activeAccountId = requestedAccount ?? uniqueAccounts[0]?.id ?? null;
-  const testConfirmedAt = value.testConfirmedAt === null || value.testConfirmedAt === undefined
-    ? null
-    : (() => {
-      const normalized = isoOr(value.testConfirmedAt, '');
-      return normalized || null;
-    })();
-  return {
-    schemaVersion: 1,
-    accounts: uniqueAccounts,
-    alarms,
-    activeAccountId,
-    tier,
-    notificationPreferences: preferences,
-    testConfirmedAt,
-  };
+  const testConfirmedAt = value.testConfirmedAt === null || value.testConfirmedAt === undefined ? null : (() => { const normalized = isoOr(value.testConfirmedAt, ''); return normalized || null; })();
+  return { schemaVersion: 1, accounts: uniqueAccounts, alarms, activeAccountId, tier, notificationPreferences: preferences, testConfirmedAt };
+}
+
+function decodePersistedState(raw: string | null): AppState | null {
+  if (!raw || raw.length > MAX_STORAGE_BYTES) return null;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed) || parsed.schemaVersion !== 1) return null;
+    const normalized = normalizeState(parsed);
+    if (!Array.isArray(parsed.accounts) || !Array.isArray(parsed.alarms)) return null;
+    return normalized;
+  } catch {
+    return null;
+  }
+}
+
+async function promoteRecovery(recovered: AppState): Promise<AppState> {
+  const serialized = JSON.stringify(recovered);
+  await AsyncStorage.setItem(STORAGE_KEY, serialized);
+  await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
+  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
+  volatileState = recovered;
+  volatileStateRevision += 1;
+  return recovered;
 }
 
 export async function loadState(): Promise<AppState> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!raw || raw.length > MAX_STORAGE_BYTES) return emptyState();
-  try {
-    return normalizeState(JSON.parse(raw) as unknown);
-  } catch {
-    return emptyState();
+  const [primary, pending, lastKnownGood] = await Promise.all([
+    AsyncStorage.getItem(STORAGE_KEY),
+    AsyncStorage.getItem(TEMP_STORAGE_KEY),
+    AsyncStorage.getItem(LAST_KNOWN_GOOD_STORAGE_KEY),
+  ]);
+
+  const current = decodePersistedState(primary);
+  if (current) {
+    const serialized = JSON.stringify(current);
+    if (serialized !== primary) await AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => undefined);
+    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized).catch(() => undefined);
+    volatileState = current;
+    volatileStateRevision += 1;
+    return current;
   }
+
+  const recoveredFromPending = decodePersistedState(pending);
+  if (recoveredFromPending) return promoteRecovery(recoveredFromPending);
+
+  const recoveredFromLastKnownGood = decodePersistedState(lastKnownGood);
+  if (recoveredFromLastKnownGood) return promoteRecovery(recoveredFromLastKnownGood);
+
+  const fresh = emptyState();
+  volatileState = fresh;
+  volatileStateRevision += 1;
+  return fresh;
 }
 
 export async function saveState(state: AppState): Promise<void> {
   const normalized = normalizeState(state);
   const serialized = JSON.stringify(normalized);
   if (serialized.length > MAX_STORAGE_BYTES) throw new Error('Der lokale Speicher ist voll. Bitte lösche alte Alarme oder exportiere ein Backup.');
+  volatileState = normalized;
+  volatileStateRevision += 1;
   await AsyncStorage.setItem(TEMP_STORAGE_KEY, serialized);
-  await AsyncStorage.setItem(STORAGE_KEY, serialized);
-  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, serialized);
+    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
+  } finally {
+    await AsyncStorage.removeItem(TEMP_STORAGE_KEY).catch(() => undefined);
+  }
 }
 
 export async function resetState(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  await Promise.all([
+    AsyncStorage.removeItem(STORAGE_KEY),
+    AsyncStorage.removeItem(TEMP_STORAGE_KEY),
+    AsyncStorage.removeItem(LAST_KNOWN_GOOD_STORAGE_KEY),
+  ]);
+  volatileState = null;
+  volatileStateRevision += 1;
 }
