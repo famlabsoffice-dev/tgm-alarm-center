@@ -58,6 +58,26 @@ test('daily recurrence keeps the configured local clock across the European DST 
   });
 });
 
+test('invalid DST spring-forward wall-clock times are rejected instead of normalized', () => {
+  withTimezone('Europe/Berlin', () => {
+    assert.throws(() => buildAlarm(TEMPLATES.custom, 'account-1', '2030-03-31', '02:30', new Date('2029-01-01T00:00:00.000Z')));
+  });
+});
+
+test('GW cycle advances exactly five 24-hour periods and preserves the occurrence end window', () => {
+  const base = new Date('2030-01-01T12:00:00.000Z');
+  const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', '2030-01-01', '13:00', base);
+  const first = nextOccurrence(alarm, new Date('2030-01-01T12:00:00.000Z'));
+  assert.ok(first);
+  assert.equal(first.toISOString(), '2030-01-06T13:00:00.000Z');
+  const second = nextOccurrence(alarm, new Date('2030-01-06T13:00:01.000Z'));
+  assert.ok(second);
+  assert.equal(second.toISOString(), '2030-01-11T13:00:00.000Z');
+  const end = occurrenceEnd(alarm, first);
+  assert.ok(end);
+  assert.equal(end.toISOString(), '2030-01-07T13:00:00.000Z');
+});
+
 test('GW cycle produces one coherent occurrence with warning, end-warning and end moments', () => {
   const base = new Date('2030-01-01T12:00:00.000Z');
   const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', '2030-01-01', '13:00', base);
@@ -71,6 +91,14 @@ test('GW cycle produces one coherent occurrence with warning, end-warning and en
   assert.deepEqual(moments.filter((m) => m.kind === 'warning').map((m) => m.warningMinutes), [60, 30, 15]);
   assert.equal(moments.filter((m) => m.kind === 'end-warning').length, 1);
   assert.equal(moments.filter((m) => m.kind === 'end').length, 1);
+});
+
+test('notification moments never resurrect a past warning and retain only future moments', () => {
+  const alarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-02-01', '12:00', new Date('2029-01-01T00:00:00.000Z'));
+  const now = new Date(Date.parse(alarm.eventAtUtc) - 10 * 60 * 1000);
+  const moments = upcomingMoments(alarm, now);
+  assert.equal(moments.some((moment) => moment.at.getTime() <= now.getTime()), false);
+  assert.equal(moments.every((moment) => moment.at.getTime() < Date.parse(alarm.eventAtUtc) || moment.kind === 'main'), true);
 });
 
 test('completed occurrence suppresses all notification moments and reactivation remains schedulable', () => {
