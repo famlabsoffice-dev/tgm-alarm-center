@@ -36,6 +36,7 @@ import {
   validateDateTime,
 } from './src/domain/alarm';
 import { effectiveTierForAccount } from './src/domain/pricing';
+import { updateAccountAlarm, deleteAccountAlarm, toggleAccountAlarm, completeAccountOccurrence } from './src/domain/accountAlarmActions';
 import { BillingPanel } from './src/billing/BillingPanel';
 import { exportBackup, restoreBackup } from './src/backup/backup';
 import { emptyState, loadState, saveState } from './src/storage/store';
@@ -182,10 +183,14 @@ export default function App() {
     return () => { cancelled = true; };
   }, [state.alarms, state.notificationPreferences, readiness.permission, readiness.supported, ready]);
 
-  const openAlarmFromNotification = useCallback((alarmId: string): void => {
-    const alarm = state.alarms.find((item) => item.id === alarmId);
+  const openAlarmFromNotification = useCallback((alarmId: string, accountId: string | null): void => {
+    if (!accountId) {
+      Alert.alert('Alarm nicht verfügbar', 'Der Account-Kontext für diesen Alarm fehlt.');
+      return;
+    }
+    const alarm = state.alarms.find((item) => item.id === alarmId && item.accountId === accountId);
     if (!alarm) {
-      Alert.alert('Alarm nicht verfügbar', 'Der angeforderte Alarm existiert nicht mehr.');
+      Alert.alert('Alarm nicht verfügbar', 'Der angeforderte Alarm gehört nicht zum angegebenen Account oder existiert nicht mehr.');
       return;
     }
     setEditingId(alarm.id);
@@ -204,11 +209,11 @@ export default function App() {
   }, [state.alarms]);
 
   const completeFromNotification = useCallback((response: Notifications.NotificationResponse | null) => {
-    const data = response?.notification.request.content.data as { alarmId?: unknown; eventTime?: unknown; kind?: unknown } | undefined;
-    if (!data || typeof data.alarmId !== 'string') return;
+    const data = response?.notification.request.content.data as { alarmId?: unknown; accountId?: unknown; eventTime?: unknown; kind?: unknown } | undefined;
+    if (!data || typeof data.alarmId !== 'string' || typeof data.accountId !== 'string') return;
     if (data.kind === 'local-test') return;
     if (response?.actionIdentifier === 'open') {
-      openAlarmFromNotification(data.alarmId);
+      openAlarmFromNotification(data.alarmId, data.accountId);
       return;
     }
     if (response?.actionIdentifier !== 'done' || typeof data.eventTime !== 'string') return;
@@ -216,11 +221,7 @@ export default function App() {
     if (!Number.isFinite(event.getTime())) return;
     setState((current) => ({
       ...current,
-      alarms: current.alarms.map((alarm) => alarm.id === data.alarmId ? {
-        ...alarm,
-        completedOccurrences: { ...alarm.completedOccurrences, [occurrenceKey(alarm.id, event)]: true },
-        updatedAt: nowIso(),
-      } : alarm),
+      alarms: completeAccountOccurrence(current.alarms, data.accountId as string, data.alarmId as string, occurrenceKey(data.alarmId as string, event), nowIso()),
     }));
   }, [openAlarmFromNotification]);
 
@@ -255,6 +256,7 @@ export default function App() {
   const alarmLimitText = Number.isFinite(tierLimit) ? `${state.alarms.length}/${tierLimit}` : `${state.alarms.length}`;
 
   const openEdit = (alarm: Alarm): void => {
+    if (!activeAccount || alarm.accountId !== activeAccount.id) return;
     const input = localInputFromUtc(alarm.eventAtUtc);
     setEditingId(alarm.id);
     setEditor({
@@ -318,9 +320,10 @@ export default function App() {
     setState((current) => {
       const ensured = createAccountIfNeeded(current);
       if (editingId) {
+        const accountId = ensured.accountId;
         return {
           ...ensured.state,
-          alarms: ensured.state.alarms.map((alarm) => alarm.id === editingId ? {
+          alarms: updateAccountAlarm(ensured.state.alarms, accountId, editingId, (alarm) => ({
             ...alarm,
             title,
             date: editor.date,
@@ -331,7 +334,7 @@ export default function App() {
             sound: editor.sound,
             protected: editor.protected,
             updatedAt: nowIso(),
-          } : alarm),
+          })),
         };
       }
       const template: AlarmTemplate = {
@@ -356,22 +359,27 @@ export default function App() {
   };
 
   const toggleAlarm = (alarmId: string): void => {
-    setState((current) => ({ ...current, alarms: current.alarms.map((alarm) => alarm.id === alarmId ? { ...alarm, active: !alarm.active, updatedAt: nowIso() } : alarm) }));
+    const accountId = activeAccount?.id ?? state.activeAccountId;
+    setState((current) => ({ ...current, alarms: toggleAccountAlarm(current.alarms, accountId, alarmId, nowIso()) }));
   };
 
   const completeAlarm = (alarm: Alarm): void => {
+    const accountId = activeAccount?.id ?? state.activeAccountId;
+    if (!accountId || alarm.accountId !== accountId) return;
     const event = nextOccurrence(alarm, new Date(now));
     if (!event) return;
     setState((current) => ({
       ...current,
-      alarms: current.alarms.map((item) => item.id === alarm.id ? { ...item, completedOccurrences: { ...item.completedOccurrences, [occurrenceKey(item.id, event)]: true }, updatedAt: nowIso() } : item),
+      alarms: completeAccountOccurrence(current.alarms, accountId, alarm.id, occurrenceKey(alarm.id, event), nowIso()),
     }));
   };
 
   const deleteAlarm = (alarm: Alarm): void => {
+    const accountId = activeAccount?.id ?? state.activeAccountId;
+    if (!accountId || alarm.accountId !== accountId) return;
     Alert.alert('Alarm löschen?', alarm.title, [
       { text: 'Abbrechen', style: 'cancel' },
-      { text: 'Löschen', style: 'destructive', onPress: () => setState((current) => ({ ...current, alarms: current.alarms.filter((item) => item.id !== alarm.id) })) },
+      { text: 'Löschen', style: 'destructive', onPress: () => setState((current) => ({ ...current, alarms: deleteAccountAlarm(current.alarms, accountId, alarm.id) })) },
     ]);
   };
 
