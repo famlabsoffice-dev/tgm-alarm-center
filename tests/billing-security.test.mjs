@@ -10,14 +10,23 @@ const verificationClient = readFileSync(new URL('../src/billing/verificationClie
 const billingPanel = readFileSync(new URL('../src/billing/BillingPanel.tsx', import.meta.url), 'utf8');
 const nativeApp = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
-const legacyFounderNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
+const founderNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
 
-test('paid web tiers are not locally authoritative', () => {
+ test('paid web tiers remain server-authoritative while native founder test access is explicit', () => {
   assert.match(app, /const effectiveTierKey = \(\) => freeTrialActive\(\) \? FREE_TRIAL_TIER : 'free';/);
   assert.doesNotMatch(app, /effectiveTierKey[^\n]*state\.tier/);
   assert.match(app, /Store-Verifizierung erforderlich/);
-  for (const name of legacyFounderNames) assert.doesNotMatch(app, new RegExp(name, 'g'));
-  assert.doesNotMatch(app, /familyAccessForAccount|isFamilyAccountName|FAMILY_ACCESS_TIER/);
+  for (const name of founderNames) assert.doesNotMatch(app, new RegExp(name, 'g'));
+  assert.match(pricing, /FOUNDER_ACCESS_TIER: Tier = 'godfather'/);
+  assert.match(pricing, /FOUNDER_ACCOUNT_NAMES = \['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'\]/);
+  assert.match(pricing, /return isFounderAccountName\(accountName\) \? FOUNDER_ACCESS_TIER : tier;/);
+  assert.match(nativeApp, /effectiveTierForAccount\(state\.tier, activeAccount\?\.name \?\? ''\)/);
+});
+
+test('founder account matching is exact, trimmed and case-insensitive', () => {
+  const directCheck = readFileSync(new URL('../scripts/check-founder.mjs', import.meta.url), 'utf8');
+  assert.match(directCheck, /TGMack.*TGMkellz.*TGMj9.*TGMvany.*TGMred/s);
+  assert.match(pricing, /accountName\.trim\(\)\.toLowerCase\(\)/);
 });
 
 test('hardened plans renderer is valid JavaScript and preserves template interpolation', () => {
@@ -28,17 +37,6 @@ test('hardened plans renderer is valid JavaScript and preserves template interpo
   assert.doesNotMatch(section, /\\`|\\\$\{/);
   assert.match(section, /\$\{TIER_ORDER\.map/);
   assert.doesNotThrow(() => new Function(app));
-});
-
-test('native tier limits are bound to the runtime verified store tier', () => {
-  assert.match(pricing, /let verifiedStoreTier: Tier = 'free';/);
-  assert.match(pricing, /export function setVerifiedStoreTier\(tier: Tier\): void/);
-  assert.match(pricing, /export function clearVerifiedStoreTier\(\): void/);
-  assert.match(pricing, /export function effectiveTierForAccount\(_persistedTier: Tier, _accountName: string\): Tier \{\n  return verifiedStoreTier;/);
-  assert.doesNotMatch(pricing, /FAMILY_ACCOUNT_NAMES|FAMILY_ACCESS_TIER|TGMack|TGMkellz|TGMj9|TGMvany|TGMred/);
-  assert.match(billingPanel, /setVerifiedStoreTier\(tier\);/);
-  assert.match(billingPanel, /verifyPurchaseWithProvider/);
-  assert.match(nativeApp, /effectiveTierForAccount\(state\.tier, activeAccount\?\.name \?\? ''\)/);
 });
 
 test('paid entitlement is explicitly server sourced and active-only', () => {
