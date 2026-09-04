@@ -1,6 +1,6 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 import { buildNotificationPlan, NotificationPlanEntry } from './notificationSchedule';
 import { getVolatileState, getVolatileStateRevision, loadState } from '../storage/store';
@@ -11,9 +11,10 @@ const SOUND_CHANNELS = { pulse: `${CHANNEL_ID}-pulse`, siren: `${CHANNEL_ID}-sir
 const NOTIFICATION_REGISTRY_KEY = 'tgm-alarm-center-notification-registry-v1';
 type NotificationRegistry = Record<string, string>;
 let lastReconciledRevision = -1;
+let resumeSubscription: { remove: () => void } | null = null;
 
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
-export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; recoveryPending: boolean; }
+export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; recoveryPending?: boolean; }
 
 async function ensureAndroidChannels(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -63,6 +64,39 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
     } catch {
       exactAlarm = false;
     }
+  }
+  installResumeRecovery();
+  return { supported: true, permission, exactAlarm, channel, recoveryPending };
+}
+
+function installResumeRecovery(): void {
+  if (resumeSubscription || Platform.OS === 'web' || !Device.isDevice) return;
+  resumeSubscription = AppState.addEventListener('change', (nextState) => {
+    if (nextState !== 'active') return;
+    void (async () => {
+      const readiness = await initializeNotificationsForResume();
+      if (!readiness.permission || !readiness.supported) return;
+      const state = getVolatileState() ?? await loadState();
+      const revision = getVolatileStateRevision();
+      if (readiness.exactAlarm && (revision !== lastReconciledRevision || readiness.recoveryPending)) {
+        await reconcileScheduledNotifications(state.alarms, state.notificationPreferences, revision);
+      }
+    })().catch(() => undefined);
+  });
+}
+
+async function initializeNotificationsForResume(): Promise<NotificationReadiness> {
+  const channel = await ensureAndroidChannels();
+  let permission = false;
+  try { permission = (await Notifications.getPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED; } catch { permission = false; }
+  let exactAlarm = true;
+  let recoveryPending = false;
+  if (Platform.OS === 'android') {
+    try {
+      exactAlarm = await canScheduleExactAlarms();
+      const signals = await consumeRecoverySignals();
+      recoveryPending = signals.bootReconciliationNeeded || signals.exactAlarmPermissionChanged;
+    } catch { exactAlarm = false; }
   }
   return { supported: true, permission, exactAlarm, channel, recoveryPending };
 }
