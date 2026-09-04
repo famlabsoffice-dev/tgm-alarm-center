@@ -67,7 +67,7 @@ test('invalid DST spring-forward wall-clock times are rejected instead of normal
 test('GW cycle advances exactly five 24-hour periods and preserves the occurrence end window', () => {
   const base = new Date('2030-01-01T12:00:00.000Z');
   const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', '2030-01-01', '13:00', base);
-  const first = nextOccurrence(alarm, new Date('2030-01-01T12:00:00.000Z'));
+  const first = nextOccurrence(alarm, new Date('2030-01-01T13:00:01.000Z'));
   assert.ok(first);
   assert.equal(first.toISOString(), '2030-01-06T13:00:00.000Z');
   const second = nextOccurrence(alarm, new Date('2030-01-06T13:00:01.000Z'));
