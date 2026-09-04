@@ -14,7 +14,9 @@ The plan:
 - deterministically sorts by notification timestamp;
 - deduplicates identical alarm/moment identities before scheduling.
 
-The native scheduler consumes this plan while retaining the existing Android time-critical channel, local sound mapping, notification categories and account-scoped payload metadata.
+The native scheduler consumes this plan while retaining account-scoped payload metadata. Android now uses dedicated sound channels for Pulse, Siren and Chime so the selected alarm tone is actually owned by the OS notification channel. A versioned channel namespace prevents an already-created legacy channel from silently overriding the selected sound. A dedicated silent channel is used only when the corresponding sound preference is disabled.
+
+Scheduled alarms are device-owned OS notifications: changing the selected account does not remove another account's scheduled alarms, leaving the app does not require the JavaScript runtime to be alive at delivery time, and notification payloads retain the originating `accountId` so opening/completing an alarm remains account-safe.
 
 ## Regression coverage
 
@@ -28,6 +30,10 @@ Automated contracts cover:
 - per-moment warning/event sound preferences.
 
 Existing reliability, account-isolation and notification-ownership tests remain part of the full suite.
+
+## Tester build contract
+
+The tester APK is built from this same native notification implementation. The tester must therefore verify scheduled delivery after switching accounts and after leaving the app, with the configured Pulse/Siren/Chime tone audible at delivery time.
 
 ## Exact alarm capability
 
