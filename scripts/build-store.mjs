@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
 
 const platform = process.argv[2];
 if (platform !== 'android' && platform !== 'ios') {
