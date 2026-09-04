@@ -1,6 +1,6 @@
 # TGM ALARM CENTER
 
-Das TGM ALARM CENTER ist eine lokale Gaming-Alarmzentrale für **The Grand Mafia**. Es erinnert an Bubble-Zeiten, GW-Bubble-Schutzfenster und eigene Spielereignisse, indem es auf dem jeweiligen Gerät einen Gaming-Alarmton ausgibt.
+Das TGM ALARM CENTER ist eine unabhängige lokale Gaming-Alarmzentrale für zeitkritische Gaming-Events. Es erinnert an Bubble-Zeiten, GW-Bubble-Schutzfenster und eigene Spielereignisse, indem es auf dem jeweiligen Gerät einen Gaming-Alarmton ausgibt.
 
 ## Produktumfang
 
