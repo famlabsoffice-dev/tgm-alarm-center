@@ -9,6 +9,7 @@ import {
   occurrenceKey,
   upcomingMoments,
 } from '../src/domain/alarm';
+import { findOwnedAlarm, ownsAlarm, ownedAlarms, updateOwnedAlarm } from '../src/domain/accountIsolation';
 
 const withTimezone = <T>(timezone: string, run: () => T): T => {
   const previous = process.env.TZ;
@@ -130,4 +131,33 @@ test('changing the selected account does not change the global notification mome
   assert.equal(after.length, 4);
   assert.equal(before.filter((value) => value.startsWith(`${accountOneAlarm.id}:`)).length, 2);
   assert.equal(before.filter((value) => value.startsWith(`${accountTwoAlarm.id}:`)).length, 2);
+});
+
+test('account ownership guard denies foreign reads, foreign writes and missing account context', () => {
+  const now = new Date('2030-07-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-07-01', '03:00', now);
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-07-01', '04:00', now);
+  const alarms = [accountOneAlarm, accountTwoAlarm];
+
+  assert.equal(ownsAlarm(accountOneAlarm, 'account-1'), true);
+  assert.equal(ownsAlarm(accountOneAlarm, 'account-2'), false);
+  assert.equal(ownsAlarm(accountOneAlarm, null), false);
+  assert.deepEqual(ownedAlarms(alarms, 'account-1').map((alarm) => alarm.id), [accountOneAlarm.id]);
+  assert.deepEqual(ownedAlarms(alarms, 'account-2').map((alarm) => alarm.id), [accountTwoAlarm.id]);
+  assert.deepEqual(ownedAlarms(alarms, null), []);
+  assert.equal(findOwnedAlarm(alarms, accountOneAlarm.id, 'account-2'), null);
+  assert.equal(findOwnedAlarm(alarms, accountOneAlarm.id, 'account-1')?.id, accountOneAlarm.id);
+
+  let mutatorCalled = false;
+  const unchanged = updateOwnedAlarm(alarms, accountOneAlarm.id, 'account-2', () => {
+    mutatorCalled = true;
+    return { ...accountOneAlarm, title: 'ILLEGAL' };
+  });
+  assert.equal(mutatorCalled, false);
+  assert.equal(unchanged[0], accountOneAlarm);
+  assert.equal(unchanged[1], accountTwoAlarm);
+
+  const updated = updateOwnedAlarm(alarms, accountOneAlarm.id, 'account-1', (alarm) => ({ ...alarm, title: 'Updated' }));
+  assert.equal(updated[0].title, 'Updated');
+  assert.equal(updated[1], accountTwoAlarm);
 });
