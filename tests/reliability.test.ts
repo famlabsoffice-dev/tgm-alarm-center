@@ -9,7 +9,7 @@ import {
   occurrenceKey,
   upcomingMoments,
 } from '../src/domain/alarm';
-import { findOwnedAlarm, ownsAlarm, ownedAlarms, updateOwnedAlarm } from '../src/domain/accountIsolation';
+import { findOwnedAlarm, ownsAlarm, updateOwnedAlarm } from '../src/domain/accountIsolation';
 
 const withTimezone = <T>(timezone: string, run: () => T): T => {
   const previous = process.env.TZ;
