@@ -1,0 +1,47 @@
+name: Billing Security Gate
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app.js'
+      - 'src/domain/pricing.ts'
+      - 'src/billing/**'
+      - 'scripts/harden-web-billing.mjs'
+      - 'tests/billing-security.test.mjs'
+      - '.github/workflows/billing-security-gate.yml'
+  pull_request:
+    paths:
+      - 'app.js'
+      - 'src/domain/pricing.ts'
+      - 'src/billing/**'
+      - 'scripts/harden-web-billing.mjs'
+      - 'tests/billing-security.test.mjs'
+      - '.github/workflows/billing-security-gate.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  billing-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Harden legacy client bypass
+        run: node scripts/harden-web-billing.mjs
+
+      - name: Verify billing security gate
+        run: node --test tests/billing-security.test.mjs
+
+      - name: Commit deterministic hardening on main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && github.actor != 'github-actions[bot]' && git_status != 'clean'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app.js
+          git commit -m 'security: enforce verified billing entitlements [billing-hardening]'
+          git push
