@@ -56,6 +56,10 @@ class TGMExactAlarmModule : Module() {
       context.startActivity(intent)
       true
     }
+
+    AsyncFunction("consumeRecoverySignals") {
+      consumeRecoverySignals(requireContext())
+    }
   }
 
   private fun requireContext(): Context {
