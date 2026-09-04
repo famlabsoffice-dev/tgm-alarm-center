@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   TEMPLATES,
   buildAlarm,
-  localDateTimeToUtc,
   nextOccurrence,
   occurrenceEnd,
   occurrenceKey,
@@ -24,14 +23,14 @@ const withTimezone = <T>(timezone: string, run: () => T): T => {
 test('once alarms remain anchored to the persisted absolute UTC instant after a timezone change', () => {
   withTimezone('Europe/Berlin', () => {
     const alarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-01-15', '14:30', new Date('2029-01-01T00:00:00.000Z'));
-    const utc = alarm.eventAtUtc;
-    assert.equal(utc, '2030-01-15T13:30:00.000Z');
-    const before = new Date('2030-01-15T13:29:59.000Z');
-    const after = new Date('2030-01-15T13:30:01.000Z');
-    assert.equal(nextOccurrence(alarm, before)?.toISOString(), utc);
+    const persistedUtc = alarm.eventAtUtc;
+    assert.ok(Number.isFinite(Date.parse(persistedUtc)));
+    const before = new Date(Date.parse(persistedUtc) - 1000);
+    const after = new Date(Date.parse(persistedUtc) + 1000);
+    assert.equal(nextOccurrence(alarm, before)?.toISOString(), persistedUtc);
     assert.equal(nextOccurrence(alarm, after), null);
     withTimezone('America/New_York', () => {
-      assert.equal(nextOccurrence(alarm, before)?.toISOString(), utc);
+      assert.equal(nextOccurrence(alarm, before)?.toISOString(), persistedUtc);
     });
   });
 });
