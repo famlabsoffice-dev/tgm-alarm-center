@@ -42,6 +42,11 @@ jobs:
       - name: Install dependencies from lockfile
         run: pnpm install --frozen-lockfile
 
+      - name: Bootstrap pinned Playwright for browser smoke
+        run: |
+          npx --yes --package=playwright@1.62.1 playwright --version
+          npx --yes --package=playwright@1.62.1 playwright install chromium
+
       - name: Run regression full-suite release contract
         run: pnpm run verify:regression
         env:
