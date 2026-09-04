@@ -4,7 +4,14 @@ import { Platform } from 'react-native';
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 import { buildNotificationPlan } from './notificationSchedule';
 
-export const CHANNEL_ID = 'time-critical-events';
+export const CHANNEL_ID = 'time-critical-events-v2';
+const SOUND_CHANNELS = {
+  pulse: `${CHANNEL_ID}-pulse`,
+  siren: `${CHANNEL_ID}-siren`,
+  chime: `${CHANNEL_ID}-chime`,
+  silent: `${CHANNEL_ID}-silent`,
+} as const;
+
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
 
 export interface NotificationReadiness {
@@ -14,24 +21,55 @@ export interface NotificationReadiness {
   channel: boolean;
 }
 
-export async function initializeNotifications(): Promise<NotificationReadiness> {
-  if (!Device.isDevice || Platform.OS === 'web') return { supported: false, permission: false, exactAlarm: false, channel: false };
-
-  let channel = Platform.OS !== 'android';
-  if (Platform.OS === 'android') {
-    try {
-      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-        name: 'Zeitkritische Ereignisse',
+async function ensureAndroidChannels(): Promise<boolean> {
+  if (Platform.OS !== 'android') return true;
+  try {
+    await Promise.all([
+      Notifications.setNotificationChannelAsync(SOUND_CHANNELS.pulse, {
+        name: 'Zeitkritische Ereignisse · Pulse',
         importance: Notifications.AndroidImportance.MAX,
         sound: 'alarm-pulse.wav',
         vibrationPattern: [0, 250, 150, 250],
         lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-      channel = Boolean(await Notifications.getNotificationChannelAsync(CHANNEL_ID));
-    } catch {
-      channel = false;
-    }
+      }),
+      Notifications.setNotificationChannelAsync(SOUND_CHANNELS.siren, {
+        name: 'Zeitkritische Ereignisse · Siren',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'alarm-siren.wav',
+        vibrationPattern: [0, 250, 150, 250],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      }),
+      Notifications.setNotificationChannelAsync(SOUND_CHANNELS.chime, {
+        name: 'Zeitkritische Ereignisse · Chime',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'alarm-chime.wav',
+        vibrationPattern: [0, 250, 150, 250],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      }),
+      Notifications.setNotificationChannelAsync(SOUND_CHANNELS.silent, {
+        name: 'Zeitkritische Ereignisse · Ohne Ton',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: null,
+        vibrationPattern: [0, 250, 150, 250],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      }),
+    ]);
+    return Boolean(await Notifications.getNotificationChannelAsync(SOUND_CHANNELS.pulse));
+  } catch {
+    return false;
   }
+}
+
+function channelFor(alarm: Alarm, soundEnabled: boolean): string | undefined {
+  if (Platform.OS !== 'android') return undefined;
+  if (!soundEnabled) return SOUND_CHANNELS.silent;
+  return alarm.sound === 'siren' ? SOUND_CHANNELS.siren : alarm.sound === 'chime' ? SOUND_CHANNELS.chime : SOUND_CHANNELS.pulse;
+}
+
+export async function initializeNotifications(): Promise<NotificationReadiness> {
+  if (!Device.isDevice || Platform.OS === 'web') return { supported: false, permission: false, exactAlarm: false, channel: false };
+
+  const channel = await ensureAndroidChannels();
 
   let permission = false;
   try {
@@ -76,6 +114,7 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
     data: { accountId: alarm.accountId, alarmId: alarm.id, eventTime: moment.eventTime.toISOString(), kind: moment.kind, endAt: moment.endAt?.toISOString() ?? null },
     categoryIdentifier: isWarning || isEndWarning ? 'tgm-warning' : 'tgm-event',
     interruptionLevel: preferences.criticalAlerts ? 'timeSensitive' : 'active',
+    ...(Platform.OS === 'android' ? { channelId: channelFor(alarm, soundEnabled) } : {}),
   };
 }
 
@@ -92,7 +131,6 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DATE,
         date: moment.at,
-        ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
       },
     });
     ids.push(id);
@@ -111,11 +149,11 @@ export async function scheduleLocalTestNotification(): Promise<string> {
       data: { kind: 'local-test' },
       categoryIdentifier: 'tgm-event',
       interruptionLevel: 'timeSensitive',
+      ...(Platform.OS === 'android' ? { channelId: SOUND_CHANNELS.pulse } : {}),
     },
     trigger: {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: new Date(Date.now() + 1500),
-      ...(Platform.OS === 'android' ? { channelId: CHANNEL_ID } : {}),
     },
   });
 }
