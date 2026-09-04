@@ -19,6 +19,17 @@ test('paid web tiers are not locally authoritative', () => {
   assert.doesNotMatch(app, /familyAccessForAccount|isFamilyAccountName|FAMILY_ACCESS_TIER/);
 });
 
+test('hardened plans renderer is valid JavaScript and preserves template interpolation', () => {
+  const start = app.indexOf('function renderPlansView() {');
+  const end = app.indexOf('function renderSettingsView() {', start);
+  assert.ok(start >= 0 && end > start, 'renderPlansView boundary missing');
+  const section = app.slice(start, end);
+  assert.doesNotMatch(section, /\\`|\\\$\{/);
+  assert.match(section, /\$\{TIER_ORDER\.map/);
+  assert.doesNotMatch(app, /const FAMILY_ACCOUNT_NAMES/);
+  assert.doesNotThrow(() => new Function(app));
+});
+
 test('domain pricing contains no account-name entitlement bypass', () => {
   assert.doesNotMatch(pricing, /FAMILY_ACCOUNT_NAMES|isFamilyAccountName|effectiveTierForAccount|FAMILY_ACCESS_TIER/);
   for (const name of legacyFounderNames) assert.doesNotMatch(pricing, new RegExp(name, 'g'));
