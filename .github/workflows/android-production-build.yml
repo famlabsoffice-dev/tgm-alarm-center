@@ -1,0 +1,90 @@
+name: android-production-build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgm-android-production-build
+  cancel-in-progress: true
+
+jobs:
+  android-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout main source
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+          pnpm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Android reliability gate
+        run: |
+          pnpm typecheck
+          pnpm lint
+          pnpm test
+          pnpm verify:android-reliability
+          pnpm verify:mobile-build
+          pnpm verify:store-config
+
+      - name: Verify EAS token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo 'Missing required GitHub Actions secret: EXPO_TOKEN'
+            exit 1
+          fi
+
+      - name: Verify EAS access
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest whoami
+
+      - name: Build signed production Android AAB
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: pnpm build:android:aab 2>&1 | tee android-production-build.log
+
+      - name: Write production build metadata
+        shell: bash
+        run: |
+          {
+            echo "TGM ALARM CENTER — Production Android Build"
+            echo "Platform: Android"
+            echo "Profile: production"
+            echo "Distribution: store"
+            echo "Artifact target: AAB"
+            echo "Application ID: com.tgm.alarmcenter"
+            echo "Commit: $(git rev-parse HEAD)"
+            echo "Branch: main"
+          } > android-production-build-metadata.txt
+
+      - name: Upload production build evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgm-android-production-build
+          path: |
+            android-production-build.log
+            android-production-build-metadata.txt
+          if-no-files-found: error
+          retention-days: 30
