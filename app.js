@@ -266,6 +266,8 @@
 
   function activeAccount() { return state.accounts.find((account) => account.id === state.activeAccountId) || null; }
   function accountAlarms(accountId) { return state.alarms.filter((alarm) => alarm.accountId === accountId); }
+  function visibleAlarms() { const account = activeAccount(); return account ? accountAlarms(account.id) : []; }
+  function ownedAlarm(id) { const account = activeAccount(); return account ? state.alarms.find((alarm) => alarm.id === id && alarm.accountId === account.id) || null : null; }
   function enforceCapacity({ accountId, type, excludeId = null }) {
     const plan = TIER_PRICING[effectiveTierKey()] || TIER_PRICING.free;
     const counts = { bubble: 0, gw: 0, custom: 0, individual: 0, rss: 0 };
@@ -338,7 +340,9 @@
   }
 
   function allMoments(reference = now()) { return state.alarms.flatMap((alarm) => momentsFor(alarm, reference)).sort((a, b) => a.at - b.at); }
+  function visibleMoments(reference = now()) { return visibleAlarms().flatMap((alarm) => momentsFor(alarm, reference)).sort((a, b) => a.at - b.at); }
   function nextMoment() { return allMoments()[0] || null; }
+  function nextVisibleMoment() { return visibleMoments()[0] || null; }
   function typeLabel(type) { return TYPE_LABEL[type] || TYPE_LABEL.custom; }
   function repeatLabel(repeat) { return REPEAT_LABEL[repeat] || REPEAT_LABEL.once; }
   function momentLabel(moment) { return moment.kind === 'warning' ? `${moment.warning} Min. Vorwarnung` : moment.kind === 'end-warning' ? 'Bubble-Ende-Warnung' : moment.kind === 'end' ? 'Bubble endet' : 'Hauptereignis'; }
@@ -448,6 +452,7 @@
   }
 
   function openEditor(id = null, template = 'bubble') {
+    if (id && !ownedAlarm(id)) return showToast('Dieser Alarm gehört nicht zum aktiven Account.');
     editingId = id;
     modalMode = 'alarm';
     modalRoot.innerHTML = renderAlarmModal(id, template);
@@ -473,6 +478,13 @@
     return `<div class="modal-wrap"><section class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><div class="modal-head"><h2 id="modalTitle">${existing ? 'Alarm bearbeiten' : 'Neuer Gaming-Alarm'}</h2><button class="close" type="button" data-action="close-modal" aria-label="Schließen">×</button></div><div class="note"><strong>Lokaler Gaming-Alarm</strong><br>Der Alarm wird nur in diesem Browser gespeichert und gibt einen Ton auf diesem Gerät aus.</div><div class="field"><label for="eTitle">Bezeichnung</label><input id="eTitle" maxlength="80" value="${esc(existing?.title || template.title)}" placeholder="z. B. Abend-Bubble" autofocus></div><div class="field"><label for="eType">Alarmtyp</label><select id="eType"><option value="bubble" ${type === 'bubble' ? 'selected' : ''}>Bubble Alarm</option><option value="gw" ${type === 'gw' ? 'selected' : ''}>Massacre Alarm</option><option value="custom" ${type === 'custom' ? 'selected' : ''}>Event Alarm</option><option value="individual" ${type === 'individual' ? 'selected' : ''}>Individual Timer · Investment / Building / Training</option><option value="rss" ${type === 'rss' ? 'selected' : ''}>RSS Timer · Tiles / Trucks / Schmuggler</option></select></div><div class="two-col"><div class="field"><label for="eDate">Datum</label><input id="eDate" type="date" value="${formatDateInput(eventAt)}"></div><div class="field"><label for="eTime">Uhrzeit</label><input id="eTime" type="time" value="${formatTimeInput(eventAt)}"></div></div><div class="field"><span class="choice-label">Vorwarnungen</span><div class="choice-grid">${[60, 30, 15].map((minutes) => `<label class="choice"><input type="checkbox" name="warning" value="${minutes}" ${warnings.includes(minutes) ? 'checked' : ''}>${minutes} Minuten</label>`).join('')}</div><span class="field-help">Mehrere Vorwarnungen können gleichzeitig aktiviert werden.</span></div><div class="field"><label for="eRepeat">Wiederholung</label><select id="eRepeat"><option value="once" ${repeat === 'once' ? 'selected' : ''}>Einmalig</option><option value="daily" ${repeat === 'daily' ? 'selected' : ''}>Täglich</option><option value="gw5d" ${repeat === 'gw5d' ? 'selected' : ''}>Massacre Alarm · alle 5 Tage · 24 Stunden Schutz</option></select></div><div class="field"><label for="eSound">Alarmton</label><select id="eSound" disabled>${Object.entries(SOUNDS).map(([key, value]) => `<option value="${key}" ${sound === key ? 'selected' : ''}>${value.label} · ${value.description}</option>`).join('')}</select></div><div class="switch-row"><label for="eProtected">Als geschützt markieren</label><input id="eProtected" type="checkbox" ${existing?.protected ?? template.protected ? 'checked' : ''}></div><div class="switch-row"><label for="eActive">Alarm aktiv</label><input id="eActive" type="checkbox" ${existing?.active !== false ? 'checked' : ''}></div><div class="modal-footer"><button class="btn ghost" type="button" data-action="preview-sound" data-sound="${esc(sound)}">Ton anhören</button><button class="btn ghost" type="button" data-action="close-modal">Abbrechen</button><button class="btn primary" type="button" data-action="save-alarm" data-id="${esc(id || '')}">${existing ? 'Änderungen speichern' : 'Alarm speichern'}</button></div></section></div>`;
   }
 
+  function refreshLiveCountdowns() {
+    document.querySelectorAll('[data-live-countdown]').forEach((element) => {
+      const eventAt = Number(element.dataset.liveCountdown);
+      if (Number.isFinite(eventAt)) element.textContent = countdown(eventAt);
+    });
+  }
+
   function render() {
     const previousNav = app.querySelector('.nav');
     if (previousNav) navScrollLeft = previousNav.scrollLeft;
@@ -488,12 +500,13 @@
   function navButton(key, label) { return `<button type="button" class="${view === key ? 'active' : ''}" data-action="view" data-view="${key}">${label}</button>`; }
 
   function renderDashboard() {
-    const next = nextMoment();
-    const active = state.alarms.filter((alarm) => alarm.active).length;
-    const protectedCount = state.alarms.filter((alarm) => alarm.active && alarm.protected).length;
-    const gwCount = state.alarms.filter((alarm) => alarm.active && alarm.repeat === 'gw5d').length;
-    const timeline = allMoments().slice(0, 5);
-    return `<section class="grid grid-hero"><div class="card hero"><div class="eyebrow">DEIN GAMING-ALARM CENTER</div><h1>Bubble Alarm und Massacre Alarm im Blick.</h1><p class="hero-copy">Plane deinen Bubble Alarm, Massacre Alarm und Event Alarm. Die Daten bleiben auf diesem Gerät, die Alarmtöne ertönen lokal.</p>${next ? `<div class="hero-next"><strong>${esc(nextMomentAlarm(next)?.title || 'Nächster Alarm')}</strong><span>${esc(momentLabel(next))} · ${formatDateTime(next.at)}</span><div class="countdown">${countdown(next.at)}</div></div>` : `<div class="hero-next"><strong>Bereit für deine nächste Spielzeit.</strong><span>Lege einen Bubble Alarm, einen Massacre Alarm oder einen Event Alarm an.</span></div>`}<div class="hero-actions"><button class="btn primary" type="button" data-action="new-alarm" data-template="bubble">Bubble Alarm anlegen</button><button class="btn secondary" type="button" data-action="new-alarm" data-template="gw">Massacre Alarm</button><button class="btn ghost" type="button" data-action="new-alarm" data-template="custom">Event Alarm</button></div></div><aside class="card next-panel"><div><div class="eyebrow">ALS NÄCHSTES</div>${next ? `<div class="next-title">${esc(nextMomentAlarm(next)?.title || 'Alarm')}</div><div class="next-at">${esc(momentLabel(next))} · ${formatDateTime(next.at)}</div><div class="countdown">${countdown(next.at)}</div>` : `<div class="next-title">Keine offenen Termine</div><div class="muted">Deine Alarmzentrale wartet.</div>`}</div>${timeline.length ? `<div class="timeline">${timeline.slice(0, 3).map((moment) => { const alarm = nextMomentAlarm(moment); return `<div class="timeline-item"><span class="when">${formatTime(moment.at)}</span><div><strong>${esc(alarm?.title || 'Alarm')}</strong><small>${esc(momentLabel(moment))}</small></div><span class="badge ${moment.kind === 'end' ? 'red' : moment.kind === 'main' ? 'gold' : 'blue'}">${esc(typeLabel(alarm?.type))}</span></div>`; }).join('')}</div>` : ''}</aside></section><section class="stats"><div class="card stat"><div class="stat-head"><span class="eyebrow">AKTIVE ALARME</span><span class="stat-icon">A</span></div><div class="stat-value">${active}</div><div class="stat-label">auf diesem Gerät</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">GESCHÜTZT</span><span class="stat-icon">盾</span></div><div class="stat-value">${protectedCount}</div><div class="stat-label">markierte Alarme</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">MASSACRE ALARM</span><span class="stat-icon">GW</span></div><div class="stat-value">${gwCount}</div><div class="stat-label">mit 24h Massacre-Alarm-Schutz</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">AUDIO-ENGINE</span><span class="stat-icon">♪</span></div><div class="stat-value ${state.preferences.audioEnabled ? 'mint' : 'gold'}">${state.preferences.audioEnabled ? 'OK' : 'OFF'}</div><div class="stat-label">${state.preferences.audioEnabled ? 'Töne bereit' : 'Aktivierung nötig'}</div></div></section><section><div class="section-head"><h2>Schnellstart</h2><p>Vorlagen mit passenden Alarmtönen</p></div><div class="template-grid"><button class="template" type="button" data-action="new-alarm" data-template="bubble"><span class="template-icon">B</span><strong>Bubble Alarm</strong><span>60 · 15 Min. · Siren</span></button><button class="template" type="button" data-action="new-alarm" data-template="gw"><span class="template-icon">MA</span><strong>Massacre Alarm</strong><span>60 · 30 · 15 Min. · Siren</span></button><button class="template" type="button" data-action="new-alarm" data-template="custom"><span class="template-icon">E</span><strong>Event Alarm</strong><span>15 Min. · Pulse</span></button><button class="template" type="button" data-action="new-alarm" data-template="individual"><span class="template-icon">I</span><strong>Individual Timer</strong><span>Investment · Building · Training · Pulse</span></button><button class="template" type="button" data-action="new-alarm" data-template="rss"><span class="template-icon">R</span><strong>RSS Timer</strong><span>Tiles · Trucks · Schmuggler · Chime</span></button></div></section><section><div class="section-head"><h2>Deine nächsten Alarme</h2><p>${state.alarms.length} gespeichert</p></div>${renderAlarmList(5)}</section>`;
+    const next = nextVisibleMoment();
+    const alarms = visibleAlarms();
+    const active = alarms.filter((alarm) => alarm.active).length;
+    const protectedCount = alarms.filter((alarm) => alarm.active && alarm.protected).length;
+    const gwCount = alarms.filter((alarm) => alarm.active && alarm.repeat === 'gw5d').length;
+    const timeline = visibleMoments().slice(0, 5);
+    return `<section class="grid grid-hero"><div class="card hero"><div class="eyebrow">DEIN GAMING-ALARM CENTER</div><h1>Bubble Alarm und Massacre Alarm im Blick.</h1><p class="hero-copy">Plane deinen Bubble Alarm, Massacre Alarm und Event Alarm. Die Daten bleiben auf diesem Gerät, die Alarmtöne ertönen lokal.</p>${next ? `<div class="hero-next"><strong>${esc(nextMomentAlarm(next)?.title || 'Nächster Alarm')}</strong><span>${esc(momentLabel(next))} · ${formatDateTime(next.at)}</span><div class="countdown" data-live-countdown="${next.at}">${countdown(next.at)}</div></div>` : `<div class="hero-next"><strong>Bereit für deine nächste Spielzeit.</strong><span>Lege einen Bubble Alarm, einen Massacre Alarm oder einen Event Alarm an.</span></div>`}<div class="hero-actions"><button class="btn primary" type="button" data-action="new-alarm" data-template="bubble">Bubble Alarm anlegen</button><button class="btn secondary" type="button" data-action="new-alarm" data-template="gw">Massacre Alarm</button><button class="btn ghost" type="button" data-action="new-alarm" data-template="custom">Event Alarm</button></div></div><aside class="card next-panel"><div><div class="eyebrow">ALS NÄCHSTES</div>${next ? `<div class="next-title">${esc(nextMomentAlarm(next)?.title || 'Alarm')}</div><div class="next-at">${esc(momentLabel(next))} · ${formatDateTime(next.at)}</div><div class="countdown" data-live-countdown="${next.at}">${countdown(next.at)}</div>` : `<div class="next-title">Keine offenen Termine</div><div class="muted">Deine Alarmzentrale wartet.</div>`}</div>${timeline.length ? `<div class="timeline">${timeline.slice(0, 3).map((moment) => { const alarm = nextMomentAlarm(moment); return `<div class="timeline-item"><span class="when">${formatTime(moment.at)}</span><div><strong>${esc(alarm?.title || 'Alarm')}</strong><small>${esc(momentLabel(moment))}</small></div><span class="badge ${moment.kind === 'end' ? 'red' : moment.kind === 'main' ? 'gold' : 'blue'}">${esc(typeLabel(alarm?.type))}</span></div>`; }).join('')}</div>` : ''}</aside></section><section class="stats"><div class="card stat"><div class="stat-head"><span class="eyebrow">AKTIVE ALARME</span><span class="stat-icon">A</span></div><div class="stat-value">${active}</div><div class="stat-label">auf diesem Gerät</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">GESCHÜTZT</span><span class="stat-icon">盾</span></div><div class="stat-value">${protectedCount}</div><div class="stat-label">markierte Alarme</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">MASSACRE ALARM</span><span class="stat-icon">GW</span></div><div class="stat-value">${gwCount}</div><div class="stat-label">mit 24h Massacre-Alarm-Schutz</div></div><div class="card stat"><div class="stat-head"><span class="eyebrow">AUDIO-ENGINE</span><span class="stat-icon">♪</span></div><div class="stat-value ${state.preferences.audioEnabled ? 'mint' : 'gold'}">${state.preferences.audioEnabled ? 'OK' : 'OFF'}</div><div class="stat-label">${state.preferences.audioEnabled ? 'Töne bereit' : 'Aktivierung nötig'}</div></div></section><section><div class="section-head"><h2>Schnellstart</h2><p>Vorlagen mit passenden Alarmtönen</p></div><div class="template-grid"><button class="template" type="button" data-action="new-alarm" data-template="bubble"><span class="template-icon">B</span><strong>Bubble Alarm</strong><span>60 · 15 Min. · Siren</span></button><button class="template" type="button" data-action="new-alarm" data-template="gw"><span class="template-icon">MA</span><strong>Massacre Alarm</strong><span>60 · 30 · 15 Min. · Siren</span></button><button class="template" type="button" data-action="new-alarm" data-template="custom"><span class="template-icon">E</span><strong>Event Alarm</strong><span>15 Min. · Pulse</span></button><button class="template" type="button" data-action="new-alarm" data-template="individual"><span class="template-icon">I</span><strong>Individual Timer</strong><span>Investment · Building · Training · Pulse</span></button><button class="template" type="button" data-action="new-alarm" data-template="rss"><span class="template-icon">R</span><strong>RSS Timer</strong><span>Tiles · Trucks · Schmuggler · Chime</span></button></div></section><section><div class="section-head"><h2>Deine nächsten Alarme</h2><p>${visibleAlarms().length} gespeichert</p></div>${renderAlarmList(5)}</section>`;
   }
 
   function nextMomentAlarm(moment) { return state.alarms.find((alarm) => alarm.id === moment?.alarmId) || null; }
@@ -501,7 +514,7 @@
   function renderAlarmsView() { return `<section><div class="section-head"><div><div class="eyebrow">VERWALTUNG</div><h2>Alle Gaming-Alarme</h2></div><div class="actions"><button class="btn primary" type="button" data-action="new-alarm" data-template="custom">+ Event Alarm</button><button class="btn secondary" type="button" data-action="new-alarm" data-template="individual">+ Individual Timer</button><button class="btn secondary" type="button" data-action="new-alarm" data-template="rss">+ RSS Timer</button></div></div>${renderAlarmList() }</section>`; }
 
   function renderAlarmList(limit = Infinity) {
-    const alarms = state.alarms.slice().sort((a, b) => (nextOccurrence(a) || Infinity) - (nextOccurrence(b) || Infinity)).slice(0, limit);
+    const alarms = visibleAlarms().slice().sort((a, b) => (nextOccurrence(a) || Infinity) - (nextOccurrence(b) || Infinity)).slice(0, limit);
     if (!alarms.length) return `<div class="card empty"><div class="empty-icon">+</div><h3>Noch kein Gaming-Alarm</h3><p>Lege einen Bubble Alarm, einen Massacre Alarm, einen Event Alarm, einen Individual Timer oder einen RSS Timer an.</p><div class="actions"><button class="btn primary" type="button" data-action="new-alarm" data-template="bubble">Bubble Alarm anlegen</button></div></div>`;
     return `<div class="alarm-list">${alarms.map(renderAlarmCard).join('')}</div>`;
   }
@@ -510,7 +523,7 @@
     const eventAt = nextOccurrence(alarm);
     const moments = momentsFor(alarm);
     const stateClass = alarm.active ? 'active-card' : '';
-    return `<article class="card alarm-card ${stateClass}"><div class="alarm-head"><div class="alarm-title"><strong>${esc(alarm.title)}</strong><span>${esc(typeLabel(alarm.type))} · ${esc(repeatLabel(alarm.repeat))} · ${esc(SOUNDS[alarm.sound]?.label || 'Pulse')}</span></div><span class="status ${alarm.active ? 'active' : 'paused'}">${alarm.active ? 'AKTIV' : 'PAUSIERT'}</span></div><div class="badges">${alarm.protected ? '<span class="badge gold">GESCHÜTZT</span>' : ''}${alarm.repeat === 'gw5d' ? '<span class="badge blue">24H MASSACRE ALARM</span>' : ''}${moments[0] ? `<span class="badge ${moments[0].kind === 'end' ? 'red' : 'mint'}">${esc(momentLabel(moments[0]))}</span>` : ''}</div><div class="alarm-time"><div><small>NÄCHSTER TERMIN</small><strong>${eventAt ? formatDateTime(eventAt) : 'Kein zukünftiger Termin'}</strong></div>${eventAt ? `<span class="time-left">${countdown(eventAt)}</span>` : ''}</div><div class="alarm-actions"><button class="alarm-action" type="button" data-action="edit-alarm" data-id="${esc(alarm.id)}">Bearbeiten</button><button class="alarm-action" type="button" data-action="toggle-alarm" data-id="${esc(alarm.id)}">${alarm.active ? 'Pausieren' : 'Aktivieren'}</button>${eventAt ? `<button class="alarm-action complete" type="button" data-action="complete-alarm" data-id="${esc(alarm.id)}">Erledigt</button>` : ''}<button class="alarm-action" type="button" data-action="duplicate-alarm" data-id="${esc(alarm.id)}">Duplizieren</button><button class="alarm-action delete" type="button" data-action="delete-alarm" data-id="${esc(alarm.id)}">Löschen</button></div></article>`;
+    return `<article class="card alarm-card ${stateClass}"><div class="alarm-head"><div class="alarm-title"><strong>${esc(alarm.title)}</strong><span>${esc(typeLabel(alarm.type))} · ${esc(repeatLabel(alarm.repeat))} · ${esc(SOUNDS[alarm.sound]?.label || 'Pulse')}</span></div><span class="status ${alarm.active ? 'active' : 'paused'}">${alarm.active ? 'AKTIV' : 'PAUSIERT'}</span></div><div class="badges">${alarm.protected ? '<span class="badge gold">GESCHÜTZT</span>' : ''}${alarm.repeat === 'gw5d' ? '<span class="badge blue">24H MASSACRE ALARM</span>' : ''}${moments[0] ? `<span class="badge ${moments[0].kind === 'end' ? 'red' : 'mint'}">${esc(momentLabel(moments[0]))}</span>` : ''}</div><div class="alarm-time"><div><small>NÄCHSTER TERMIN</small><strong>${eventAt ? formatDateTime(eventAt) : 'Kein zukünftiger Termin'}</strong></div>${eventAt ? `<span class="time-left" data-live-countdown="${eventAt}">${countdown(eventAt)}</span>` : ''}</div><div class="alarm-actions"><button class="alarm-action" type="button" data-action="edit-alarm" data-id="${esc(alarm.id)}">Bearbeiten</button><button class="alarm-action" type="button" data-action="toggle-alarm" data-id="${esc(alarm.id)}">${alarm.active ? 'Pausieren' : 'Aktivieren'}</button>${eventAt ? `<button class="alarm-action complete" type="button" data-action="complete-alarm" data-id="${esc(alarm.id)}">Erledigt</button>` : ''}<button class="alarm-action" type="button" data-action="duplicate-alarm" data-id="${esc(alarm.id)}">Duplizieren</button><button class="alarm-action delete" type="button" data-action="delete-alarm" data-id="${esc(alarm.id)}">Löschen</button></div></article>`;
   }
 
   function renderAccountsView() {
@@ -552,7 +565,8 @@
     if (!['once', 'daily', 'gw5d'].includes(repeat)) return showToast('Wiederholung ist ungültig.');
     if (!SOUNDS[sound]) return showToast('Alarmton ist ungültig.');
     if (!warnings.length) return showToast('Bitte mindestens eine Vorwarnung wählen.');
-    const existing = id ? state.alarms.find((alarm) => alarm.id === id) : null;
+    const existing = id ? ownedAlarm(id) : null;
+    if (id && !existing) return showToast('Dieser Alarm gehört nicht zum aktiven Account.');
     if (!enforceCapacity({ accountId: account.id, type, excludeId: existing?.id || null })) return;
     const record = {
       id: existing?.id || uid(), accountId: account.id, title, type, eventAt, date, time, repeat, sound: soundForAlarmType(type), warnings,
@@ -583,7 +597,7 @@
   }
 
   function completeAlarm(id) {
-    const alarm = state.alarms.find((item) => item.id === id);
+    const alarm = ownedAlarm(id);
     const eventAt = alarm && nextOccurrence(alarm);
     if (!alarm || !eventAt) return showToast('Für diesen Alarm gibt es keinen offenen Termin.');
     alarm.completedOccurrences[occurrenceKey(alarm, eventAt)] = true;
@@ -592,7 +606,7 @@
   }
 
   function toggleAlarm(id) {
-    const alarm = state.alarms.find((item) => item.id === id);
+    const alarm = ownedAlarm(id);
     if (!alarm) return;
     alarm.active = !alarm.active;
     alarm.updatedAt = iso(now());
@@ -600,7 +614,7 @@
   }
 
   function duplicateAlarm(id) {
-    const source = state.alarms.find((item) => item.id === id);
+    const source = ownedAlarm(id);
     if (!source) return;
     if (!enforceCapacity({ accountId: source.accountId, type: source.type })) return;
     const copy = { ...source, id: uid(), title: `${source.title} Kopie`.slice(0, MAX_TITLE_LENGTH), active: false, createdAt: iso(now()), updatedAt: iso(now()), completedOccurrences: {} };
@@ -609,9 +623,9 @@
   }
 
   function deleteAlarm(id) {
-    const alarm = state.alarms.find((item) => item.id === id);
+    const alarm = ownedAlarm(id);
     if (!alarm || !window.confirm(`„${alarm.title}“ wirklich löschen?`)) return;
-    state.alarms = state.alarms.filter((item) => item.id !== id);
+    state.alarms = state.alarms.filter((item) => item.id !== id || item.accountId !== alarm.accountId);
     Object.keys(state.firedMoments).filter((key) => key.startsWith(`${id}|`)).forEach((key) => delete state.firedMoments[key]);
     persist(); render(); showToast('Alarm gelöscht.');
   }
@@ -716,7 +730,7 @@
   window.addEventListener('focus', fireDueMoments);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) fireDueMoments(); });
   state = loadState();
-  ticker = window.setInterval(() => { fireDueMoments(); render(); }, 1000);
+  ticker = window.setInterval(() => { fireDueMoments(); refreshLiveCountdowns(); }, 1000);
   window.addEventListener('beforeunload', () => window.clearInterval(ticker));
   render();
 })();

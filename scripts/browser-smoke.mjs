@@ -118,6 +118,38 @@ try {
   await page.locator('article').filter({ hasText: 'CI Smoke Bubble' }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: reload persistence passed.');
 
+  await page.evaluate(() => {
+    const now = Date.now();
+    localStorage.setItem('tgm-alarm-center-web-v2', JSON.stringify({
+      schemaVersion: 2,
+      tier: 'free',
+      activeAccountId: 'account-a',
+      accounts: [
+        { id: 'account-a', name: 'Account A', color: '#F4C969', createdAt: new Date(now).toISOString() },
+        { id: 'account-b', name: 'Account B', color: '#64C4F1', createdAt: new Date(now).toISOString() },
+      ],
+      alarms: [
+        { id: 'alarm-a', accountId: 'account-a', title: 'Visible A', type: 'bubble', eventAt: now + 3600000, repeat: 'once', warnings: [15], sound: 'siren', active: true, protected: true, completedOccurrences: {}, createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() },
+        { id: 'alarm-b', accountId: 'account-b', title: 'Hidden B', type: 'custom', eventAt: now + 7200000, repeat: 'once', warnings: [15], sound: 'pulse', active: true, protected: false, completedOccurrences: {}, createdAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() },
+      ],
+      preferences: { warningSound: true, eventSound: true, vibration: true, criticalAlerts: true, sound: 'pulse', audioEnabled: false },
+      firedMoments: {},
+      testConfirmedAt: null,
+      freeTrialStartedAt: null,
+      freeTrialEndsAt: null,
+      updatedAt: new Date(now).toISOString(),
+    }));
+  });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('article').filter({ hasText: 'Visible A' }).first().waitFor({ state: 'visible' });
+  if (await page.locator('article').filter({ hasText: 'Hidden B' }).count()) throw new Error('Foreign account alarm leaked into active account view.');
+  await page.locator('button[data-action="view"][data-view="accounts"]').click();
+  await page.locator('button[data-action="select-account"][data-id="account-b"]').click();
+  await page.locator('button[data-action="view"][data-view="today"]').click();
+  await page.locator('article').filter({ hasText: 'Hidden B' }).first().waitFor({ state: 'visible' });
+  if (await page.locator('article').filter({ hasText: 'Visible A' }).count()) throw new Error('Previous account alarm remained visible after account switch.');
+  console.log('Browser smoke: active-account isolation passed.');
+
   await page.locator('button[data-action="view"][data-view="settings"]').click();
   await page.getByText('Backup & Wiederherstellung', { exact: true }).waitFor({ state: 'visible' });
   const downloadPromise = page.waitForEvent('download');
@@ -135,7 +167,7 @@ try {
   await page.getByText('Backup & Wiederherstellung', { exact: true }).waitFor({ state: 'visible' });
   await page.locator('#backupFile').setInputFiles(backupFile);
   await page.locator('button[data-action="view"][data-view="today"]').click();
-  await page.locator('article').filter({ hasText: 'CI Smoke Bubble' }).first().waitFor({ state: 'visible' });
+  await page.locator('article').filter({ hasText: 'Hidden B' }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: backup import passed.');
 
   if (consoleErrors.length) throw new Error(`Console error(s): ${consoleErrors.join(' | ')}`);
