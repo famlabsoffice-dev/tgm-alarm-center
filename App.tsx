@@ -24,6 +24,7 @@ import {
   TEMPLATES,
   TIER_LIMITS,
   alarmTypeLabel,
+  alarmsForAccount,
   buildAlarm,
   localInputFromUtc,
   momentLabel,
@@ -238,10 +239,12 @@ export default function App() {
     };
   }, [completeFromNotification]);
 
-  const next = useMemo(() => state.alarms
+  const visibleAlarms = useMemo(() => alarmsForAccount(state.alarms, state.activeAccountId), [state.alarms, state.activeAccountId]);
+
+  const next = useMemo(() => visibleAlarms
     .map((alarm) => ({ alarm, event: nextOccurrence(alarm, new Date(now)) }))
     .filter((item): item is { alarm: Alarm; event: Date } => item.event !== null)
-    .sort((a, b) => a.event.getTime() - b.event.getTime())[0] ?? null, [state.alarms, now]);
+    .sort((a, b) => a.event.getTime() - b.event.getTime())[0] ?? null, [visibleAlarms, now]);
 
   const activeAccount = state.accounts.find((account) => account.id === state.activeAccountId) ?? null;
   const confirmStoreTier = useCallback((tier: Tier): void => {
@@ -449,7 +452,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       <FlatList
-        data={state.alarms}
+        data={visibleAlarms}
         keyExtractor={(item) => item.id}
         renderItem={renderAlarm}
         contentContainerStyle={styles.content}
@@ -465,14 +468,14 @@ export default function App() {
             </View>
             <View style={styles.statsRow}>
               <View style={styles.statCard}><Text style={styles.eyebrow}>ALARME</Text><Text style={styles.statValue}>{alarmLimitText}</Text><Text style={styles.muted}>im aktuellen Plan</Text></View>
-              <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE ALARM</Text><Text style={styles.statValue}>{state.alarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>Massacre Alarm-Zyklen aktiv</Text></View>
+              <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE ALARM</Text><Text style={styles.statValue}>{visibleAlarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>Massacre Alarm-Zyklen aktiv</Text></View>
               <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Exakte Alarmberechtigung nicht verifiziert'}</Text></View>
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
             <View style={styles.templateGrid}>
               {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' || key === 'gwBubble' ? 'Siren' : key === 'rss' ? 'Chime' : 'Pulse'}</Text></Pressable>)}
             </View>
-            <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{state.alarms.length} gespeichert</Text></View>
+            <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{visibleAlarms.length} gespeichert</Text></View>
           </View>
         }
         ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart oder erstelle einen Event Alarm.</Text></View>}
