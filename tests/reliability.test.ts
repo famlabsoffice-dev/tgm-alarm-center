@@ -106,7 +106,6 @@ test('notification schedule remains account-independent when the selected accoun
   assert.deepEqual(new Set(afterSwitch.map((moment) => moment.alarmId)), new Set([accountOneAlarm.id, accountTwoAlarm.id]));
 });
 
-
 test('visible alarm projection is strictly isolated to the active account', () => {
   const now = new Date('2029-01-01T00:00:00.000Z');
   const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', now);
@@ -123,7 +122,10 @@ test('changing the selected account does not change the global notification mome
   const now = new Date('2030-06-01T00:00:00.000Z');
   const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', new Date('2029-01-01T00:00:00.000Z'));
   const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', new Date('2029-01-01T00:00:00.000Z'));
-  const globalSchedule = (alarms: typeof [accountOneAlarm, accountTwoAlarm]) => alarms.flatMap((alarm) => upcomingMoments(alarm, now))
+  const globalSchedule = (alarms: { accountId: string }[]) => alarms.flatMap((alarm) => {
+    const matching = alarm.accountId === 'account-1' ? accountOneAlarm : accountTwoAlarm;
+    return upcomingMoments(matching, now);
+  })
     .map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`)
     .sort();
 
