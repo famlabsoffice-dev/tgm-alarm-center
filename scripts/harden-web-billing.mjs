@@ -4,6 +4,16 @@ const path = new URL('../app.js', import.meta.url);
 const source = readFileSync(path, 'utf8');
 
 const forbiddenNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
+const alreadyHardened = source.includes("const effectiveTierKey = () => freeTrialActive() ? FREE_TRIAL_TIER : 'free';")
+  && !source.includes('FAMILY_ACCOUNT_NAMES')
+  && !source.includes('familyAccessForAccount')
+  && !source.includes('isFamilyAccountName');
+if (alreadyHardened) {
+  for (const name of forbiddenNames) if (source.includes(name)) throw new Error(`Hardened app.js still contains legacy founder name '${name}'.`);
+  console.log('TGM billing hardening: PASS (already hardened)');
+  process.exit(0);
+}
+
 for (const name of forbiddenNames) {
   if (!source.includes(name)) throw new Error(`Billing hardening expected legacy family grant marker '${name}' to exist before migration.`);
 }
