@@ -234,7 +234,6 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
   const revision = getVolatileStateRevision();
   if (revision === lastReconciledRevision) return [];
   const state = accountName === undefined ? (getVolatileState() ?? await loadState()) : null;
-  const resolvedAccountName = accountName ?? state?.accounts.find((account) => account.id === alarm.accountId)?.name ?? alarm.accountId;
   await reconcileScheduledNotifications(state ? state.alarms : [alarm], preferences, revision);
   const registry = await readRegistry();
   return Object.entries(registry).filter(([key]) => key.startsWith(`${alarm.id}|`)).map(([, id]) => id);
