@@ -29,6 +29,7 @@ export default defineConfig([
         Intl: 'readonly',
         JSON: 'readonly',
         Math: 'readonly',
+        NodeFilter: 'readonly',
         Object: 'readonly',
         Set: 'readonly',
         String: 'readonly',
