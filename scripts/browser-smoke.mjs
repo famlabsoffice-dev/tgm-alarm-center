@@ -80,6 +80,7 @@ try {
   browser = await chromium.launchPersistentContext(browserProfile, {
     headless: true,
     acceptDownloads: true,
+    locale: 'de-DE',
     viewport: { width: 1440, height: 1000 },
     args: ['--no-sandbox', '--disable-dev-shm-usage'],
   });
