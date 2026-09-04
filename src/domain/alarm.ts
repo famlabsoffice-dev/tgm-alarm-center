@@ -63,7 +63,8 @@ function nextDailyOccurrence(alarm: Alarm, now: Date): Date | null {
 }
 function nextGwOccurrence(alarm: Alarm, now: Date): Date | null {
   const base = new Date(alarm.eventAtUtc); if (!Number.isFinite(base.getTime())) return null;
-  const delta = now.getTime() - base.getTime(); const cycles = Math.max(1, Math.floor(delta / FIVE_DAYS_MS) + 1);
+  if (base.getTime() > now.getTime()) return isCompleted(alarm, base) ? new Date(base.getTime() + FIVE_DAYS_MS) : base;
+  const delta = now.getTime() - base.getTime(); const cycles = Math.floor(delta / FIVE_DAYS_MS) + 1;
   let candidate = new Date(base.getTime() + cycles * FIVE_DAYS_MS);
   for (let attempts = 0; attempts < 370; attempts += 1) { if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate; candidate = new Date(candidate.getTime() + FIVE_DAYS_MS); }
   return null;
