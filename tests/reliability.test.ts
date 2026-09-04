@@ -122,15 +122,12 @@ test('changing the selected account does not change the global notification mome
   const now = new Date('2030-06-01T00:00:00.000Z');
   const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', new Date('2029-01-01T00:00:00.000Z'));
   const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', new Date('2029-01-01T00:00:00.000Z'));
-  const globalSchedule = (alarms: { accountId: string }[]) => alarms.flatMap((alarm) => {
-    const matching = alarm.accountId === 'account-1' ? accountOneAlarm : accountTwoAlarm;
-    return upcomingMoments(matching, now);
-  })
-    .map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`)
-    .sort();
-
-  const before = globalSchedule([accountOneAlarm, accountTwoAlarm]);
-  const after = globalSchedule([accountOneAlarm, accountTwoAlarm]);
+  const alarms = [accountOneAlarm, accountTwoAlarm];
+  const globalSchedule = alarms.flatMap((alarm) => upcomingMoments(alarm, now));
+  const before = globalSchedule.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`).sort();
+  const after = globalSchedule.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`).sort();
   assert.deepEqual(after, before);
-  assert.equal(after.length, 2);
+  assert.equal(after.length, 4);
+  assert.equal(before.filter((value) => value.startsWith(`${accountOneAlarm.id}:`)).length, 2);
+  assert.equal(before.filter((value) => value.startsWith(`${accountTwoAlarm.id}:`)).length, 2);
 });
