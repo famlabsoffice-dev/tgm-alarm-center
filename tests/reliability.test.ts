@@ -93,3 +93,14 @@ test('rapid occurrence completion uses a stable occurrence key and cannot comple
   assert.equal(alarm.completedOccurrences[occurrenceKey(alarm.id, event)], true);
   assert.equal(alarm.completedOccurrences[occurrenceKey(`${alarm.id}-other`, event)], undefined);
 });
+
+test('notification schedule remains account-independent when the selected account changes', () => {
+  const now = new Date('2030-06-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', new Date('2029-01-01T00:00:00.000Z'));
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', new Date('2029-01-01T00:00:00.000Z'));
+  const alarms = [accountOneAlarm, accountTwoAlarm];
+  const beforeSwitch = alarms.filter((alarm) => alarm.active).flatMap((alarm) => upcomingMoments(alarm, now));
+  const afterSwitch = alarms.filter((alarm) => alarm.active).flatMap((alarm) => upcomingMoments(alarm, now));
+  assert.deepEqual(afterSwitch.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`), beforeSwitch.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`));
+  assert.deepEqual(new Set(afterSwitch.map((moment) => moment.alarmId)), new Set([accountOneAlarm.id, accountTwoAlarm.id]));
+});
