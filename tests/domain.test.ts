@@ -55,6 +55,23 @@ test('uses the production templates for all core alarm types', () => {
   assert.equal(TEMPLATES.custom.sound, 'chime');
 });
 
+test('preserves the first future GW occurrence instead of skipping a cycle', () => {
+  const base = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', localDate(base), localTime(base), new Date());
+  const next = nextOccurrence(alarm, new Date(base.getTime() - 1));
+  assert.ok(next);
+  assert.equal(next.toISOString(), alarm.eventAtUtc);
+});
+
+test('advances a completed future GW base by exactly one cycle', () => {
+  const base = new Date(Date.now() + 6 * 60 * 60 * 1000);
+  const alarm = buildAlarm(TEMPLATES.gwBubble, 'account-1', localDate(base), localTime(base), new Date());
+  alarm.completedOccurrences[occurrenceKey(alarm.id, base)] = true;
+  const next = nextOccurrence(alarm, new Date(base.getTime() - 1));
+  assert.ok(next);
+  assert.equal(next.getTime(), base.getTime() + 5 * 24 * 60 * 60 * 1000);
+});
+
 test('calculates the five-day GW cycle and both end moments', () => {
   const base = new Date();
   base.setDate(base.getDate() - 6);
