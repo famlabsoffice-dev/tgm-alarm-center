@@ -4,7 +4,7 @@ import { Platform } from 'react-native';
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 import { buildNotificationPlan, NotificationPlanEntry } from './notificationSchedule';
 import { loadState } from '../storage/store';
-import { canScheduleExactAlarms, openExactAlarmSettings } from '../../modules/tgm-exact-alarm';
+import { canScheduleExactAlarms, consumeRecoverySignals, openExactAlarmSettings } from '../../modules/tgm-exact-alarm';
 
 export const CHANNEL_ID = 'time-critical-events-v2';
 const SOUND_CHANNELS = { pulse: `${CHANNEL_ID}-pulse`, siren: `${CHANNEL_ID}-siren`, chime: `${CHANNEL_ID}-chime`, silent: `${CHANNEL_ID}-silent` } as const;
@@ -12,7 +12,7 @@ const NOTIFICATION_REGISTRY_KEY = 'tgm-alarm-center-notification-registry-v1';
 type NotificationRegistry = Record<string, string>;
 
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
-export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; }
+export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; recoveryPending: boolean; }
 
 async function ensureAndroidChannels(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
@@ -42,7 +42,7 @@ function channelFor(alarm: Alarm, soundEnabled: boolean): string | undefined {
 }
 
 export async function initializeNotifications(): Promise<NotificationReadiness> {
-  if (!Device.isDevice || Platform.OS === 'web') return { supported: false, permission: false, exactAlarm: false, channel: false };
+  if (!Device.isDevice || Platform.OS === 'web') return { supported: false, permission: false, exactAlarm: false, channel: false, recoveryPending: false };
   const channel = await ensureAndroidChannels();
   let permission = false;
   try {
@@ -53,10 +53,17 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
     permission = false;
   }
   let exactAlarm = true;
+  let recoveryPending = false;
   if (Platform.OS === 'android') {
-    try { exactAlarm = await canScheduleExactAlarms(); } catch { exactAlarm = false; }
+    try {
+      exactAlarm = await canScheduleExactAlarms();
+      const signals = await consumeRecoverySignals();
+      recoveryPending = signals.bootReconciliationNeeded || signals.exactAlarmPermissionChanged;
+    } catch {
+      exactAlarm = false;
+    }
   }
-  return { supported: true, permission, exactAlarm, channel };
+  return { supported: true, permission, exactAlarm, channel, recoveryPending };
 }
 
 export async function requestExactAlarmAccess(): Promise<boolean> { if (Platform.OS !== 'android') return true; return openExactAlarmSettings(); }
@@ -113,8 +120,8 @@ function pendingOwnershipKey(notification: Notifications.NotificationRequest): s
   return `${data.alarmId}|${data.eventTime}|${data.kind}|${warningMinutes}`;
 }
 
-async function schedulePlanEntry(entry: NotificationPlanEntry, alarm: Alarm, preferences: NotificationPreferences, accountName: string): Promise<string> {
-  const moments = upcomingMoments(alarm, new Date(Date.now() - 1));
+async function schedulePlanEntry(entry: NotificationPlanEntry, alarm: Alarm, preferences: NotificationPreferences, accountName: string, now: Date): Promise<string> {
+  const moments = upcomingMoments(alarm, now);
   const moment = moments.find((candidate) => candidate.kind === entry.kind && candidate.eventTime.toISOString() === entry.eventTime && (candidate.warningMinutes ?? null) === (entry.warningMinutes ?? null));
   if (!moment) throw new Error(`Benachrichtigungszeitpunkt für Alarm ${alarm.id} konnte nicht rekonstruiert werden.`);
   return Notifications.scheduleNotificationAsync({
@@ -154,7 +161,7 @@ export async function reconcileScheduledNotifications(alarms: readonly Alarm[], 
     if (current.has(key)) continue;
     const alarm = alarmById.get(entry.alarmId);
     if (!alarm) continue;
-    const id = await schedulePlanEntry(entry, alarm, preferences, accountNames.get(alarm.accountId) ?? alarm.accountId);
+    const id = await schedulePlanEntry(entry, alarm, preferences, accountNames.get(alarm.accountId) ?? alarm.accountId, now);
     current.set(key, id);
   }
 
@@ -175,7 +182,7 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
   const now = new Date();
   const plan = buildNotificationPlan([alarm], preferences, now);
   const ids: string[] = [];
-  for (const entry of plan) ids.push(await schedulePlanEntry(entry, alarm, preferences, resolvedAccountName));
+  for (const entry of plan) ids.push(await schedulePlanEntry(entry, alarm, preferences, resolvedAccountName, now));
   return ids;
 }
 
