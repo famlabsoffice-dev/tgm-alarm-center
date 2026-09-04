@@ -72,7 +72,7 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
     body,
     sound: soundEnabled ? soundFor(alarm.sound) : undefined,
     vibrate: preferences.vibration ? [0, 250, 150, 250] : undefined,
-    data: { alarmId: alarm.id, eventTime: moment.eventTime.toISOString(), kind: moment.kind, endAt: moment.endAt?.toISOString() ?? null },
+    data: { accountId: alarm.accountId, alarmId: alarm.id, eventTime: moment.eventTime.toISOString(), kind: moment.kind, endAt: moment.endAt?.toISOString() ?? null },
     categoryIdentifier: isWarning || isEndWarning ? 'tgm-warning' : 'tgm-event',
     interruptionLevel: preferences.criticalAlerts ? 'timeSensitive' : 'active',
   };
