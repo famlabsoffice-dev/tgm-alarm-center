@@ -14,6 +14,7 @@ import {
 
 export const STORAGE_KEY = 'tgm-alarm-center-v1';
 const TEMP_STORAGE_KEY = `${STORAGE_KEY}:pending`;
+const LAST_KNOWN_GOOD_STORAGE_KEY = `${STORAGE_KEY}:last-known-good`;
 const MAX_STORAGE_BYTES = 512 * 1024;
 const MAX_ACCOUNTS = 50;
 const MAX_ALARMS = 500;
@@ -190,14 +191,55 @@ function normalizeState(value: unknown): AppState {
   };
 }
 
-export async function loadState(): Promise<AppState> {
-  const raw = await AsyncStorage.getItem(STORAGE_KEY);
-  if (!raw || raw.length > MAX_STORAGE_BYTES) return emptyState();
+function decodePersistedState(raw: string | null): AppState | null {
+  if (!raw || raw.length > MAX_STORAGE_BYTES) return null;
   try {
-    return normalizeState(JSON.parse(raw) as unknown);
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed) || parsed.schemaVersion !== 1) return null;
+    const normalized = normalizeState(parsed);
+    if (!Array.isArray(parsed.accounts) || !Array.isArray(parsed.alarms)) return null;
+    return normalized;
   } catch {
-    return emptyState();
+    return null;
   }
+}
+
+async function promoteRecovery(raw: string, recovered: AppState): Promise<AppState> {
+  const serialized = JSON.stringify(recovered);
+  await AsyncStorage.setItem(STORAGE_KEY, serialized);
+  await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
+  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
+  return recovered;
+}
+
+export async function loadState(): Promise<AppState> {
+  const [primary, pending, lastKnownGood] = await Promise.all([
+    AsyncStorage.getItem(STORAGE_KEY),
+    AsyncStorage.getItem(TEMP_STORAGE_KEY),
+    AsyncStorage.getItem(LAST_KNOWN_GOOD_STORAGE_KEY),
+  ]);
+
+  const current = decodePersistedState(primary);
+  if (current) {
+    const serialized = JSON.stringify(current);
+    if (serialized !== primary) {
+      await AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => undefined);
+    }
+    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized).catch(() => undefined);
+    return current;
+  }
+
+  const recoveredFromPending = decodePersistedState(pending);
+  if (recoveredFromPending && typeof pending === 'string') {
+    return promoteRecovery(pending, recoveredFromPending);
+  }
+
+  const recoveredFromLastKnownGood = decodePersistedState(lastKnownGood);
+  if (recoveredFromLastKnownGood && typeof lastKnownGood === 'string') {
+    return promoteRecovery(lastKnownGood, recoveredFromLastKnownGood);
+  }
+
+  return emptyState();
 }
 
 export async function saveState(state: AppState): Promise<void> {
@@ -205,10 +247,18 @@ export async function saveState(state: AppState): Promise<void> {
   const serialized = JSON.stringify(normalized);
   if (serialized.length > MAX_STORAGE_BYTES) throw new Error('Der lokale Speicher ist voll. Bitte lösche alte Alarme oder exportiere ein Backup.');
   await AsyncStorage.setItem(TEMP_STORAGE_KEY, serialized);
-  await AsyncStorage.setItem(STORAGE_KEY, serialized);
-  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
+  try {
+    await AsyncStorage.setItem(STORAGE_KEY, serialized);
+    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
+  } finally {
+    await AsyncStorage.removeItem(TEMP_STORAGE_KEY).catch(() => undefined);
+  }
 }
 
 export async function resetState(): Promise<void> {
-  await AsyncStorage.removeItem(STORAGE_KEY);
+  await Promise.all([
+    AsyncStorage.removeItem(STORAGE_KEY),
+    AsyncStorage.removeItem(TEMP_STORAGE_KEY),
+    AsyncStorage.removeItem(LAST_KNOWN_GOOD_STORAGE_KEY),
+  ]);
 }
