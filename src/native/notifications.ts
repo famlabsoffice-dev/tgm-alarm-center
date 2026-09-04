@@ -3,13 +3,14 @@ import * as Device from 'expo-device';
 import { Platform } from 'react-native';
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 import { buildNotificationPlan, NotificationPlanEntry } from './notificationSchedule';
-import { loadState } from '../storage/store';
+import { getVolatileState, getVolatileStateRevision, loadState } from '../storage/store';
 import { canScheduleExactAlarms, consumeRecoverySignals, openExactAlarmSettings } from '../../modules/tgm-exact-alarm';
 
 export const CHANNEL_ID = 'time-critical-events-v2';
 const SOUND_CHANNELS = { pulse: `${CHANNEL_ID}-pulse`, siren: `${CHANNEL_ID}-siren`, chime: `${CHANNEL_ID}-chime`, silent: `${CHANNEL_ID}-silent` } as const;
 const NOTIFICATION_REGISTRY_KEY = 'tgm-alarm-center-notification-registry-v1';
 type NotificationRegistry = Record<string, string>;
+let lastReconciledRevision = -1;
 
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
 export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; recoveryPending: boolean; }
@@ -67,7 +68,14 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
 }
 
 export async function requestExactAlarmAccess(): Promise<boolean> { if (Platform.OS !== 'android') return true; return openExactAlarmSettings(); }
-export async function cancelAllScheduled(): Promise<void> { if (Platform.OS !== 'web') await Notifications.cancelAllScheduledNotificationsAsync(); }
+
+export async function cancelAllScheduled(): Promise<void> {
+  if (Platform.OS === 'web') return;
+  const revision = getVolatileStateRevision();
+  if (revision === lastReconciledRevision) return;
+  const state = getVolatileState() ?? await loadState();
+  await reconcileScheduledNotifications(state.alarms, state.notificationPreferences, revision);
+}
 
 function notificationOwnershipKey(entry: Pick<NotificationPlanEntry, 'alarmId' | 'eventTime' | 'kind' | 'warningMinutes'>): string {
   return `${entry.alarmId}|${entry.eventTime}|${entry.kind}|${entry.warningMinutes ?? ''}`;
@@ -130,13 +138,13 @@ async function schedulePlanEntry(entry: NotificationPlanEntry, alarm: Alarm, pre
   });
 }
 
-export async function reconcileScheduledNotifications(alarms: readonly Alarm[], preferences: NotificationPreferences): Promise<void> {
+export async function reconcileScheduledNotifications(alarms: readonly Alarm[], preferences: NotificationPreferences, revision?: number): Promise<void> {
   if (Platform.OS === 'web') return;
   if (Platform.OS === 'android' && !(await canScheduleExactAlarms())) throw new Error('Die Android-Berechtigung „Alarme & Erinnerungen“ ist nicht aktiviert.');
 
   const now = new Date();
   const plan = buildNotificationPlan([...alarms], preferences, now);
-  const accountState = await loadState();
+  const accountState = getVolatileState() ?? await loadState();
   const accountNames = new Map(accountState.accounts.map((account) => [account.id, account.name]));
   const alarmById = new Map(alarms.map((alarm) => [alarm.id, alarm]));
   const desired = new Map(plan.map((entry) => [notificationOwnershipKey(entry), entry]));
@@ -172,12 +180,14 @@ export async function reconcileScheduledNotifications(alarms: readonly Alarm[], 
   }
 
   await writeRegistry(Object.fromEntries(current));
+  if (revision !== undefined && revision === getVolatileStateRevision()) lastReconciledRevision = revision;
 }
 
 export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPreferences, accountName?: string): Promise<string[]> {
   if (Platform.OS === 'web') return [];
-  if (Platform.OS === 'android' && !(await canScheduleExactAlarms())) throw new Error('Die Android-Berechtigung „Alarme & Erinnerungen“ ist nicht aktiviert.');
-  const state = accountName === undefined ? await loadState() : null;
+  const revision = getVolatileStateRevision();
+  if (revision === lastReconciledRevision) return [];
+  const state = accountName === undefined ? (getVolatileState() ?? await loadState()) : null;
   const resolvedAccountName = accountName ?? state?.accounts.find((account) => account.id === alarm.accountId)?.name ?? alarm.accountId;
   const now = new Date();
   const plan = buildNotificationPlan([alarm], preferences, now);
