@@ -44,4 +44,4 @@ A release is non-compliant if any of the following occurs:
 4. restart or valid backup/restore removes effective Founder access;
 5. refactoring, migration, security hardening or release work can silently disable the contract.
 
-`npm test` includes the Founder verification gate. The dedicated gate is also available as `npm run verify:founder-access`.
+The dedicated gate is available as `node scripts/verify-founder-access.mjs` and is enforced by `.github/workflows/founder-access-gate.yml` on pushes to `main` and pull requests.
