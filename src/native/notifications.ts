@@ -15,22 +15,34 @@ export interface NotificationReadiness {
 
 export async function initializeNotifications(): Promise<NotificationReadiness> {
   if (!Device.isDevice || Platform.OS === 'web') return { supported: false, permission: false, exactAlarm: false, channel: false };
-  let channel = true;
+
+  let channel = Platform.OS !== 'android';
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
-      name: 'Zeitkritische Ereignisse',
-      importance: Notifications.AndroidImportance.MAX,
-      sound: 'alarm-pulse.wav',
-      vibrationPattern: [0, 250, 150, 250],
-      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-    });
-    channel = Boolean(await Notifications.getNotificationChannelAsync(CHANNEL_ID));
+    try {
+      await Notifications.setNotificationChannelAsync(CHANNEL_ID, {
+        name: 'Zeitkritische Ereignisse',
+        importance: Notifications.AndroidImportance.MAX,
+        sound: 'alarm-pulse.wav',
+        vibrationPattern: [0, 250, 150, 250],
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+      channel = Boolean(await Notifications.getNotificationChannelAsync(CHANNEL_ID));
+    } catch {
+      channel = false;
+    }
   }
-  const current = await Notifications.getPermissionsAsync();
-  let permission = current.status === Notifications.PermissionStatus.GRANTED;
-  if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) {
-    permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
+
+  let permission = false;
+  try {
+    const current = await Notifications.getPermissionsAsync();
+    permission = current.status === Notifications.PermissionStatus.GRANTED;
+    if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) {
+      permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
+    }
+  } catch {
+    permission = false;
   }
+
   // expo-notifications does not expose the Android SCHEDULE_EXACT_ALARM app-op
   // state. Do not present the platform declaration itself as a runtime check.
   const exactAlarm = false;
@@ -55,7 +67,7 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
         ? `${eventLabel} beginnt um ${moment.eventTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}.`
         : `Termin ${moment.eventTime.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}.`;
   const soundEnabled = isWarning || isEndWarning ? preferences.warningSound : preferences.eventSound;
-  const content: Notifications.NotificationContentInput = {
+  return {
     title,
     body,
     sound: soundEnabled ? soundFor(alarm.sound) : undefined,
@@ -64,7 +76,6 @@ function contentFor(alarm: Alarm, moment: NotificationMoment, preferences: Notif
     categoryIdentifier: isWarning || isEndWarning ? 'tgm-warning' : 'tgm-event',
     interruptionLevel: preferences.criticalAlerts ? 'timeSensitive' : 'active',
   };
-  return content;
 }
 
 export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPreferences): Promise<string[]> {
@@ -106,11 +117,13 @@ export async function scheduleLocalTestNotification(): Promise<string> {
 
 export async function registerCategories(): Promise<void> {
   if (Platform.OS === 'web') return;
-  await Notifications.setNotificationCategoryAsync('tgm-warning', [
-    { identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } },
-  ]);
-  await Notifications.setNotificationCategoryAsync('tgm-event', [
-    { identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } },
-    { identifier: 'done', buttonTitle: 'Erledigt', options: { opensAppToForeground: false } },
+  await Promise.allSettled([
+    Notifications.setNotificationCategoryAsync('tgm-warning', [
+      { identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } },
+    ]),
+    Notifications.setNotificationCategoryAsync('tgm-event', [
+      { identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } },
+      { identifier: 'done', buttonTitle: 'Erledigt', options: { opensAppToForeground: false } },
+    ]),
   ]);
 }
