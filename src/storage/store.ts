@@ -215,12 +215,9 @@ export async function saveState(state: AppState): Promise<void> {
   volatileState = normalized;
   volatileStateRevision += 1;
   await AsyncStorage.setItem(TEMP_STORAGE_KEY, serialized);
-  try {
-    await AsyncStorage.setItem(STORAGE_KEY, serialized);
-    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
-  } finally {
-    await AsyncStorage.removeItem(TEMP_STORAGE_KEY).catch(() => undefined);
-  }
+  await AsyncStorage.setItem(STORAGE_KEY, serialized);
+  await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
+  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
 }
 
 export async function resetState(): Promise<void> {
