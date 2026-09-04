@@ -7,6 +7,7 @@ const checks = [
   ['javascript', ['pnpm', 'verify:javascript']],
   ['whitespace', ['pnpm', 'verify:whitespace']],
   ['expo-config', ['pnpm', 'exec', 'expo', 'config', '--json']],
+  ['android-reliability', ['pnpm', 'verify:android-reliability']],
   ['store-config', ['pnpm', 'verify:store-config']],
   ['mobile-build', ['pnpm', 'verify:mobile-build']],
   ['release-verification', ['pnpm', 'verify:release']],
