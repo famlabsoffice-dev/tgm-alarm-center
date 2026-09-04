@@ -8,6 +8,7 @@ const steps = [
   ['Lint', ['run', 'lint']],
   ['Typecheck', ['run', 'typecheck']],
   ['Domain + Web Core + Pricing tests', ['run', 'test']],
+  ['Production floor', ['run', 'verify:production-floor']],
   ['JavaScript syntax', ['run', 'verify:javascript']],
   ['Whitespace', ['run', 'verify:whitespace']],
   ['Web build/package', ['run', 'build:web']],
