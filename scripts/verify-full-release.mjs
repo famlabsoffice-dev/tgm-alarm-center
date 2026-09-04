@@ -4,6 +4,7 @@ const checks = [
   ['typecheck', ['pnpm', 'typecheck']],
   ['lint', ['pnpm', 'lint']],
   ['tests', ['pnpm', 'test']],
+  ['production-floor', ['pnpm', 'verify:production-floor']],
   ['javascript', ['pnpm', 'verify:javascript']],
   ['whitespace', ['pnpm', 'verify:whitespace']],
   ['expo-config', ['pnpm', 'exec', 'expo', 'config', '--json']],
