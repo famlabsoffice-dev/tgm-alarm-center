@@ -1,0 +1,36 @@
+name: Repository Snapshot
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Create repository ZIP from git tree
+        run: git archive --format=zip --output=TGM-ALARM-CENTER-COMPLETE.zip HEAD
+      - name: Write snapshot manifest
+        run: |
+          {
+            echo "commit=$(git rev-parse HEAD)"
+            echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            echo "source=git archive HEAD"
+            echo "stale-upload-excluded=true"
+          } > TGM-ALARM-CENTER-SNAPSHOT.txt
+      - name: Upload current repository snapshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: tgm-alarm-center-complete-${{ github.sha }}
+          path: |
+            TGM-ALARM-CENTER-COMPLETE.zip
+            TGM-ALARM-CENTER-SNAPSHOT.txt
+          if-no-files-found: error
