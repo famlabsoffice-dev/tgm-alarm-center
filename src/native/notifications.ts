@@ -11,6 +11,7 @@ const SOUND_CHANNELS = { pulse: `${CHANNEL_ID}-pulse`, siren: `${CHANNEL_ID}-sir
 const NOTIFICATION_REGISTRY_KEY = 'tgm-alarm-center-notification-registry-v1';
 type NotificationRegistry = Record<string, string>;
 let lastReconciledRevision = -1;
+let reconciliationQueue: Promise<void> = Promise.resolve();
 let resumeSubscription: { remove: () => void } | null = null;
 
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
@@ -172,10 +173,12 @@ async function schedulePlanEntry(entry: NotificationPlanEntry, alarm: Alarm, pre
   });
 }
 
-export async function reconcileScheduledNotifications(alarms: readonly Alarm[], preferences: NotificationPreferences, revision?: number): Promise<void> {
+async function reconcileScheduledNotificationsInternal(alarms: readonly Alarm[], preferences: NotificationPreferences, revision?: number): Promise<void> {
   if (Platform.OS === 'web') return;
   if (Platform.OS === 'android' && !(await canScheduleExactAlarms())) throw new Error('Die Android-Berechtigung „Alarme & Erinnerungen“ ist nicht aktiviert.');
 
+  const effectiveRevision = revision ?? getVolatileStateRevision();
+  if (effectiveRevision === lastReconciledRevision) return;
   const now = new Date();
   const plan = buildNotificationPlan([...alarms], preferences, now);
   const accountState = getVolatileState() ?? await loadState();
@@ -214,7 +217,16 @@ export async function reconcileScheduledNotifications(alarms: readonly Alarm[], 
   }
 
   await writeRegistry(Object.fromEntries(current));
-  if (revision !== undefined && revision === getVolatileStateRevision()) lastReconciledRevision = revision;
+  if (effectiveRevision === getVolatileStateRevision()) lastReconciledRevision = effectiveRevision;
+}
+
+export async function reconcileScheduledNotifications(alarms: readonly Alarm[], preferences: NotificationPreferences, revision?: number): Promise<void> {
+  const run = reconciliationQueue.then(
+    () => reconcileScheduledNotificationsInternal(alarms, preferences, revision),
+    () => reconcileScheduledNotificationsInternal(alarms, preferences, revision),
+  );
+  reconciliationQueue = run.catch(() => undefined);
+  await run;
 }
 
 export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPreferences, accountName?: string): Promise<string[]> {
@@ -223,11 +235,9 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
   if (revision === lastReconciledRevision) return [];
   const state = accountName === undefined ? (getVolatileState() ?? await loadState()) : null;
   const resolvedAccountName = accountName ?? state?.accounts.find((account) => account.id === alarm.accountId)?.name ?? alarm.accountId;
-  const now = new Date();
-  const plan = buildNotificationPlan([alarm], preferences, now);
-  const ids: string[] = [];
-  for (const entry of plan) ids.push(await schedulePlanEntry(entry, alarm, preferences, resolvedAccountName, now));
-  return ids;
+  await reconcileScheduledNotifications(state ? state.alarms : [alarm], preferences, revision);
+  const registry = await readRegistry();
+  return Object.entries(registry).filter(([key]) => key.startsWith(`${alarm.id}|`)).map(([, id]) => id);
 }
 
 export async function scheduleLocalTestNotification(): Promise<string> {
