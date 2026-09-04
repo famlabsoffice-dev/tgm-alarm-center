@@ -22,16 +22,17 @@ const withTimezone = <T>(timezone: string, run: () => T): T => {
 };
 
 test('once alarms remain anchored to the persisted absolute UTC instant after a timezone change', () => {
-  const utc = withTimezone('Europe/Berlin', () => localDateTimeToUtc('2030-01-15', '14:30'));
-  assert.ok(utc);
-  const alarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-01-15', '14:30', new Date('2029-01-01T00:00:00.000Z'));
-  assert.equal(alarm.eventAtUtc, utc);
-  const before = new Date('2030-01-15T13:29:59.000Z');
-  const after = new Date('2030-01-15T13:30:01.000Z');
-  assert.equal(nextOccurrence(alarm, before)?.toISOString(), utc);
-  assert.equal(nextOccurrence(alarm, after), null);
-  withTimezone('America/New_York', () => {
+  withTimezone('Europe/Berlin', () => {
+    const alarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-01-15', '14:30', new Date('2029-01-01T00:00:00.000Z'));
+    const utc = alarm.eventAtUtc;
+    assert.equal(utc, '2030-01-15T13:30:00.000Z');
+    const before = new Date('2030-01-15T13:29:59.000Z');
+    const after = new Date('2030-01-15T13:30:01.000Z');
     assert.equal(nextOccurrence(alarm, before)?.toISOString(), utc);
+    assert.equal(nextOccurrence(alarm, after), null);
+    withTimezone('America/New_York', () => {
+      assert.equal(nextOccurrence(alarm, before)?.toISOString(), utc);
+    });
   });
 });
 
