@@ -17,7 +17,7 @@
     "package:web": "node scripts/package-web.mjs",
     "verify:packaging": "node scripts/verify-packaging.mjs",
     "serve:web": "node scripts/serve-web.mjs",
-    "browser:smoke": "npx --yes playwright@1.55.0 install chromium && npx --yes -p playwright@1.55.0 node scripts/browser-smoke.mjs",
+    "browser:smoke": "node scripts/browser-smoke.mjs",
     "verify:store-config": "node scripts/verify-store-config.mjs",
     "verify:mobile-build": "node scripts/verify-mobile-build.mjs",
     "verify:android-reliability": "node scripts/verify-android-reliability.mjs",
