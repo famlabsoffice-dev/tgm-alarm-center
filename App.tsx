@@ -48,6 +48,7 @@ import {
   scheduleAlarm,
   scheduleLocalTestNotification,
 } from './src/native/notifications';
+import { activeAlarmsForNotification } from './src/native/notificationSchedule';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -174,7 +175,7 @@ export default function App() {
       if (cancelled || generation !== notificationGeneration.current) return;
       await cancelAllScheduled();
       if (cancelled || generation !== notificationGeneration.current) return;
-      for (const alarm of state.alarms.filter((item) => item.active)) {
+      for (const alarm of activeAlarmsForNotification(state.alarms)) {
         if (cancelled || generation !== notificationGeneration.current) return;
         await scheduleAlarm(alarm, state.notificationPreferences);
       }

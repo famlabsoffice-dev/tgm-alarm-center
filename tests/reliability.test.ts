@@ -11,6 +11,7 @@ import {
 } from '../src/domain/alarm';
 import { findOwnedAlarm, ownsAlarm, updateOwnedAlarm } from '../src/domain/accountIsolation';
 import { findNotificationAlarm, updateNotificationAlarm } from '../src/domain/notificationOwnership';
+import { activeAlarmsForNotification, buildNotificationPlan } from '../src/native/notificationSchedule';
 
 const withTimezone = <T>(timezone: string, run: () => T): T => {
   const previous = process.env.TZ;
@@ -207,4 +208,19 @@ test('notification action requires payload account ownership and never falls bac
   const updated = updateNotificationAlarm(alarms, { alarmId: accountTwoAlarm.id, accountId: 'account-2' }, (alarm) => ({ ...alarm, title: 'Done' }));
   assert.equal(updated[0], accountOneAlarm);
   assert.equal(updated[1]?.title, 'Done');
+});
+
+test('native notification reconciliation includes every active account regardless of selected account', () => {
+  const now = new Date('2030-06-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', new Date('2029-01-01T00:00:00.000Z'));
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', new Date('2029-01-01T00:00:00.000Z'));
+  const pausedAlarm = { ...buildAlarm(TEMPLATES.custom, 'account-3', '2030-06-01', '05:00', new Date('2029-01-01T00:00:00.000Z')), active: false };
+  const alarms = [accountOneAlarm, accountTwoAlarm, pausedAlarm];
+  const active = activeAlarmsForNotification(alarms);
+  const plan = buildNotificationPlan(alarms, { sound: 'pulse', warningSound: true, eventSound: true, vibration: true, criticalAlerts: true, preview: true }, now);
+
+  assert.deepEqual(active.map((alarm) => alarm.accountId), ['account-1', 'account-2']);
+  assert.equal(plan.some((entry) => entry.accountId === 'account-1'), true);
+  assert.equal(plan.some((entry) => entry.accountId === 'account-2'), true);
+  assert.equal(plan.some((entry) => entry.accountId === 'account-3'), false);
 });

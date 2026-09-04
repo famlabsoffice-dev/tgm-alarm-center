@@ -12,13 +12,17 @@ export interface NotificationPlanEntry {
   soundEnabled: boolean;
 }
 
+/** Notification scheduling is global to the locally loaded state, never to the selected UI account. */
+export function activeAlarmsForNotification(alarms: readonly Alarm[]): Alarm[] {
+  return alarms.filter((alarm) => alarm.active);
+}
+
 export function buildNotificationPlan(
   alarms: Alarm[],
   preferences: NotificationPreferences,
   now = new Date(),
 ): NotificationPlanEntry[] {
-  const entries = alarms
-    .filter((alarm) => alarm.active)
+  const entries = activeAlarmsForNotification(alarms)
     .flatMap((alarm) => upcomingMoments(alarm, now).map((moment) => ({
       alarmId: alarm.id,
       accountId: alarm.accountId,
