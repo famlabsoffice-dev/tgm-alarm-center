@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   TEMPLATES,
+  alarmsForAccount,
   buildAlarm,
   nextOccurrence,
   occurrenceEnd,
@@ -103,4 +104,31 @@ test('notification schedule remains account-independent when the selected accoun
   const afterSwitch = alarms.filter((alarm) => alarm.active).flatMap((alarm) => upcomingMoments(alarm, now));
   assert.deepEqual(afterSwitch.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`), beforeSwitch.map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`));
   assert.deepEqual(new Set(afterSwitch.map((moment) => moment.alarmId)), new Set([accountOneAlarm.id, accountTwoAlarm.id]));
+});
+
+
+test('visible alarm projection is strictly isolated to the active account', () => {
+  const now = new Date('2029-01-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', now);
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', now);
+  const alarms = [accountOneAlarm, accountTwoAlarm];
+
+  assert.deepEqual(alarmsForAccount(alarms, 'account-1').map((alarm) => alarm.id), [accountOneAlarm.id]);
+  assert.deepEqual(alarmsForAccount(alarms, 'account-2').map((alarm) => alarm.id), [accountTwoAlarm.id]);
+  assert.deepEqual(alarmsForAccount(alarms, null), []);
+  assert.equal(alarmsForAccount(alarms, 'account-1').some((alarm) => alarm.accountId !== 'account-1'), false);
+});
+
+test('changing the selected account does not change the global notification moments', () => {
+  const now = new Date('2030-06-01T00:00:00.000Z');
+  const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-06-01', '03:00', new Date('2029-01-01T00:00:00.000Z'));
+  const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-06-01', '04:00', new Date('2029-01-01T00:00:00.000Z'));
+  const globalSchedule = (alarms: typeof [accountOneAlarm, accountTwoAlarm]) => alarms.flatMap((alarm) => upcomingMoments(alarm, now))
+    .map((moment) => `${moment.alarmId}:${moment.kind}:${moment.at.toISOString()}`)
+    .sort();
+
+  const before = globalSchedule([accountOneAlarm, accountTwoAlarm]);
+  const after = globalSchedule([accountOneAlarm, accountTwoAlarm]);
+  assert.deepEqual(after, before);
+  assert.equal(after.length, 2);
 });
