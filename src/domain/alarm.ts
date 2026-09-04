@@ -87,6 +87,11 @@ const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TITLE_LENGTH = 80;
 
+export function alarmsForAccount(alarms: Alarm[], accountId: string | null): Alarm[] {
+  if (!accountId) return [];
+  return alarms.filter((alarm) => alarm.accountId === accountId);
+}
+
 export function titleIsValid(title: string): boolean {
   const normalized = title.trim();
   return normalized.length > 0 && normalized.length <= MAX_TITLE_LENGTH;
