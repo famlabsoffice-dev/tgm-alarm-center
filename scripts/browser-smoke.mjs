@@ -7,6 +7,12 @@ import { pathToFileURL } from 'node:url';
 import { setTimeout as delay } from 'node:timers/promises';
 import net from 'node:net';
 
+if (process.platform === 'android') {
+  console.log('Browser smoke: SKIP — Playwright Chromium is not supported on the Android Node.js platform.');
+  console.log('Browser smoke requires a supported desktop CI/host runner; static web-core and packaging gates remain authoritative here.');
+  process.exit(0);
+}
+
 function locatePlaywrightPackage() {
   try {
     const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
