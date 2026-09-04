@@ -2,9 +2,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
-const sourceRoot = root;
 const outputRoot = new URL('../dist/web/', import.meta.url);
-const outputPath = new URL(outputRoot).pathname;
 
 const sourceFiles = ['index.html', 'app.js', 'styles.css', 'sw.js', 'manifest.webmanifest', 'icon.png'];
 const soundFiles = [
