@@ -5,6 +5,17 @@ export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
 
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
+export const FOUNDER_ACCESS_TIER: Tier = 'godfather';
+export const FOUNDER_ACCOUNT_NAMES = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'] as const;
+const FOUNDER_ACCOUNT_NAME_KEYS = new Set(FOUNDER_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
+
+export function isFounderAccountName(accountName: string): boolean {
+  return FOUNDER_ACCOUNT_NAME_KEYS.has(accountName.trim().toLowerCase());
+}
+
+export function effectiveTierForAccount(tier: Tier, accountName: string): Tier {
+  return isFounderAccountName(accountName) ? FOUNDER_ACCESS_TIER : tier;
+}
 
 export interface FreeTrialState {
   startedAt: string | null;
@@ -111,21 +122,6 @@ export const BUSINESS_VALUE_GUIDANCE = {
 } as const;
 
 export const getTierPricing = (tier: Tier): TierPricing => TIER_PRICING[tier];
-
-let verifiedStoreTier: Tier = 'free';
-
-/** Runtime entitlement gate for legacy Native UI call sites. The persisted tier and account name are never authoritative. */
-export function setVerifiedStoreTier(tier: Tier): void {
-  verifiedStoreTier = tier;
-}
-
-export function clearVerifiedStoreTier(): void {
-  verifiedStoreTier = 'free';
-}
-
-export function effectiveTierForAccount(_persistedTier: Tier, _accountName: string): Tier {
-  return verifiedStoreTier;
-}
 
 export function effectiveTier(tier: Tier, trial: FreeTrialState, at = Date.now()): Tier {
   return isFreeTrialActive(trial, at) ? FREE_TRIAL_TIER : tier;
