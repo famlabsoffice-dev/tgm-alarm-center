@@ -33,8 +33,22 @@ function locatePlaywrightPackage() {
   }
 }
 
-const playwrightRoot = locatePlaywrightPackage();
-if (!playwrightRoot) throw new Error('Pinned Playwright package is unavailable in the npx cache.');
+function ensurePinnedPlaywright() {
+  const existing = locatePlaywrightPackage();
+  if (existing) return existing;
+  const npm = process.platform === 'win32' ? 'npx.cmd' : 'npx';
+  console.log('Browser smoke: Playwright package not cached; bootstrapping pinned Playwright 1.55.0.');
+  execFileSync(npm, ['--yes', 'playwright@1.55.0', 'install', 'chromium'], {
+    cwd: process.cwd(),
+    stdio: 'inherit',
+    env: { ...process.env, CI: process.env.CI ?? 'true' },
+  });
+  const installed = locatePlaywrightPackage();
+  if (!installed) throw new Error('Pinned Playwright package could not be located after bootstrap.');
+  return installed;
+}
+
+const playwrightRoot = ensurePinnedPlaywright();
 const requireFromPlaywright = createRequire(pathToFileURL(join(playwrightRoot, 'package.json')));
 const { chromium } = requireFromPlaywright('playwright');
 
