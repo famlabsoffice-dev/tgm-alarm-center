@@ -66,15 +66,12 @@ for (const needle of [
   'Plane deinen Bubble Alarm',
   'localStorage',
   'AudioContext',
-  'FAMILY_ACCOUNT_NAMES',
-  'FAMILY_ACCESS_TIER',
-  'familyAccessForAccount',
-  'GODFATHER LIFETIME · KOSTENFREI',
-  'Dauerhaft freigeschaltet',
 ]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
+
 for (const familyName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
-  assert(js.includes(familyName), `Family account is missing: ${familyName}`);
+  assert(!js.includes(familyName), `Founder account must not grant paid access in the web client: ${familyName}`);
 }
+assert(!js.includes('FAMILY_ACCOUNT_NAMES') && !js.includes('FAMILY_ACCESS_TIER') && !js.includes('familyAccessForAccount'), 'Client-side founder access leaked into the web build.');
 
 for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
   assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
