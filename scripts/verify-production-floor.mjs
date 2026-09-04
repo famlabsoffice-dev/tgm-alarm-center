@@ -14,6 +14,7 @@ const notificationPlan = read('src/native/notificationSchedule.ts');
 const backup = read('src/backup/backup.ts');
 const accountActions = read('src/domain/accountAlarmActions.ts');
 const app = read('App.tsx');
+const storage = read('src/storage/store.ts');
 const packageJson = JSON.parse(read('package.json'));
 const appJson = JSON.parse(read('app.json')).expo;
 const eas = JSON.parse(read('eas.json'));
@@ -28,6 +29,7 @@ for (const path of [
   'src/storage/store.ts',
   'tests/billing-security.test.mjs',
   'scripts/check-founder.mjs',
+  'scripts/verify-p0-hardening.mjs',
 ]) requireFile(path);
 
 requireValue(pricing.includes("FOUNDER_ACCESS_TIER: Tier = 'godfather'"), 'Founder access tier must remain Godfather.');
@@ -46,7 +48,10 @@ requireValue(notifications.includes('SOUND_CHANNELS'), 'Notification sound chann
 requireValue(notifications.includes('canScheduleExactAlarms'), 'Android exact-alarm readiness gate is missing.');
 requireValue(notifications.includes('accountId: alarm.accountId'), 'Notification account ownership payload is missing.');
 requireValue(notifications.includes('alarm-pulse.wav') && notifications.includes('alarm-siren.wav') && notifications.includes('alarm-chime.wav'), 'Notification sound assets are not fully wired.');
-requireValue(notifications.includes('Notifications.cancelAllScheduledNotificationsAsync'), 'Notification reconciliation cancellation is missing.');
+requireValue(notifications.includes('reconcileScheduledNotifications'), 'Incremental notification reconciliation is missing.');
+requireValue(notifications.includes('notificationOwnershipKey'), 'Deterministic notification ownership key is missing.');
+requireValue(notifications.includes('getAllScheduledNotificationsAsync'), 'Scheduled-notification registry reconciliation cannot inspect existing requests.');
+requireValue(notifications.includes('upcomingMoments(alarm, now)'), 'Notification planning must reuse the same time base for boundary consistency.');
 requireValue(notificationPlan.includes('buildNotificationPlan'), 'Deterministic notification planning is missing.');
 requireValue(notificationPlan.includes('warning') && notificationPlan.includes('end-warning'), 'Warning boundary planning is incomplete.');
 
@@ -56,6 +61,12 @@ requireValue(backup.includes('activeAccountId'), 'Backup active-account state is
 requireValue(backup.includes('validateBackup'), 'Backup validation is missing.');
 requireValue(backup.includes('alarmIds') && backup.includes('accountIds'), 'Backup identity/reference validation is incomplete.');
 requireValue(backup.includes('JSON.parse'), 'Backup restore must parse JSON payloads.');
+requireValue(backup.includes('stripEntitlement'), 'Backup must not be a paid-entitlement trust anchor.');
+requireValue(backup.includes('MAX_BACKUP_BYTES'), 'Backup size protection is missing.');
+
+requireValue(storage.includes(':pending') && storage.includes(':last-known-good'), 'Crash-safe storage recovery ladder is missing.');
+requireValue(storage.includes('volatileStateRevision'), 'Volatile state revision contract is missing.');
+requireValue(storage.includes('recoveredFromPending') && storage.includes('recoveredFromLastKnownGood'), 'Storage recovery sources are incomplete.');
 
 requireValue(accountActions.includes('accountId'), 'Account-scoped alarm actions are missing ownership context.');
 requireValue(app.includes('alarmsForAccount(state.alarms, state.activeAccountId)'), 'UI alarm list must remain account-scoped.');
@@ -78,4 +89,4 @@ if (failures.length) {
 }
 
 console.log('Production floor verification: PASS');
-console.log('Internal quality floor: >= 9/10 contracts present for alarms, notifications, accounts, backup, UI integration and release configuration.');
+console.log('Internal quality floor: >= 9/10 contracts present for alarms, notifications, accounts, backup, storage recovery, UI integration and release configuration.');
