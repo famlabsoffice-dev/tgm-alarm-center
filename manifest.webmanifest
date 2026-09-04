@@ -1,7 +1,7 @@
 {
   "name":"TGM ALARM CENTER",
   "short_name":"TGM Alarm",
-  "description":"Persönliche Alarmzentrale für Bubble, GW Bubble und eigene TGM-Events.",
+  "description":"Unabhängige lokale Gaming-Alarmzentrale für zeitkritische Gaming-Events.",
   "start_url":"./",
   "display":"standalone",
   "orientation":"any",
