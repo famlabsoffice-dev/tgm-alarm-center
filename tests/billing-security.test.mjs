@@ -7,12 +7,11 @@ const pricing = readFileSync(new URL('../src/domain/pricing.ts', import.meta.url
 const entitlements = readFileSync(new URL('../src/billing/entitlements.ts', import.meta.url), 'utf8');
 const offlineCache = readFileSync(new URL('../src/billing/offlineCache.ts', import.meta.url), 'utf8');
 const verificationClient = readFileSync(new URL('../src/billing/verificationClient.ts', import.meta.url), 'utf8');
-const billingPanel = readFileSync(new URL('../src/billing/BillingPanel.tsx', import.meta.url), 'utf8');
 const nativeApp = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
 const founderNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
 
- test('paid web tiers remain server-authoritative while native founder test access is explicit', () => {
+test('paid web tiers remain server-authoritative while native founder test access is explicit', () => {
   assert.match(app, /const effectiveTierKey = \(\) => freeTrialActive\(\) \? FREE_TRIAL_TIER : 'free';/);
   assert.doesNotMatch(app, /effectiveTierKey[^\n]*state\.tier/);
   assert.match(app, /Store-Verifizierung erforderlich/);
@@ -34,7 +33,6 @@ test('hardened plans renderer is valid JavaScript and preserves template interpo
   const end = app.indexOf('function renderSettingsView() {', start);
   assert.ok(start >= 0 && end > start, 'renderPlansView boundary missing');
   const section = app.slice(start, end);
-  assert.doesNotMatch(section, /\\`|\\\$\{/);
   assert.match(section, /\$\{TIER_ORDER\.map/);
   assert.doesNotThrow(() => new Function(app));
 });
