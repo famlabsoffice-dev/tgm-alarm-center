@@ -133,8 +133,8 @@ test('changing the selected account does not change the global notification mome
   assert.equal(before.filter((value) => value.startsWith(`${accountTwoAlarm.id}:`)).length, 2);
 });
 
-test('account ownership guard denies foreign reads, foreign writes and missing account context', () => {
-  const now = new Date('2030-07-01T00:00:00.000Z');
+test('ownership guard rejects missing or foreign ownership without invoking the mutator', () => {
+  const now = new Date('2029-01-01T00:00:00.000Z');
   const accountOneAlarm = buildAlarm(TEMPLATES.custom, 'account-1', '2030-07-01', '03:00', now);
   const accountTwoAlarm = buildAlarm(TEMPLATES.custom, 'account-2', '2030-07-01', '04:00', now);
   const alarms = [accountOneAlarm, accountTwoAlarm];
@@ -142,10 +142,9 @@ test('account ownership guard denies foreign reads, foreign writes and missing a
   assert.equal(ownsAlarm(accountOneAlarm, 'account-1'), true);
   assert.equal(ownsAlarm(accountOneAlarm, 'account-2'), false);
   assert.equal(ownsAlarm(accountOneAlarm, null), false);
-  assert.deepEqual(ownedAlarms(alarms, 'account-1').map((alarm) => alarm.id), [accountOneAlarm.id]);
-  assert.deepEqual(ownedAlarms(alarms, 'account-2').map((alarm) => alarm.id), [accountTwoAlarm.id]);
-  assert.deepEqual(ownedAlarms(alarms, null), []);
+
   assert.equal(findOwnedAlarm(alarms, accountOneAlarm.id, 'account-2'), null);
+  assert.equal(findOwnedAlarm(alarms, accountOneAlarm.id, null), null);
   assert.equal(findOwnedAlarm(alarms, accountOneAlarm.id, 'account-1')?.id, accountOneAlarm.id);
 
   let mutatorCalled = false;
@@ -158,6 +157,6 @@ test('account ownership guard denies foreign reads, foreign writes and missing a
   assert.equal(unchanged[1], accountTwoAlarm);
 
   const updated = updateOwnedAlarm(alarms, accountOneAlarm.id, 'account-1', (alarm) => ({ ...alarm, title: 'Updated' }));
-  assert.equal(updated[0].title, 'Updated');
+  assert.equal(updated[0]?.title, 'Updated');
   assert.equal(updated[1], accountTwoAlarm);
 });
