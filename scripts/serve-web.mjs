@@ -1,6 +1,6 @@
 import http from 'node:http';
 import { existsSync, statSync, readFileSync } from 'node:fs';
-import { join, normalize, resolve, extname } from 'node:path';
+import { normalize, resolve, extname } from 'node:path';
 
 const args = process.argv.slice(2);
 const valueAfter = (flag, fallback) => {
