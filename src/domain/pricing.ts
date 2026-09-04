@@ -43,8 +43,6 @@ export interface TierPricing {
   annualSavingPercent: number | null;
 }
 
-/** EUR is the authoritative commercial price list. USD/JPY use the latest
- * configured ECB reference conversion and stable psychological local prices. */
 export const PRICE_REFERENCE = {
   date: '2026-08-31',
   eurUsd: 1.1596,
@@ -54,70 +52,34 @@ export const PRICE_REFERENCE = {
 
 export const TIER_PRICING: Record<Tier, TierPricing> = {
   free: {
-    tier: 'free',
-    name: 'Free',
+    tier: 'free', name: 'Free',
     limits: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
-    eur: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
-    usdDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
-    usdStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
-    jpyDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
-    jpyStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 },
-    annualSavingPercent: null,
+    eur: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, usdDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, usdStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, jpyDirect: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, jpyStore: { weekly: 0, monthly: 0, sixMonth: 0, yearly: 0, lifetime: 0 }, annualSavingPercent: null,
   },
   streetBoss: {
-    tier: 'streetBoss',
-    name: 'Street Boss',
+    tier: 'streetBoss', name: 'Street Boss',
     limits: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
-    eur: { weekly: 4.99, monthly: 14.99, sixMonth: 79.99, yearly: 129.99, lifetime: 199.99 },
-    usdDirect: { weekly: 5.79, monthly: 17.37, sixMonth: 92.77, yearly: 150.77, lifetime: 231.91 },
-    usdStore: { weekly: 5.99, monthly: 16.99, sixMonth: 89.99, yearly: 149.99, lifetime: 214.99 },
-    jpyDirect: { weekly: 924, monthly: 2777, sixMonth: 14815, yearly: 24072, lifetime: 37042 },
-    jpyStore: { weekly: 1000, monthly: 2800, sixMonth: 14800, yearly: 24000, lifetime: 37000 },
-    annualSavingPercent: 17,
+    eur: { weekly: 4.99, monthly: 14.99, sixMonth: 79.99, yearly: 129.99, lifetime: 199.99 }, usdDirect: { weekly: 5.79, monthly: 17.37, sixMonth: 92.77, yearly: 150.77, lifetime: 231.91 }, usdStore: { weekly: 5.99, monthly: 16.99, sixMonth: 89.99, yearly: 149.99, lifetime: 214.99 }, jpyDirect: { weekly: 924, monthly: 2777, sixMonth: 14815, yearly: 24072, lifetime: 37042 }, jpyStore: { weekly: 1000, monthly: 2800, sixMonth: 14800, yearly: 24000, lifetime: 37000 }, annualSavingPercent: 17,
   },
   caporegime: {
-    tier: 'caporegime',
-    name: 'Caporegime',
+    tier: 'caporegime', name: 'Caporegime',
     limits: { accounts: 3, alarms: 9, events: 3, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 1, rssAlarms: 0 } },
-    eur: { weekly: 7.99, monthly: 24.99, sixMonth: 129.99, yearly: 199.99, lifetime: 299.99 },
-    usdDirect: { weekly: 9.26, monthly: 28.99, sixMonth: 150.72, yearly: 231.83, lifetime: 347.73 },
-    usdStore: { weekly: 9.99, monthly: 27.99, sixMonth: 149.99, yearly: 229.99, lifetime: 319.99 },
-    jpyDirect: { weekly: 1479, monthly: 4629, sixMonth: 24077, yearly: 37038, lifetime: 55557 },
-    jpyStore: { weekly: 1500, monthly: 4600, sixMonth: 24000, yearly: 37000, lifetime: 55000 },
-    annualSavingPercent: 23,
+    eur: { weekly: 7.99, monthly: 24.99, sixMonth: 129.99, yearly: 199.99, lifetime: 299.99 }, usdDirect: { weekly: 9.26, monthly: 28.99, sixMonth: 150.72, yearly: 231.83, lifetime: 347.73 }, usdStore: { weekly: 9.99, monthly: 27.99, sixMonth: 149.99, yearly: 229.99, lifetime: 319.99 }, jpyDirect: { weekly: 1479, monthly: 4629, sixMonth: 24077, yearly: 37038, lifetime: 55557 }, jpyStore: { weekly: 1500, monthly: 4600, sixMonth: 24000, yearly: 37000, lifetime: 55000 }, annualSavingPercent: 23,
   },
   underboss: {
-    tier: 'underboss',
-    name: 'Underboss',
+    tier: 'underboss', name: 'Underboss',
     limits: { accounts: 5, alarms: 15, events: 5, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 1, rssAlarms: 1 } },
-    eur: { weekly: 9.99, monthly: 34.99, sixMonth: 179.99, yearly: 299.99, lifetime: 449.99 },
-    usdDirect: { weekly: 11.58, monthly: 40.56, sixMonth: 208.77, yearly: 347.79, lifetime: 521.87 },
-    usdStore: { weekly: 11.99, monthly: 39.99, sixMonth: 199.99, yearly: 349.99, lifetime: 479.99 },
-    jpyDirect: { weekly: 1850, monthly: 6483, sixMonth: 33332, yearly: 55552, lifetime: 83358 },
-    jpyStore: { weekly: 1900, monthly: 6500, sixMonth: 33000, yearly: 56000, lifetime: 83000 },
-    annualSavingPercent: 17,
+    eur: { weekly: 9.99, monthly: 34.99, sixMonth: 179.99, yearly: 299.99, lifetime: 449.99 }, usdDirect: { weekly: 11.58, monthly: 40.56, sixMonth: 208.77, yearly: 347.79, lifetime: 521.87 }, usdStore: { weekly: 11.99, monthly: 39.99, sixMonth: 199.99, yearly: 349.99, lifetime: 479.99 }, jpyDirect: { weekly: 1850, monthly: 6483, sixMonth: 33332, yearly: 55552, lifetime: 83358 }, jpyStore: { weekly: 1900, monthly: 6500, sixMonth: 33000, yearly: 56000, lifetime: 83000 }, annualSavingPercent: 17,
   },
   boss: {
-    tier: 'boss',
-    name: 'Boss',
+    tier: 'boss', name: 'Boss',
     limits: { accounts: 10, alarms: 70, events: 20, perAccount: { bubbleAlarms: 1, eventAlarms: 2, individualAlarms: 2, rssAlarms: 2 } },
-    eur: { weekly: 14.99, monthly: 49.99, sixMonth: 249.99, yearly: 399.99, lifetime: 599.99 },
-    usdDirect: { weekly: 17.38, monthly: 57.94, sixMonth: 289.90, yearly: 463.84, lifetime: 695.76 },
-    usdStore: { weekly: 16.99, monthly: 54.99, sixMonth: 299.99, yearly: 499.99, lifetime: 699.99 },
-    jpyDirect: { weekly: 2777, monthly: 9259, sixMonth: 46296, yearly: 74088, lifetime: 111132 },
-    jpyStore: { weekly: 2800, monthly: 10000, sixMonth: 50000, yearly: 78000, lifetime: 115000 },
-    annualSavingPercent: 20,
+    eur: { weekly: 14.99, monthly: 49.99, sixMonth: 249.99, yearly: 399.99, lifetime: 599.99 }, usdDirect: { weekly: 17.38, monthly: 57.94, sixMonth: 289.90, yearly: 463.84, lifetime: 695.76 }, usdStore: { weekly: 16.99, monthly: 54.99, sixMonth: 299.99, yearly: 499.99, lifetime: 699.99 }, jpyDirect: { weekly: 2777, monthly: 9259, sixMonth: 46296, yearly: 74088, lifetime: 111132 }, jpyStore: { weekly: 2800, monthly: 10000, sixMonth: 50000, yearly: 78000, lifetime: 115000 }, annualSavingPercent: 20,
   },
   godfather: {
-    tier: 'godfather',
-    name: 'Godfather',
+    tier: 'godfather', name: 'Godfather',
     limits: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
-    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 },
-    usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68, lifetime: 927.64 },
-    usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 },
-    jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 },
-    jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 },
-    annualSavingPercent: 17,
+    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 }, usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68, lifetime: 927.64 }, usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 }, jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 }, jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 }, annualSavingPercent: 17,
   },
 };
 
@@ -145,14 +107,25 @@ export const BUSINESS_VALUE_GUIDANCE = {
     medium: { payingUsers: 4000, yearlyMixPercent: 65, netAnnualUsd: { min: 180_000, max: 320_000 } },
     strong: { payingUsers: 10_000, yearlyMixPercent: 70, netAnnualUsd: { min: 450_000, max: 800_000 }, openEnded: true },
   },
-  ltvGuidanceUsd: {
-    monthly: { min: 20, max: 90 },
-    yearly: { min: 60, max: 220 },
-    lifetime: { min: 110, max: 420 },
-  },
+  ltvGuidanceUsd: { monthly: { min: 20, max: 90 }, yearly: { min: 60, max: 220 }, lifetime: { min: 110, max: 420 } },
 } as const;
 
 export const getTierPricing = (tier: Tier): TierPricing => TIER_PRICING[tier];
+
+let verifiedStoreTier: Tier = 'free';
+
+/** Runtime entitlement gate for legacy Native UI call sites. The persisted tier and account name are never authoritative. */
+export function setVerifiedStoreTier(tier: Tier): void {
+  verifiedStoreTier = tier;
+}
+
+export function clearVerifiedStoreTier(): void {
+  verifiedStoreTier = 'free';
+}
+
+export function effectiveTierForAccount(_persistedTier: Tier, _accountName: string): Tier {
+  return verifiedStoreTier;
+}
 
 export function effectiveTier(tier: Tier, trial: FreeTrialState, at = Date.now()): Tier {
   return isFreeTrialActive(trial, at) ? FREE_TRIAL_TIER : tier;
