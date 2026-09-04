@@ -162,9 +162,16 @@ function nextDailyOccurrence(alarm: Alarm, now: Date): Date | null {
 function nextGwOccurrence(alarm: Alarm, now: Date): Date | null {
   const base = new Date(alarm.eventAtUtc);
   if (!Number.isFinite(base.getTime())) return null;
-  const delta = now.getTime() - base.getTime();
-  const cycles = delta < 0 ? 0 : Math.floor(delta / FIVE_DAYS_MS) + 1;
-  const candidate = new Date(base.getTime() + cycles * FIVE_DAYS_MS);
+
+  let candidate: Date;
+  if (now.getTime() < base.getTime()) {
+    candidate = new Date(base);
+  } else {
+    const delta = now.getTime() - base.getTime();
+    const cycles = Math.floor(delta / FIVE_DAYS_MS) + 1;
+    candidate = new Date(base.getTime() + cycles * FIVE_DAYS_MS);
+  }
+
   for (let attempts = 0; attempts < 370; attempts += 1) {
     if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate;
     candidate.setTime(candidate.getTime() + FIVE_DAYS_MS);
