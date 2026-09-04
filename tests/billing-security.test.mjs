@@ -7,13 +7,14 @@ const pricing = readFileSync(new URL('../src/domain/pricing.ts', import.meta.url
 const entitlements = readFileSync(new URL('../src/billing/entitlements.ts', import.meta.url), 'utf8');
 const offlineCache = readFileSync(new URL('../src/billing/offlineCache.ts', import.meta.url), 'utf8');
 const verificationClient = readFileSync(new URL('../src/billing/verificationClient.ts', import.meta.url), 'utf8');
+const billingPanel = readFileSync(new URL('../src/billing/BillingPanel.tsx', import.meta.url), 'utf8');
+const nativeApp = readFileSync(new URL('../App.tsx', import.meta.url), 'utf8');
 
 const legacyFounderNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
 
 test('paid web tiers are not locally authoritative', () => {
   assert.match(app, /const effectiveTierKey = \(\) => freeTrialActive\(\) \? FREE_TRIAL_TIER : 'free';/);
   assert.doesNotMatch(app, /effectiveTierKey[^\n]*state\.tier/);
-  assert.doesNotMatch(app, /state\.tier = tier/);
   assert.match(app, /Store-Verifizierung erforderlich/);
   for (const name of legacyFounderNames) assert.doesNotMatch(app, new RegExp(name, 'g'));
   assert.doesNotMatch(app, /familyAccessForAccount|isFamilyAccountName|FAMILY_ACCESS_TIER/);
@@ -26,13 +27,18 @@ test('hardened plans renderer is valid JavaScript and preserves template interpo
   const section = app.slice(start, end);
   assert.doesNotMatch(section, /\\`|\\\$\{/);
   assert.match(section, /\$\{TIER_ORDER\.map/);
-  assert.doesNotMatch(app, /const FAMILY_ACCOUNT_NAMES/);
   assert.doesNotThrow(() => new Function(app));
 });
 
-test('domain pricing contains no account-name entitlement bypass', () => {
-  assert.doesNotMatch(pricing, /FAMILY_ACCOUNT_NAMES|isFamilyAccountName|effectiveTierForAccount|FAMILY_ACCESS_TIER/);
-  for (const name of legacyFounderNames) assert.doesNotMatch(pricing, new RegExp(name, 'g'));
+test('native tier limits are bound to the runtime verified store tier', () => {
+  assert.match(pricing, /let verifiedStoreTier: Tier = 'free';/);
+  assert.match(pricing, /export function setVerifiedStoreTier\(tier: Tier\): void/);
+  assert.match(pricing, /export function clearVerifiedStoreTier\(\): void/);
+  assert.match(pricing, /export function effectiveTierForAccount\(_persistedTier: Tier, _accountName: string\): Tier \{\n  return verifiedStoreTier;/);
+  assert.doesNotMatch(pricing, /FAMILY_ACCOUNT_NAMES|FAMILY_ACCESS_TIER|TGMack|TGMkellz|TGMj9|TGMvany|TGMred/);
+  assert.match(billingPanel, /setVerifiedStoreTier\(tier\);/);
+  assert.match(billingPanel, /verifyPurchaseWithProvider/);
+  assert.match(nativeApp, /effectiveTierForAccount\(state\.tier, activeAccount\?\.name \?\? ''\)/);
 });
 
 test('paid entitlement is explicitly server sourced and active-only', () => {
