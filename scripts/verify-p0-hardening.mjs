@@ -40,7 +40,9 @@ assert.match(notifications, /getVolatileState/);
 assert.match(notifications, /upcomingMoments\(alarm, now\)/);
 assert.match(notifications, /consumeRecoverySignals/);
 assert.match(notifications, /AppState\.addEventListener/);
-assert.match(notifications, /Notifications\.cancelAllScheduledNotificationsAsync/);
+assert.match(notifications, /export async function cancelAllScheduled\(\): Promise<void>/);
+assert.match(notifications, /await reconcileScheduledNotifications\(state\.alarms, state\.notificationPreferences, revision\)/);
+assert.doesNotMatch(notifications, /Notifications\.cancelAllScheduledNotificationsAsync\(\)/);
 
 assert.match(nativeIndex, /consumeRecoverySignals/);
 assert.match(nativeModule, /consumeRecoverySignals/);
