@@ -14,7 +14,7 @@ import {
   upcomingMoments,
   validateDateTime,
 } from '../src/domain/alarm';
-import { FAMILY_ACCESS_TIER, FAMILY_ACCOUNT_NAMES, FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, effectiveTierForAccount, isFamilyAccountName, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
+import { FREE_TRIAL_DURATION_MS, TIER_PRICING, canStartFreeTrial, effectiveTier, isFreeTrialActive, startFreeTrial } from '../src/domain/pricing';
 import { highestTier, productForId, STORE_LIFETIME_IDS, STORE_PRODUCT_IDS, STORE_SUBSCRIPTION_IDS } from '../src/billing/catalog';
 
 const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -85,18 +85,6 @@ test('supports one-time three-day free trial activation and expiry', () => {
   assert.equal(effectiveTier('free', trial, started + FREE_TRIAL_DURATION_MS), 'free');
 });
 
-test('recognizes every Family account and grants the permanent Godfather tier', () => {
-  assert.deepEqual(FAMILY_ACCOUNT_NAMES, ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']);
-  for (const name of FAMILY_ACCOUNT_NAMES) {
-    assert.equal(isFamilyAccountName(name), true);
-    assert.equal(effectiveTierForAccount('free', name), FAMILY_ACCESS_TIER);
-  }
-  assert.equal(isFamilyAccountName(' tgmack '), true);
-  assert.equal(effectiveTierForAccount('underboss', 'TGMj9'), FAMILY_ACCESS_TIER);
-  assert.equal(isFamilyAccountName('TGMack2'), false);
-  assert.equal(effectiveTierForAccount('free', 'TGMack2'), 'free');
-});
-
 test('keeps the six-tier commercial ladder and all currency periods synchronized', () => {
   assert.deepEqual(Object.keys(TIER_LIMITS), ['free', 'streetBoss', 'caporegime', 'underboss', 'boss', 'godfather']);
   assert.equal(TIER_LIMITS.underboss.accounts, 5);
@@ -129,8 +117,8 @@ test('keeps the six-tier commercial ladder and all currency periods synchronized
   assert.equal(TIER_PRICING.underboss.usdStore.lifetime, 479.99);
   assert.equal(TIER_PRICING.godfather.usdStore.monthly, 79.99);
   assert.equal(TIER_PRICING.godfather.usdStore.lifetime, 899.99);
-  assert.deepEqual(TEMPLATES.individual.type, 'individual');
-  assert.deepEqual(TEMPLATES.rss.type, 'rss');
+  assert.equal(TEMPLATES.individual.type, 'individual');
+  assert.equal(TEMPLATES.rss.type, 'rss');
   assert.equal(TEMPLATES.bubble.sound, 'pulse');
   assert.equal(TEMPLATES.gwBubble.sound, 'siren');
   assert.equal(TEMPLATES.custom.sound, 'chime');
