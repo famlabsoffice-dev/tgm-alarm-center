@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import type { StoreProduct } from '../src/billing/catalog';
 import type { ServerConfig } from './config';
 import { ApplePurchaseVerifier, decodeGoogleRtdnData, GooglePurchaseVerifier, type VerifiedPurchase, verifyGooglePubSubToken } from './providers';
-import { BillingRepository, type StoredEntitlement } from './repository';
+import { BillingRepository, type StoredEntitlement, type StoredWebhookEvent } from './repository';
 import { SecurityError, verifyAppleJws } from './security';
 
 export interface PurchaseVerificationRequest {
@@ -47,6 +47,23 @@ function assertProduct(product: StoreProduct, productId: string): void {
   if (product.id !== productId) throw new SecurityError('Verifiziertes Produkt stimmt nicht mit der Anfrage überein.');
 }
 
+const processingEventIds = new Set<string>();
+
+async function claimEvent(repository: BillingRepository, eventId: string): Promise<boolean> {
+  if (await repository.hasEvent(eventId)) return false;
+  if (processingEventIds.has(eventId)) return false;
+  processingEventIds.add(eventId);
+  return true;
+}
+
+function releaseEvent(eventId: string): void {
+  processingEventIds.delete(eventId);
+}
+
+async function persistProcessedEvent(repository: BillingRepository, event: StoredWebhookEvent): Promise<void> {
+  await repository.recordEvent(event);
+}
+
 export class BillingWebhookService {
   private readonly apple: ApplePurchaseVerifier;
   private readonly google: GooglePurchaseVerifier;
@@ -84,21 +101,32 @@ export class BillingWebhookService {
     const payload = notification.payload;
     if (payload.bundleId !== this.config.appleBundleId) throw new SecurityError('Apple-Bundle-ID stimmt nicht überein.');
     const eventId = stringField(payload.notificationUUID, 'notificationUUID');
-    if (!(await this.repository.recordEvent({ eventId, platform: 'ios', receivedAt: new Date().toISOString(), payloadDigest: notification.digest }))) return 'duplicate';
-    const data = payload.data;
-    if (!data || typeof data !== 'object' || Array.isArray(data)) return 'processed';
-    const signedTransactionInfo = (data as Record<string, unknown>).signedTransactionInfo;
-    if (typeof signedTransactionInfo !== 'string') return 'processed';
-    const transaction = verifyAppleJws(signedTransactionInfo, this.config.appleRootCertificatePem).payload;
-    const userId = typeof transaction.appAccountToken === 'string' && transaction.appAccountToken.length > 0
-      ? transaction.appAccountToken
-      : stringField(transaction.originalTransactionId, 'originalTransactionId');
-    const verified = this.apple.verifySignedTransaction(signedTransactionInfo, userId);
-    const notificationType = typeof payload.notificationType === 'string' ? payload.notificationType : 'DID_CHANGE_RENEWAL_STATUS';
-    const subtype = typeof payload.subtype === 'string' ? payload.subtype : null;
-    const status = statusFromAppleNotification(notificationType, subtype);
-    await this.repository.upsertEntitlement(entitlementFromPurchase({ ...verified, status }, eventId, null));
-    return 'processed';
+    if (!(await claimEvent(this.repository, eventId))) return 'duplicate';
+    try {
+      const data = payload.data;
+      if (!data || typeof data !== 'object' || Array.isArray(data)) {
+        await persistProcessedEvent(this.repository, { eventId, platform: 'ios', receivedAt: new Date().toISOString(), payloadDigest: notification.digest });
+        return 'processed';
+      }
+      const signedTransactionInfo = (data as Record<string, unknown>).signedTransactionInfo;
+      if (typeof signedTransactionInfo !== 'string') {
+        await persistProcessedEvent(this.repository, { eventId, platform: 'ios', receivedAt: new Date().toISOString(), payloadDigest: notification.digest });
+        return 'processed';
+      }
+      const transaction = verifyAppleJws(signedTransactionInfo, this.config.appleRootCertificatePem).payload;
+      const userId = typeof transaction.appAccountToken === 'string' && transaction.appAccountToken.length > 0
+        ? transaction.appAccountToken
+        : stringField(transaction.originalTransactionId, 'originalTransactionId');
+      const verified = this.apple.verifySignedTransaction(signedTransactionInfo, userId);
+      const notificationType = typeof payload.notificationType === 'string' ? payload.notificationType : 'DID_CHANGE_RENEWAL_STATUS';
+      const subtype = typeof payload.subtype === 'string' ? payload.subtype : null;
+      const status = statusFromAppleNotification(notificationType, subtype);
+      await this.repository.upsertEntitlement(entitlementFromPurchase({ ...verified, status }, eventId, null));
+      await persistProcessedEvent(this.repository, { eventId, platform: 'ios', receivedAt: new Date().toISOString(), payloadDigest: notification.digest });
+      return 'processed';
+    } finally {
+      releaseEvent(eventId);
+    }
   }
 
   async receiveGoogleNotification(oidcToken: string, body: unknown): Promise<'processed' | 'duplicate'> {
@@ -110,43 +138,59 @@ export class BillingWebhookService {
     const messageId = stringField(messageObject.messageId, 'messageId');
     const encodedData = stringField(messageObject.data, 'data');
     const eventId = `google:${messageId}`;
-    const digest = createHash('sha256').update(encodedData).digest('hex');
-    if (!(await this.repository.recordEvent({ eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest }))) return 'duplicate';
-    const data = decodeGoogleRtdnData(encodedData);
-    const voided = data.voidedPurchaseNotification;
-    if (voided && typeof voided === 'object' && !Array.isArray(voided)) {
-      const token = (voided as Record<string, unknown>).purchaseToken;
-      if (typeof token === 'string') {
-        const existingUser = await this.repository.findUserByPurchaseToken(token);
-        if (existingUser) {
-          const entitlements = await this.repository.entitlementsForUser(existingUser);
-          for (const entitlement of entitlements.filter((candidate) => candidate.purchaseToken === token)) await this.repository.upsertEntitlement({ ...entitlement, status: 'revoked', updatedAt: new Date().toISOString(), sourceEventId: eventId });
+    if (!(await claimEvent(this.repository, eventId))) return 'duplicate';
+    try {
+      const digest = createHash('sha256').update(encodedData).digest('hex');
+      const data = decodeGoogleRtdnData(encodedData);
+      const voided = data.voidedPurchaseNotification;
+      if (voided && typeof voided === 'object' && !Array.isArray(voided)) {
+        const token = (voided as Record<string, unknown>).purchaseToken;
+        if (typeof token === 'string') {
+          const existingUser = await this.repository.findUserByPurchaseToken(token);
+          if (existingUser) {
+            const entitlements = await this.repository.entitlementsForUser(existingUser);
+            for (const entitlement of entitlements.filter((candidate) => candidate.purchaseToken === token)) await this.repository.upsertEntitlement({ ...entitlement, status: 'revoked', updatedAt: new Date().toISOString(), sourceEventId: eventId });
+          }
         }
+        await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
+        return 'processed';
       }
+      const subscription = data.subscriptionNotification;
+      if (subscription && typeof subscription === 'object' && !Array.isArray(subscription)) {
+        const token = stringField((subscription as Record<string, unknown>).purchaseToken, 'purchaseToken');
+        const notificationType = Number((subscription as Record<string, unknown>).notificationType);
+        const existingUser = await this.repository.findUserByPurchaseToken(token);
+        if (!existingUser) {
+          await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
+          return 'processed';
+        }
+        const existing = (await this.repository.entitlementsForUser(existingUser)).find((candidate) => candidate.purchaseToken === token);
+        if (!existing) {
+          await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
+          return 'processed';
+        }
+        const verified = await this.google.verifySubscription(existing.productId, token, existingUser);
+        const status: VerifiedPurchase['status'] = notificationType === 13 || notificationType === 12 ? 'expired' : notificationType === 3 || notificationType === 5 ? 'pending' : verified.status;
+        await this.repository.upsertEntitlement({ ...entitlementFromPurchase({ ...verified, status }, eventId, token), userId: existingUser });
+        await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
+        return 'processed';
+      }
+      const oneTime = data.oneTimeProductNotification;
+      if (oneTime && typeof oneTime === 'object' && !Array.isArray(oneTime)) {
+        const token = stringField((oneTime as Record<string, unknown>).purchaseToken, 'purchaseToken');
+        const existingUser = await this.repository.findUserByPurchaseToken(token);
+        if (!existingUser) {
+          await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
+          return 'processed';
+        }
+        const productId = stringField((oneTime as Record<string, unknown>).sku, 'sku');
+        const verified = await this.google.verifyOneTime(productId, token, existingUser);
+        await this.repository.upsertEntitlement(entitlementFromPurchase(verified, eventId, token));
+      }
+      await persistProcessedEvent(this.repository, { eventId, platform: 'android', receivedAt: new Date().toISOString(), payloadDigest: digest });
       return 'processed';
+    } finally {
+      releaseEvent(eventId);
     }
-    const subscription = data.subscriptionNotification;
-    if (subscription && typeof subscription === 'object' && !Array.isArray(subscription)) {
-      const token = stringField((subscription as Record<string, unknown>).purchaseToken, 'purchaseToken');
-      const notificationType = Number((subscription as Record<string, unknown>).notificationType);
-      const existingUser = await this.repository.findUserByPurchaseToken(token);
-      if (!existingUser) return 'processed';
-      const existing = (await this.repository.entitlementsForUser(existingUser)).find((candidate) => candidate.purchaseToken === token);
-      if (!existing) return 'processed';
-      const verified = await this.google.verifySubscription(existing.productId, token, existingUser);
-      const status: VerifiedPurchase['status'] = notificationType === 13 || notificationType === 12 ? 'expired' : notificationType === 3 || notificationType === 5 ? 'pending' : verified.status;
-      await this.repository.upsertEntitlement({ ...entitlementFromPurchase({ ...verified, status }, eventId, token), userId: existingUser });
-      return 'processed';
-    }
-    const oneTime = data.oneTimeProductNotification;
-    if (oneTime && typeof oneTime === 'object' && !Array.isArray(oneTime)) {
-      const token = stringField((oneTime as Record<string, unknown>).purchaseToken, 'purchaseToken');
-      const existingUser = await this.repository.findUserByPurchaseToken(token);
-      if (!existingUser) return 'processed';
-      const productId = stringField((oneTime as Record<string, unknown>).sku, 'sku');
-      const verified = await this.google.verifyOneTime(productId, token, existingUser);
-      await this.repository.upsertEntitlement(entitlementFromPurchase(verified, eventId, token));
-    }
-    return 'processed';
   }
 }
