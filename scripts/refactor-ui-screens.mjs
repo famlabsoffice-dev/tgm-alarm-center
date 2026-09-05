@@ -32,10 +32,12 @@ function extractBalancedBlock(text, startIndex, openChar = '{', closeChar = '}')
   fail(`unclosed block beginning at ${startIndex}`);
 }
 
-function removeFunction(text, signature) {
+function removeFunction(text, signature, bodyMarker = null) {
   const start = text.indexOf(signature);
   if (start < 0) fail(`function signature not found: ${signature}`);
-  const open = text.indexOf('{', start);
+  const bodyStart = bodyMarker ? text.indexOf(bodyMarker, start) : text.indexOf('{', start);
+  if (bodyStart < 0) fail(`function body marker not found: ${signature}`);
+  const open = bodyMarker ? bodyStart + bodyMarker.lastIndexOf('{') : bodyStart;
   const block = extractBalancedBlock(text, open);
   return text.slice(0, start) + text.slice(block.end);
 }
@@ -64,7 +66,7 @@ const defaultBlock = extractBalancedBlock(source, defaultOpen);
 source = source.slice(0, defaultStart) + source.slice(defaultBlock.end);
 
 source = removeFunction(source, 'function isOccurrenceCompleted(');
-source = removeFunction(source, 'function SettingRow(');
+source = removeFunction(source, 'function SettingRow(', '): React.ReactElement {');
 
 const renderStart = source.indexOf('  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {');
 requireOnce(renderStart >= 0, 'renderAlarm block missing');
