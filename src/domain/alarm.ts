@@ -2,17 +2,15 @@ export type AlarmType = 'bubble' | 'gwBubble' | 'cvc' | 'faction' | 'custom' | '
 export type RepeatMode = 'once' | 'daily' | 'gw5d' | 'cvcCycle';
 export type SoundProfile = 'pulse' | 'siren' | 'chime';
 export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'boss' | 'godfather';
-export type OccurrenceKind = 'warning' | 'main' | 'end-warning' | 'end';
+export type OccurrenceKind = 'warning' | 'main' | 'battle-day' | 'end-warning' | 'end';
 export type BubbleDurationHours = 4 | 8 | 24 | 72 | 168 | 336 | 504;
 export type FactionEvent = 'oakvale' | 'undergroundMarket' | 'otherBattleEvent';
-
 export interface Account { id: string; name: string; color: string; createdAt: string; }
 export interface Alarm { id: string; accountId: string; title: string; type: AlarmType; date: string; time: string; eventAtUtc: string; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; active: boolean; protected: boolean; completedOccurrences: Record<string, true>; createdAt: string; updatedAt: string; durationHours?: BubbleDurationHours; factionEvent?: FactionEvent; cycleDays?: number; }
 export interface NotificationPreferences { sound: SoundProfile; warningSound: boolean; eventSound: boolean; vibration: boolean; criticalAlerts: boolean; preview: boolean; }
 export interface AppState { schemaVersion: 1; accounts: Account[]; alarms: Alarm[]; activeAccountId: string | null; tier: Tier; notificationPreferences: NotificationPreferences; testConfirmedAt: string | null; }
 export interface AlarmTemplate { title: string; type: AlarmType; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; protected: boolean; durationHours?: BubbleDurationHours; factionEvent?: FactionEvent; cycleDays?: number; }
 export interface NotificationMoment { alarmId: string; eventTime: Date; at: Date; kind: OccurrenceKind; warningMinutes?: number; endAt?: Date; }
-
 export const BUBBLE_DURATIONS: readonly { hours: BubbleDurationHours; label: string }[] = [
   { hours: 4, label: '4 Stunden' }, { hours: 8, label: '8 Stunden' }, { hours: 24, label: '24 Stunden' }, { hours: 72, label: '72 Stunden' },
   { hours: 168, label: '1 Woche' }, { hours: 336, label: '2 Wochen' }, { hours: 504, label: '3 Wochen' },
@@ -20,7 +18,6 @@ export const BUBBLE_DURATIONS: readonly { hours: BubbleDurationHours; label: str
 export const FACTION_EVENT_OPTIONS: readonly { id: FactionEvent; label: string }[] = [
   { id: 'oakvale', label: 'Oakvale' }, { id: 'undergroundMarket', label: 'Underground Market' }, { id: 'otherBattleEvent', label: 'Faction Battle Event' },
 ];
-
 export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number; individualAlarms: number; rssAlarms: number } }> = {
   free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
   streetBoss: { accounts: 2, alarms: 4, events: 2, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
@@ -29,7 +26,6 @@ export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; event
   boss: { accounts: 10, alarms: 70, events: 20, perAccount: { bubbleAlarms: 1, eventAlarms: 2, individualAlarms: 2, rssAlarms: 2 } },
   godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
 };
-
 export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'cvc' | 'faction' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
   bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'pulse', protected: true, durationHours: 24 },
   gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'gw5d', sound: 'siren', protected: true, durationHours: 24 },
@@ -39,11 +35,9 @@ export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'cvc' | 'faction' | 'cust
   individual: { title: 'Individual Timer', type: 'individual', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
   rss: { title: 'RSS Timer', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
 };
-
 const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_TITLE_LENGTH = 80;
-
 export function alarmsForAccount(alarms: Alarm[], accountId: string | null): Alarm[] { if (!accountId) return []; return alarms.filter((alarm) => alarm.accountId === accountId); }
 export function titleIsValid(title: string): boolean { const normalized = title.trim(); return normalized.length > 0 && normalized.length <= MAX_TITLE_LENGTH; }
 export function validateDateTime(date: string, time: string): boolean {
@@ -114,6 +108,10 @@ export function upcomingMoments(alarm: Alarm, now = new Date()): NotificationMom
   const eventTime = nextOccurrence(alarm, now); if (!eventTime) return []; const moments: NotificationMoment[] = [];
   for (const warningMinutes of [...alarm.warnings].sort((a, b) => b - a)) { const at = new Date(eventTime.getTime() - warningMinutes * 60 * 1000); if (at.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime, at, kind: 'warning', warningMinutes }); }
   if (eventTime.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime, at: eventTime, kind: 'main' });
+  if (alarm.type === 'cvc') {
+    const battleDayAt = cvcBattleDayAt(alarm, eventTime);
+    if (battleDayAt && battleDayAt.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime: battleDayAt, at: battleDayAt, kind: 'battle-day' });
+  }
   const endAt = occurrenceEnd(alarm, eventTime);
   if (endAt) { const endWarningAt = new Date(endAt.getTime() - 60 * 60 * 1000); if (endWarningAt.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime, at: endWarningAt, kind: 'end-warning', endAt }); if (endAt.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime, at: endAt, kind: 'end', endAt }); }
   return moments.sort((a, b) => a.at.getTime() - b.at.getTime());
@@ -125,4 +123,4 @@ export function buildAlarm(template: AlarmTemplate, accountId: string, date: str
 export function soundForAlarmType(type: AlarmType): SoundProfile { if (type === 'bubble' || type === 'gwBubble') return type === 'gwBubble' ? 'siren' : 'pulse'; if (type === 'cvc' || type === 'faction') return 'siren'; if (type === 'custom') return 'chime'; if (type === 'individual') return 'pulse'; return 'chime'; }
 export function alarmTypeLabel(type: AlarmType): string { if (type === 'bubble') return 'Bubble Alarm'; if (type === 'gwBubble') return 'Massacre Alarm'; if (type === 'cvc') return 'CvC · City vs City'; if (type === 'faction') return 'Faction Battle Event'; if (type === 'individual') return 'Individual Timer'; if (type === 'rss') return 'RSS Timer'; return 'Event Alarm'; }
 export function repeatLabel(repeat: RepeatMode): string { if (repeat === 'daily') return 'Täglich'; if (repeat === 'gw5d') return 'Massacre Alarm · alle 5 Tage'; if (repeat === 'cvcCycle') return 'CvC-Zyklus'; return 'Einmalig'; }
-export function momentLabel(moment: NotificationMoment): string { if (moment.kind === 'warning') return `${moment.warningMinutes} Min. Vorwarnung`; if (moment.kind === 'end-warning') return 'Event-Ende-Warnung'; if (moment.kind === 'end') return 'Event endet'; return 'Hauptereignis'; }
+export function momentLabel(moment: NotificationMoment): string { if (moment.kind === 'warning') return `${moment.warningMinutes} Min. Vorwarnung`; if (moment.kind === 'battle-day') return 'CvC Battle Day'; if (moment.kind === 'end-warning') return 'Event-Ende-Warnung'; if (moment.kind === 'end') return 'Event endet'; return 'Hauptereignis'; }
