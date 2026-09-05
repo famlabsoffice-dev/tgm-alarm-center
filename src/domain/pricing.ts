@@ -3,22 +3,14 @@ import { trustedNativeTier } from '../billing/nativeEntitlementService';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
-
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
 export const FOUNDER_ACCESS_TIER: Tier = 'godfather';
 export const FOUNDER_ACCOUNT_NAMES = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'] as const;
 const FOUNDER_ACCOUNT_NAME_KEYS = new Set(FOUNDER_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
-
-export function isFounderAccountName(accountName: string): boolean {
-  return FOUNDER_ACCOUNT_NAME_KEYS.has(accountName.trim().toLowerCase());
-}
-
-/** Legacy persisted tier is deliberately ignored for premium feature authorization. */
-export function effectiveTierForAccount(tier: Tier, accountName: string): Tier {
-  return isFounderAccountName(accountName) ? FOUNDER_ACCESS_TIER : trustedNativeTier(accountName, tier);
-}
-
+export function isFounderAccountName(accountName: string): boolean { return FOUNDER_ACCOUNT_NAME_KEYS.has(accountName.trim().toLowerCase()); }
+function founderAccessTier(tier: Tier, accountName: string): Tier { return isFounderAccountName(accountName) ? FOUNDER_ACCESS_TIER : tier; }
+export function effectiveTierForAccount(tier: Tier, accountName: string): Tier { return isFounderAccountName(accountName) ? founderAccessTier(tier, accountName) : trustedNativeTier(accountName, tier); }
 export interface FreeTrialState { startedAt: string | null; endsAt: string | null; }
 export function isFreeTrialActive(trial: FreeTrialState, at = Date.now()): boolean { if (!trial.startedAt || !trial.endsAt) return false; const started = Date.parse(trial.startedAt); const ends = Date.parse(trial.endsAt); return Number.isFinite(started) && Number.isFinite(ends) && ends > started && at >= started && at < ends; }
 export function canStartFreeTrial(trial: FreeTrialState): boolean { return trial.startedAt === null && trial.endsAt === null; }
