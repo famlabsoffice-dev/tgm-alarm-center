@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: tgm-mobile-quality
@@ -17,7 +17,7 @@ concurrency:
 jobs:
   mobile-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -25,16 +25,23 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.13.1
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
 
-      - name: Enable Corepack and pnpm
+      - name: Install exact pnpm toolchain
         run: |
-          corepack enable
-          corepack prepare pnpm@10.15.1 --activate
+          npm install --global pnpm@10.15.1
           pnpm --version
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - name: Resolve Expo SDK dependency graph
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Align Expo-managed dependencies
+        run: pnpm exec expo install --fix
+
+      - name: Expo Doctor
+        run: pnpm dlx expo-doctor@latest
 
       - name: Typecheck
         run: pnpm typecheck
@@ -59,3 +66,17 @@ jobs:
 
       - name: Expo configuration validation
         run: pnpm exec expo config --type public
+
+      - name: Persist verified dependency graph
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        shell: bash
+        run: |
+          if git diff --quiet -- package.json pnpm-lock.yaml; then
+            echo 'Dependency graph already synchronized.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add package.json pnpm-lock.yaml
+          git commit -m 'chore: lock verified Expo SDK 57 dependency graph'
+          git push
