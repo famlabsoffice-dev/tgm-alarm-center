@@ -30,6 +30,31 @@ test('catalog definitions generate deterministic personal-event occurrences', ()
   ]);
 });
 
+test('daily local schedules honor IANA timezone offsets across DST transitions', () => {
+  const definition = {
+    ...MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event')!,
+    id: 'daily-local-dst-test',
+    schedule: { ruleType: 'dailyLocal' as const, localTime: '09:00', timezoneId: 'Europe/Berlin' },
+  };
+  assert.deepEqual(validateEventDefinition(definition), []);
+  const occurrences = generateOccurrences(definition, new Date('2026-10-24T00:00:00.000Z'), new Date('2026-10-26T23:59:59.999Z'));
+  assert.deepEqual(occurrences.map((item) => item.startUtc), [
+    '2026-10-24T07:00:00.000Z',
+    '2026-10-25T08:00:00.000Z',
+    '2026-10-26T08:00:00.000Z',
+  ]);
+});
+
+test('invalid IANA timezones fail closed during event-definition validation', () => {
+  const definition = {
+    ...MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event')!,
+    id: 'daily-local-invalid-timezone',
+    schedule: { ruleType: 'dailyLocal' as const, localTime: '09:00', timezoneId: 'Mars/Olympus' },
+  };
+  assert.equal(validateEventDefinition(definition).includes('invalid-timezone'), true);
+  assert.throws(() => generateOccurrences(definition, new Date('2026-09-05T00:00:00.000Z'), new Date('2026-09-06T00:00:00.000Z')), /invalid-timezone/);
+});
+
 test('unconfirmed variants remain predicted until explicit confirmation', () => {
   const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
   if (!definition) throw new Error('personal-event definition missing');
@@ -46,11 +71,7 @@ test('unconfirmed variants remain predicted until explicit confirmation', () => 
 test('community reports produce weighted consensus and preserve conflicts', () => {
   const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
   if (!definition) throw new Error('personal-event definition missing');
-  const occurrence = generateOccurrences(
-    definition,
-    new Date('2026-09-05T08:00:00.000Z'),
-    new Date('2026-09-05T09:01:00.000Z'),
-  )[0];
+  const occurrence = generateOccurrences(definition, new Date('2026-09-05T08:00:00.000Z'), new Date('2026-09-05T09:01:00.000Z'))[0];
   if (!occurrence) throw new Error('personal-event occurrence missing');
   const reports: EventReport[] = [
     { id: 'r-1', occurrenceId: occurrence.id, reporterId: 'alice', variant: 'Construction', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:30:00.000Z' },
@@ -71,42 +92,21 @@ test('community reports produce weighted consensus and preserve conflicts', () =
 
 test('notification plans use stable occurrence ownership ids and chronological order', () => {
   const occurrence = {
-    id: 'personal-event@2026-09-05T09:00:00.000Z',
-    definitionId: 'personal-event',
-    definitionVersion: 1,
-    startUtc: '2026-09-05T09:00:00.000Z',
-    endUtc: '2026-09-05T09:55:00.000Z',
-    variant: null,
-    status: 'predicted' as const,
-    confidence: 1,
-    sourceRefs: ['internal-masterplan'],
-    metadata: {},
+    id: 'personal-event@2026-09-05T09:00:00.000Z', definitionId: 'personal-event', definitionVersion: 1,
+    startUtc: '2026-09-05T09:00:00.000Z', endUtc: '2026-09-05T09:55:00.000Z', variant: null, status: 'predicted' as const,
+    confidence: 1, sourceRefs: ['internal-masterplan'], metadata: {},
   };
   const plan = buildNotificationPlan(occurrence, [
-    { kind: 'end' },
-    { kind: 'warning', minutesBefore: 15 },
-    { kind: 'start' },
-    { kind: 'end-warning', minutesBefore: 10 },
+    { kind: 'end' }, { kind: 'warning', minutesBefore: 15 }, { kind: 'start' }, { kind: 'end-warning', minutesBefore: 10 },
   ]);
   assert.deepEqual(plan.map((item) => item.atUtc), [
-    '2026-09-05T08:45:00.000Z',
-    '2026-09-05T09:00:00.000Z',
-    '2026-09-05T09:45:00.000Z',
-    '2026-09-05T09:55:00.000Z',
+    '2026-09-05T08:45:00.000Z', '2026-09-05T09:00:00.000Z', '2026-09-05T09:45:00.000Z', '2026-09-05T09:55:00.000Z',
   ]);
   assert.equal(new Set(plan.map((item) => item.id)).size, 4);
 });
 
 test('notification health returns the first actionable failure and all reasons', () => {
-  const report = evaluateNotificationHealth({
-    notificationsGranted: true,
-    exactAlarmGranted: false,
-    batteryRestricted: true,
-    clockSkewMinutes: 4,
-    recoveryPending: false,
-    reconciliationRequired: true,
-    scheduleError: false,
-  });
+  const report = evaluateNotificationHealth({ notificationsGranted: true, exactAlarmGranted: false, batteryRestricted: true, clockSkewMinutes: 4, recoveryPending: false, reconciliationRequired: true, scheduleError: false });
   assert.equal(report.state, 'EXACT_ALARM_REQUIRED');
   assert.equal(report.healthy, false);
   assert.deepEqual(report.reasons, ['EXACT_ALARM_REQUIRED', 'BATTERY_RESTRICTION', 'CLOCK_SUSPECT', 'RECONCILIATION_REQUIRED']);
@@ -116,11 +116,7 @@ test('remote config requires valid structure, signature verification and monoton
   const baseRule = MASTER_EVENT_CATALOG[0];
   if (!baseRule) throw new Error('catalog is empty');
   const candidate: RemoteEventConfig = {
-    schema: 3,
-    configVersion: 2,
-    gameVersionRange: ['1.5.0', '1.6.x'],
-    effectiveFrom: '2026-09-05T00:00:00.000Z',
-    rules: [baseRule],
+    schema: 3, configVersion: 2, gameVersionRange: ['1.5.0', '1.6.x'], effectiveFrom: '2026-09-05T00:00:00.000Z', rules: [baseRule],
     signature: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_==',
   };
   assert.deepEqual(validateRemoteConfig(candidate), []);
