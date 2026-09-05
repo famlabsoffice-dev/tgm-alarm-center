@@ -35,28 +35,28 @@
   },
   "dependencies": {
     "@react-native-async-storage/async-storage": "^2.2.0",
-    "expo": "57.0.3",
-    "expo-application": "~6.1.5",
-    "expo-build-properties": "~0.14.8",
-    "expo-constants": "~17.1.7",
-    "expo-device": "~7.1.4",
-    "expo-document-picker": "~13.1.1",
-    "expo-file-system": "~18.1.10",
+    "expo": "57.0.17",
+    "expo-application": "~57.0.17",
+    "expo-build-properties": "~57.0.17",
+    "expo-constants": "~57.0.17",
+    "expo-device": "~57.0.17",
+    "expo-document-picker": "~57.0.17",
+    "expo-file-system": "~57.0.17",
     "expo-iap": "^3.4.13",
-    "expo-linking": "~7.1.7",
-    "expo-notifications": "~0.31.4",
-    "expo-sharing": "~13.1.5",
-    "expo-status-bar": "~2.2.3",
-    "expo-system-ui": "~5.0.11",
+    "expo-linking": "~57.0.17",
+    "expo-notifications": "~57.0.17",
+    "expo-sharing": "~57.0.17",
+    "expo-status-bar": "~57.0.17",
+    "expo-system-ui": "~57.0.17",
     "react": "19.2.3",
-    "react-native": "0.86.0"
+    "react-native": "0.86.3"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
     "@types/react": "~19.0.10",
-    "eslint": "^9.35.0",
+    "eslint": "^10.9.1",
     "jest": "^30.0.5",
     "tsx": "^4.23.13",
-    "typescript": "~5.8.3"
+    "typescript": "7.0.2"
   }
 }
