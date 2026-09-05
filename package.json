@@ -10,7 +10,7 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts && node --test tests/billing-security.test.mjs && node scripts/verify-production-floor.mjs && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-p0-hardening.mjs",
+    "test": "tsx --test tests/*.test.ts && node --test tests/billing-security.test.mjs && node scripts/verify-production-floor.mjs && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-p0-hardening.mjs && node scripts/verify-internal-optimization.mjs",
     "verify:billing-security": "node scripts/harden-web-billing.mjs && node --test tests/billing-security.test.mjs",
     "verify:production-floor": "node scripts/verify-production-floor.mjs",
     "verify:p0-hardening": "node scripts/verify-p0-hardening.mjs",
@@ -29,6 +29,7 @@
     "build:android:aab": "node scripts/build-store.mjs android",
     "build:ios:ipa": "node scripts/build-store.mjs ios",
     "verify:migrations": "bash scripts/migration-gates.sh status && bash scripts/migration-gates.sh preflight",
+    "verify:internal-optimization": "node scripts/verify-internal-optimization.mjs",
     "verify:regression": "node scripts/verify-regression.mjs"
   },
   "dependencies": {
