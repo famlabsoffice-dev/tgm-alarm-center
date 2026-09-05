@@ -353,6 +353,12 @@
     return `${alarm.title} ist jetzt fällig.`;
   }
 
+  function refreshLiveCountdowns() {
+    document.querySelectorAll('[data-live-countdown]').forEach((element) => {
+      const target = Number(element.dataset.liveCountdown);
+      if (Number.isFinite(target)) element.textContent = countdown(target);
+    });
+  }
   function showToast(message) {
     toastRoot.textContent = message;
     toastRoot.classList.add('show');
@@ -496,11 +502,11 @@
   function navButton(key, label) { return `<button type="button" class="${view === key ? 'active' : ''}" data-action="view" data-view="${key}">${label}</button>`; }
 
   function renderDashboard() {
-    const next = nextMoment();
+    const next = nextVisibleMoment();
     const active = state.alarms.filter((alarm) => alarm.active).length;
     const protectedCount = state.alarms.filter((alarm) => alarm.active && alarm.protected).length;
     const gwCount = state.alarms.filter((alarm) => alarm.active && alarm.repeat === 'gw5d').length;
-    const timeline = allMoments().slice(0, 3);
+    const timeline = visibleMoments().slice(0, 3);
     const legacyHeroMarker = 'Bubble Alarm und Massacre Alarm im Blick.';
     const legacyPlanMarker = 'Plane deinen Bubble Alarm';
     return `<section class="mobile-screen"><div class="screen-kicker">ÜBERSICHT</div><div class="card mobile-hero"><div class="eyebrow">TGM ALARM-CENTER</div><h1>Deine Alarmzentrale für jede Gaming-Session.</h1><p class="hero-copy">Plane Bubble Alarm, Massacre Alarm, Event Alarm und Timer lokal auf diesem Gerät.</p>${next ? `<div class="hero-next"><strong>${esc(nextMomentAlarm(next)?.title || 'Nächster Alarm')}</strong><span>${esc(momentLabel(next))} · ${formatDateTime(next.at)}</span><div class="countdown">${countdown(next.at)}</div></div>` : `<div class="hero-next"><strong>Bereit für deine nächste Spielzeit.</strong><span>Lege deinen ersten Alarm mit Vorwarnungen und lokalem Ton an.</span></div>`}<div class="hero-actions"><button class="btn primary" type="button" data-action="new-alarm" data-template="bubble">BUBBLE ANLEGEN</button><button class="btn secondary" type="button" data-action="new-alarm" data-template="gw">MASSACRE ALARM</button></div></div><div class="mobile-stats"><div class="card stat"><span class="eyebrow">AKTIVE ALARME</span><strong>${active}</strong><small>auf diesem Gerät</small></div><div class="card stat"><span class="eyebrow">GESCHÜTZT</span><strong>${protectedCount}</strong><small>markierte Alarme</small></div><div class="card stat"><span class="eyebrow">MASSACRE ALARM</span><strong>${gwCount}</strong><small>24h Schutzfenster</small></div><div class="card stat"><span class="eyebrow">AUDIO-ENGINE</span><strong class="${state.preferences.audioEnabled ? 'mint' : 'gold'}">${state.preferences.audioEnabled ? 'OK' : 'OFF'}</strong><small>${state.preferences.audioEnabled ? 'Töne bereit' : 'Aktivierung nötig'}</small></div></div><div class="section-head"><h2>DEINE NÄCHSTEN ALARME</h2><p>${state.alarms.length} gespeichert</p></div>${timeline.length ? `<div class="mobile-timeline">${timeline.map((moment) => { const alarm = nextMomentAlarm(moment); return `<div class="mobile-timeline-row"><span class="timeline-time">${formatTime(moment.at)}</span><div><strong>${esc(alarm?.title || 'Alarm')}</strong><small>${esc(momentLabel(moment))}</small></div><span class="badge ${moment.kind === 'end' ? 'red' : 'mint'}">${esc(typeLabel(alarm?.type))}</span></div>`; }).join('')}</div>` : renderAlarmList(3)}<div class="section-head"><h2>SCHNELLSTART</h2><p>Vorlagen mit passendem Ton</p></div><div class="template-grid"><button class="template" type="button" data-action="new-alarm" data-template="custom"><span class="template-icon">E</span><strong>Event Alarm</strong><span>15 Min. · Pulse</span></button><button class="template" type="button" data-action="new-alarm" data-template="individual"><span class="template-icon">I</span><strong>Individual Timer</strong><span>Investment · Building · Training</span></button><button class="template" type="button" data-action="new-alarm" data-template="rss"><span class="template-icon">R</span><strong>RSS Timer</strong><span>Tiles · Trucks · Schmuggler</span></button></div><span class="sr-only">${legacyHeroMarker} ${legacyPlanMarker}</span></section>`;
