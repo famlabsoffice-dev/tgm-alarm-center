@@ -5,6 +5,14 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgm-mobile-quality
+  cancel-in-progress: true
 
 jobs:
   mobile-quality:
