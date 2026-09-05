@@ -1,5 +1,3 @@
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, Tier, validateDateTime } from '../domain/alarm';
 
 export const FORMAT = 'tgm-alarm-center-backup';
@@ -7,6 +5,10 @@ export const VERSION = 1;
 export interface Backup { format: typeof FORMAT; version: 1; exportedAt: string; schemaVersion: 1; data: AppState; }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+const hasOnlyKeys = (value: Record<string, unknown>, keys: readonly string[]): boolean => {
+  const allowed = new Set(keys);
+  return Object.keys(value).every((key) => allowed.has(key));
+};
 const isIso = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(new Date(value).getTime());
 const validType = (value: unknown): value is AlarmType => value === 'bubble' || value === 'gwBubble' || value === 'custom' || value === 'individual' || value === 'rss';
 const validRepeat = (value: unknown): value is RepeatMode => value === 'once' || value === 'daily' || value === 'gw5d';
@@ -18,6 +20,7 @@ const MAX_ALARMS = 500;
 const MAX_COMPLETED_OCCURRENCES = 500;
 const MAX_WARNINGS = 16;
 const MAX_BACKUP_BYTES = 512 * 1024;
+const BACKUP_KEYS = ['format', 'version', 'exportedAt', 'schemaVersion', 'data'] as const;
 
 function validateAccount(value: unknown, ids: Set<string>): void {
   if (!isRecord(value) || typeof value.id !== 'string' || value.id.length === 0 || ids.has(value.id) || typeof value.name !== 'string' || value.name.trim().length === 0 || value.name.length > 80 || !validColor(value.color) || !isIso(value.createdAt)) throw new Error('Ungültige Accountdaten');
@@ -45,7 +48,7 @@ export function makeBackup(data: AppState): Backup {
 }
 
 export function validateBackup(value: unknown): Backup {
-  if (!isRecord(value) || value.format !== FORMAT || value.version !== VERSION || value.schemaVersion !== 1 || !isIso(value.exportedAt) || !isRecord(value.data)) throw new Error('Backup-Version oder Format ist nicht kompatibel');
+  if (!isRecord(value) || !hasOnlyKeys(value, BACKUP_KEYS) || value.format !== FORMAT || value.version !== VERSION || value.schemaVersion !== 1 || !isIso(value.exportedAt) || !isRecord(value.data)) throw new Error('Backup-Version oder Format ist nicht kompatibel');
   const data = value.data;
   if (data.schemaVersion !== 1 || !Array.isArray(data.accounts) || data.accounts.length > MAX_ACCOUNTS || !Array.isArray(data.alarms) || data.alarms.length > MAX_ALARMS || !isRecord(data.notificationPreferences) || (data.activeAccountId !== null && typeof data.activeAccountId !== 'string') || !validTier(data.tier) || (data.testConfirmedAt !== null && !isIso(data.testConfirmedAt))) throw new Error('Backup-Struktur ist ungültig');
   const accountIds = new Set<string>();
@@ -67,6 +70,8 @@ export function restoreBackup(payload: string | unknown): AppState {
 }
 
 export async function exportBackup(data: AppState): Promise<void> {
+  const FileSystem = await import('expo-file-system');
+  const Sharing = await import('expo-sharing');
   const file = `${FileSystem.cacheDirectory}tgm-alarm-center-${Date.now()}.json`;
   const payload = JSON.stringify(makeBackup(data), null, 2);
   if (payload.length > MAX_BACKUP_BYTES) throw new Error('Backup-Datei wäre zu groß');

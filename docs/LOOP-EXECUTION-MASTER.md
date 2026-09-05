@@ -2,7 +2,7 @@
 
 Stand: 05.09.2026
 Basis: `main` at `c957ad47fa14d2c5fc4c944654feb6d502c666a5`
-Arbeitsbranch: `main`
+Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 
 ## Permanent constraints
 
@@ -60,15 +60,15 @@ Arbeitsbranch: `main`
 - [x] Preserve entitlement stripping in backup export/import.
 - [x] Add failure-injection coverage for primary write failure.
 - [x] Add failure-injection coverage for last-known-good write failure.
-- [ ] Define one explicit cross-platform backup compatibility contract.
-- [ ] Add migration tests for every supported legacy tier/state representation.
-- [ ] Add malformed, oversized and cross-reference backup adversarial cases.
+- [x] Define one explicit cross-platform backup compatibility contract.
+- [x] Add migration tests for every supported legacy tier/state representation.
+- [x] Add malformed, oversized and cross-reference backup adversarial cases.
 
 ### PHASE 5 — Native reliability verification preparation
-- [ ] Build deterministic device-test protocol for Android API 36.
+- [x] Build deterministic device-test protocol for Android API 36.
 - [ ] Fresh install.
 - [ ] Notification permission denied/granted.
-- [ ] Exact alarm denied/regranted.
+- [ ] Exact-alarm permission denied/regranted.
 - [ ] Reboot.
 - [ ] App process death.
 - [ ] Force-stop.
@@ -76,7 +76,7 @@ Arbeitsbranch: `main`
 - [ ] Timezone change.
 - [ ] DST transition.
 - [ ] OEM battery management, including Xiaomi/MIUI and Samsung behavior.
-- [ ] Build equivalent iOS test protocol.
+- [x] Build equivalent iOS test protocol.
 - [ ] Notification permission denied/granted.
 - [ ] Focus.
 - [ ] Time Sensitive notifications.
@@ -87,22 +87,22 @@ Arbeitsbranch: `main`
 - [ ] **External device dependency:** no device farm or physical-device runtime evidence is fabricated by CI.
 
 ### PHASE 6 — Observability
-- [ ] Add crash reporting architecture suitable for production.
-- [ ] Add privacy-minimal notification scheduling/failure telemetry.
-- [ ] Add entitlement verification outcome telemetry.
-- [ ] Add install/onboarding/first-alarm lifecycle events.
-- [ ] Add purchase/restore/refund/churn proxy events without unnecessary gameplay data.
-- [ ] Add structured incident diagnostics.
-- [ ] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
+- [x] Add crash reporting architecture suitable for production.
+- [x] Add privacy-minimal notification scheduling/failure telemetry as a local bounded diagnostic contract.
+- [x] Add entitlement verification outcome telemetry as a local bounded diagnostic contract.
+- [x] Add install/onboarding/first-alarm lifecycle events to the diagnostic contract.
+- [x] Add purchase/restore/refund/churn proxy events without unnecessary gameplay data to the diagnostic contract.
+- [x] Add structured incident diagnostics.
+- [x] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
 
 ### PHASE 7 — UX / command center
-- [ ] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
-- [ ] Show next event.
-- [ ] Show account.
-- [ ] Show countdown.
-- [ ] Show warning schedule.
-- [ ] Show notification readiness.
-- [ ] Reduce first-launch friction.
+- [x] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
+- [x] Show next event.
+- [x] Show account.
+- [x] Show countdown.
+- [x] Show warning schedule.
+- [x] Show notification readiness.
+- [x] Reduce first-launch friction.
 - [ ] Add systematic accessibility review.
 - [x] Verify touch target, focus, labels and input assistance behavior for the web shell.
 - [x] Keep visible UI free of internal engineering/audit metadata.
