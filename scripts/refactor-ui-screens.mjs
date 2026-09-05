@@ -67,12 +67,7 @@ source = source.slice(0, defaultStart) + source.slice(defaultBlock.end);
 
 source = removeFunction(source, 'function isOccurrenceCompleted(');
 source = removeFunction(source, 'function SettingRow(', '): React.ReactElement {');
-
-const renderStart = source.indexOf('  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {');
-requireOnce(renderStart >= 0, 'renderAlarm block missing');
-const renderOpen = source.indexOf('{', renderStart);
-const renderBlock = extractBalancedBlock(source, renderOpen);
-source = source.slice(0, renderStart) + source.slice(renderBlock.end);
+source = removeFunction(source, '  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {', '=> {');
 source = source.replace('renderItem={renderAlarm}', 'renderItem={({ item }) => <AlarmCard alarm={item} now={now} onEdit={openEdit} onToggle={toggleAlarm} onComplete={completeAlarm} onDelete={deleteAlarm} />}');
 
 const footerMarker = '        ListFooterComponent={';
