@@ -17,6 +17,16 @@ let resumeSubscription: { remove: () => void } | null = null;
 const soundFor = (sound: Alarm['sound']): string => sound === 'siren' ? 'alarm-siren.wav' : sound === 'chime' ? 'alarm-chime.wav' : 'alarm-pulse.wav';
 export interface NotificationReadiness { supported: boolean; permission: boolean; exactAlarm: boolean; channel: boolean; recoveryPending?: boolean; }
 
+function hasNotificationAuthorization(status: Notifications.NotificationPermissionsStatus): boolean {
+  if (Platform.OS === 'ios') {
+    const iosStatus = status.ios?.status;
+    return iosStatus === Notifications.IosAuthorizationStatus.AUTHORIZED
+      || iosStatus === Notifications.IosAuthorizationStatus.PROVISIONAL
+      || iosStatus === Notifications.IosAuthorizationStatus.EPHEMERAL;
+  }
+  return status.status === Notifications.PermissionStatus.GRANTED;
+}
+
 async function ensureAndroidChannels(): Promise<boolean> {
   if (Platform.OS !== 'android') return true;
   try {
@@ -48,8 +58,8 @@ export async function initializeNotifications(): Promise<NotificationReadiness> 
   let permission = false;
   try {
     const current = await Notifications.getPermissionsAsync();
-    permission = current.status === Notifications.PermissionStatus.GRANTED;
-    if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) permission = (await Notifications.requestPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED;
+    permission = hasNotificationAuthorization(current);
+    if (!permission && current.status === Notifications.PermissionStatus.UNDETERMINED) permission = hasNotificationAuthorization(await Notifications.requestPermissionsAsync());
   } catch { permission = false; }
   let exactAlarm = true;
   let recoveryPending = false;
@@ -81,7 +91,7 @@ function installResumeRecovery(): void {
 async function initializeNotificationsForResume(): Promise<NotificationReadiness> {
   const channel = await ensureAndroidChannels();
   let permission = false;
-  try { permission = (await Notifications.getPermissionsAsync()).status === Notifications.PermissionStatus.GRANTED; } catch { permission = false; }
+  try { permission = hasNotificationAuthorization(await Notifications.getPermissionsAsync()); } catch { permission = false; }
   let exactAlarm = true;
   let recoveryPending = false;
   if (Platform.OS === 'android') {
@@ -198,7 +208,7 @@ export async function scheduleAlarm(alarm: Alarm, preferences: NotificationPrefe
 export async function scheduleLocalTestNotification(): Promise<string> {
   if (!Device.isDevice || Platform.OS === 'web') throw new Error('Der lokale Gerätetest ist nur auf einem echten Android- oder iOS-Gerät verfügbar.');
   if (Platform.OS === 'android' && !(await canScheduleExactAlarms())) throw new Error('Die Android-Berechtigung „Alarme & Erinnerungen“ ist nicht aktiviert.');
-  return Notifications.scheduleNotificationAsync({ content: { title: 'TGM ALARM CENTER · Gerätetest', body: 'Lokale Benachrichtigung erfolgreich ausgelöst.', sound: soundFor('pulse'), vibrate: [0, 250, 150, 250], data: { kind: 'local-test' }, categoryIdentifier: 'tgm-event', interruptionLevel: 'timeSensitive', ...(Platform.OS === 'android' ? { channelId: SOUND_CHANNELS.pulse } : {}) }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 1500) } });
+  return Notifications.scheduleNotificationAsync({ content: { title: 'TGM ALARM CENTER · Gerätetest', body: 'Öffne diese Benachrichtigung, um den Gerätetest auf diesem Gerät zu bestätigen.', sound: soundFor('pulse'), vibrate: [0, 250, 150, 250], data: { kind: 'local-test', testToken: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}` }, categoryIdentifier: 'tgm-test', interruptionLevel: 'timeSensitive', ...(Platform.OS === 'android' ? { channelId: SOUND_CHANNELS.pulse } : {}) }, trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: new Date(Date.now() + 1500) } });
 }
 
 export async function registerCategories(): Promise<void> {
@@ -206,5 +216,6 @@ export async function registerCategories(): Promise<void> {
   await Promise.allSettled([
     Notifications.setNotificationCategoryAsync('tgm-warning', [{ identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } }]),
     Notifications.setNotificationCategoryAsync('tgm-event', [{ identifier: 'open', buttonTitle: 'Öffnen', options: { opensAppToForeground: true } }, { identifier: 'done', buttonTitle: 'Erledigt', options: { opensAppToForeground: false } }]),
+    Notifications.setNotificationCategoryAsync('tgm-test', [{ identifier: 'confirm', buttonTitle: 'Test bestätigen', options: { opensAppToForeground: true } }]),
   ]);
 }
