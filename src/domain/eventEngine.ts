@@ -4,6 +4,8 @@ import { validateEventDefinition } from './eventModel';
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 
+type CalendarDate = { year: number; month: number; day: number };
+
 function occurrenceId(definition: EventDefinition, startUtc: string): string {
   return `${definition.id}@${startUtc}`;
 }
@@ -53,14 +55,47 @@ function anchoredOccurrences(definition: EventDefinition, from: Date, until: Dat
   return result;
 }
 
+function localDateAt(instant: Date, timeZone: string): CalendarDate {
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]));
+  return { year: values.year, month: values.month, day: values.day };
+}
+
+function zonedLocalToUtc(date: CalendarDate, hour: number, minute: number, timeZone: string): Date {
+  let candidate = new Date(Date.UTC(date.year, date.month - 1, date.day, hour, minute));
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const parts = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+    }).formatToParts(candidate);
+    const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]));
+    const rendered = Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute);
+    const target = Date.UTC(date.year, date.month - 1, date.day, hour, minute);
+    const delta = target - rendered;
+    if (delta === 0) break;
+    candidate = new Date(candidate.getTime() + delta);
+  }
+  return candidate;
+}
+
+function nextCalendarDate(date: CalendarDate): CalendarDate {
+  const next = new Date(Date.UTC(date.year, date.month - 1, date.day) + DAY_MS);
+  return { year: next.getUTCFullYear(), month: next.getUTCMonth() + 1, day: next.getUTCDate() };
+}
+
 function dailyOccurrences(definition: EventDefinition, from: Date, until: Date): EventOccurrence[] {
   const time = definition.schedule.localTime;
   if (!time || !/^\d{2}:\d{2}$/.test(time)) return [];
   const [hour, minute] = time.split(':').map(Number);
+  const timeZone = definition.schedule.timezoneId ?? 'UTC';
+  const startDate = localDateAt(from, timeZone);
   const result: EventOccurrence[] = [];
-  const cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), hour, minute));
-  if (cursor < from) cursor.setUTCDate(cursor.getUTCDate() + 1);
-  for (; cursor <= until; cursor.setTime(cursor.getTime() + DAY_MS)) result.push(makeOccurrence(definition, new Date(cursor)));
+  for (let date = startDate; ; date = nextCalendarDate(date)) {
+    const start = zonedLocalToUtc(date, hour, minute, timeZone);
+    if (start > until) break;
+    if (start >= from) result.push(makeOccurrence(definition, start));
+    if (result.length >= 512) break;
+  }
   return result;
 }
 
@@ -77,7 +112,7 @@ export function generateOccurrences(definition: EventDefinition, fromUtc: Date, 
     case 'dailyLocal':
       return dailyOccurrences(definition, fromUtc, untilUtc);
     case 'fixedUtc':
-      if (definition.id === 'game-reset') return dailyOccurrences({ ...definition, schedule: { ...definition.schedule, localTime: '00:00' } }, fromUtc, untilUtc);
+      if (definition.id === 'game-reset') return dailyOccurrences({ ...definition, schedule: { ...definition.schedule, localTime: '00:00', timezoneId: 'UTC' } }, fromUtc, untilUtc);
       if (definition.id === 'hell-event') return hourlyOccurrences(definition, fromUtc, untilUtc);
       return [];
     case 'dynamicRemote':
