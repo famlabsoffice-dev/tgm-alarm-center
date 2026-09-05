@@ -87,13 +87,13 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [ ] **External device dependency:** no device farm or physical-device runtime evidence is fabricated by CI.
 
 ### PHASE 6 — Observability
-- [ ] Add crash reporting architecture suitable for production.
-- [ ] Add privacy-minimal notification scheduling/failure telemetry.
-- [ ] Add entitlement verification outcome telemetry.
-- [ ] Add install/onboarding/first-alarm lifecycle events.
-- [ ] Add purchase/restore/refund/churn proxy events without unnecessary gameplay data.
-- [ ] Add structured incident diagnostics.
-- [ ] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
+- [x] Add crash reporting architecture suitable for production.
+- [x] Add privacy-minimal notification scheduling/failure telemetry as a local bounded diagnostic contract.
+- [x] Add entitlement verification outcome telemetry as a local bounded diagnostic contract.
+- [x] Add install/onboarding/first-alarm lifecycle events to the diagnostic contract.
+- [x] Add purchase/restore/refund/churn proxy events without unnecessary gameplay data to the diagnostic contract.
+- [x] Add structured incident diagnostics.
+- [x] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
 
 ### PHASE 7 — UX / command center
 - [ ] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
