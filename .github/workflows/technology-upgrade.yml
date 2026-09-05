@@ -17,17 +17,17 @@ concurrency:
 jobs:
   upgrade:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: Setup Node
+      - name: Setup Node LTS
         uses: actions/setup-node@v7
         with:
-          node-version: 22.13.1
+          node-version: 24.20.0
           package-manager-cache: false
 
       - name: Install exact pnpm toolchain
@@ -41,30 +41,38 @@ jobs:
           node <<'NODE'
           const fs = require('node:fs');
           const target = JSON.parse(fs.readFileSync('config/tech-stack-target.json', 'utf8'));
-          for (const key of ['expoSdk', 'react', 'reactNative', 'node']) {
+          for (const key of ['expoSdk', 'react', 'reactNative', 'node', 'typescript', 'eslint']) {
             if (typeof target[key] !== 'string' || target[key].length === 0) throw new Error(`Invalid technology target: ${key}`);
           }
-          console.log(`Expo SDK ${target.expoSdk}`);
-          console.log(`React ${target.react}`);
-          console.log(`React Native ${target.reactNative}`);
-          console.log(`Node ${target.node}`);
+          console.log(JSON.stringify(target, null, 2));
           NODE
 
-      - name: Upgrade Expo and React Native core
+      - name: Install target core toolchain
         run: |
           TARGET=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).expoSdk")
           REACT=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).react")
           RN=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).reactNative")
+          TS=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).typescript")
+          ESLINT=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).eslint")
           pnpm add --save-exact "expo@$TARGET" "react@$REACT" "react-native@$RN"
+          pnpm add --save-dev --save-exact "typescript@$TS" "eslint@$ESLINT"
 
       - name: Align all Expo dependencies
-        run: pnpm exec expo install --fix
+        run: |
+          pnpm exec expo install --fix
+          pnpm install --lockfile-only
 
       - name: Doctor
         run: pnpm dlx expo-doctor@latest
 
+      - name: Clean native prebuild
+        run: pnpm exec expo prebuild --clean --non-interactive
+
       - name: Typecheck
         run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Test suite
         run: pnpm test
