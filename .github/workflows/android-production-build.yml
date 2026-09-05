@@ -23,10 +23,10 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Setup Node
+      - name: Setup Node LTS
         uses: actions/setup-node@v7
         with:
-          node-version: 22.13.1
+          node-version: 24.20.0
           package-manager-cache: false
 
       - name: Install exact pnpm toolchain
@@ -34,15 +34,17 @@ jobs:
           npm install --global pnpm@10.15.1
           pnpm --version
 
-      - name: Resolve Expo SDK dependency graph
-        run: pnpm install --no-frozen-lockfile
+      - name: Install verified dependency graph
+        run: pnpm install --frozen-lockfile
 
-      - name: Align Expo-managed dependencies
-        run: pnpm exec expo install --fix
+      - name: Verify Expo compatibility
+        run: pnpm dlx expo-doctor@latest
+
+      - name: Rebuild native projects from clean state
+        run: pnpm exec expo prebuild --clean --non-interactive
 
       - name: Run Android reliability gate
         run: |
-          pnpm dlx expo-doctor@latest
           pnpm typecheck
           pnpm lint
           pnpm test
@@ -81,6 +83,8 @@ jobs:
             echo "Application ID: com.tgm.alarmcenter"
             echo "Commit: $(git rev-parse HEAD)"
             echo "Branch: main"
+            echo "Node: $(node --version)"
+            echo "Expo: $(node -p \"require('./node_modules/expo/package.json').version\")"
           } > android-production-build-metadata.txt
 
       - name: Upload production build evidence
