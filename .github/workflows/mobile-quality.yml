@@ -37,13 +37,26 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Align Expo-managed dependencies
-        run: pnpm exec expo install expo@57.0.17 react-native@0.86.3 && pnpm exec expo install --fix
+        run: pnpm exec expo install expo@57.0.20 react-native@0.86.3 && pnpm exec expo install --fix
+
+      - name: Normalize Android notification sound assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pair in "alarm-pulse.wav:alarm_pulse.wav" "alarm-siren.wav:alarm_siren.wav" "alarm-chime.wav:alarm_chime.wav"; do
+            IFS=: read -r source target <<< "$pair"
+            test -f "assets/notifications/$source"
+            cp "assets/notifications/$source" "assets/notifications/$target"
+          done
+          test -f assets/notifications/alarm_pulse.wav
+          test -f assets/notifications/alarm_siren.wav
+          test -f assets/notifications/alarm_chime.wav
 
       - name: Expo Doctor
         run: pnpm dlx expo-doctor@latest
 
       - name: Clean native prebuild
-        run: pnpm exec expo prebuild --clean --non-interactive
+        run: CI=1 pnpm exec expo prebuild --clean
 
       - name: Typecheck
         run: pnpm typecheck
@@ -73,12 +86,12 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         shell: bash
         run: |
-          if git diff --quiet -- package.json pnpm-lock.yaml; then
+          if git diff --quiet -- package.json pnpm-lock.yaml assets/notifications; then
             echo 'Dependency graph already synchronized.'
             exit 0
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add package.json pnpm-lock.yaml
+          git add package.json pnpm-lock.yaml assets/notifications
           git commit -m 'chore: lock verified Expo SDK 57 dependency graph'
           git push
