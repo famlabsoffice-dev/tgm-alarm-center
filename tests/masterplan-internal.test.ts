@@ -1,10 +1,16 @@
-import { strict as assert } from 'node:assert';
+import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MASTER_EVENT_CATALOG } from '../src/domain/eventCatalog';
 import { generateOccurrences, mergeOccurrenceConfirmation } from '../src/domain/eventEngine';
 import { evaluateNotificationHealth } from '../src/domain/notificationHealth';
+import { buildNotificationPlan } from '../src/domain/notificationPlan';
 import { acceptRemoteConfig, validateRemoteConfig, type RemoteEventConfig } from '../src/domain/remoteConfig';
 import { PRODUCT_IDENTITIES, assertTrackBIdentity } from '../src/domain/productTracks';
+import { validateEventDefinition } from '../src/domain/eventModel';
+
+test('all built-in event definitions satisfy the strict model contract', () => {
+  for (const definition of MASTER_EVENT_CATALOG) assert.deepEqual(validateEventDefinition(definition), [], definition.id);
+});
 
 test('catalog definitions generate deterministic personal-event occurrences', () => {
   const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
@@ -34,6 +40,34 @@ test('unconfirmed variants remain predicted until explicit confirmation', () => 
   assert.equal(confirmed.confidence, 0.97);
 });
 
+test('notification plans use stable occurrence ownership ids and chronological order', () => {
+  const occurrence = {
+    id: 'personal-event@2026-09-05T09:00:00.000Z',
+    definitionId: 'personal-event',
+    definitionVersion: 1,
+    startUtc: '2026-09-05T09:00:00.000Z',
+    endUtc: '2026-09-05T09:55:00.000Z',
+    variant: null,
+    status: 'predicted' as const,
+    confidence: 1,
+    sourceRefs: ['internal-masterplan'],
+    metadata: {},
+  };
+  const plan = buildNotificationPlan(occurrence, [
+    { kind: 'end' },
+    { kind: 'warning', minutesBefore: 15 },
+    { kind: 'start' },
+    { kind: 'end-warning', minutesBefore: 10 },
+  ]);
+  assert.deepEqual(plan.map((item) => item.atUtc), [
+    '2026-09-05T08:45:00.000Z',
+    '2026-09-05T09:00:00.000Z',
+    '2026-09-05T09:45:00.000Z',
+    '2026-09-05T09:55:00.000Z',
+  ]);
+  assert.equal(new Set(plan.map((item) => item.id)).size, 4);
+});
+
 test('notification health returns the first actionable failure and all reasons', () => {
   const report = evaluateNotificationHealth({
     notificationsGranted: true,
@@ -51,6 +85,7 @@ test('notification health returns the first actionable failure and all reasons',
 
 test('remote config requires valid structure, signature verification and monotonic versions', () => {
   const baseRule = MASTER_EVENT_CATALOG[0];
+  assert.ok(baseRule);
   const candidate: RemoteEventConfig = {
     schema: 3,
     configVersion: 2,
