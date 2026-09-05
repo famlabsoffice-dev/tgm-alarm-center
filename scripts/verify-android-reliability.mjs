@@ -17,7 +17,7 @@ for (const permission of requiredAndroidPermissions) {
 const notificationPlugin = app.plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === 'expo-notifications');
 if (!notificationPlugin) throw new Error('expo-notifications plugin configuration missing.');
 const configuredSounds = notificationPlugin[1]?.sounds ?? [];
-for (const sound of ['./assets/notifications/alarm-pulse.wav', './assets/notifications/alarm-siren.wav', './assets/notifications/alarm-chime.wav']) {
+for (const sound of ['./assets/notifications/alarm_pulse.wav', './assets/notifications/alarm_siren.wav', './assets/notifications/alarm_chime.wav']) {
   if (!configuredSounds.includes(sound)) throw new Error(`Notification sound is not registered in app.json: ${sound}`);
   if (!existsSync(sound)) throw new Error(`Notification sound asset is missing: ${sound}`);
 }

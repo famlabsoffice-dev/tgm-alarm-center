@@ -70,7 +70,7 @@ export function restoreBackup(payload: string | unknown): AppState {
 }
 
 export async function exportBackup(data: AppState): Promise<void> {
-  const FileSystem = await import('expo-file-system');
+  const FileSystem = await import('expo-file-system/legacy');
   const Sharing = await import('expo-sharing');
   const file = `${FileSystem.cacheDirectory}tgm-alarm-center-${Date.now()}.json`;
   const payload = JSON.stringify(makeBackup(data), null, 2);
