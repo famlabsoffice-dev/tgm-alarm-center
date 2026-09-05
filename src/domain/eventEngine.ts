@@ -29,7 +29,8 @@ function makeOccurrence(definition: EventDefinition, start: Date, variant: strin
 }
 
 function hourlyOccurrences(definition: EventDefinition, from: Date, until: Date): EventOccurrence[] {
-  const cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), from.getUTCHours() + 1, 0, 0, 0));
+  const cursor = new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate(), from.getUTCHours(), 0, 0, 0));
+  if (cursor < from) cursor.setTime(cursor.getTime() + HOUR_MS);
   const result: EventOccurrence[] = [];
   for (; cursor <= until; cursor.setTime(cursor.getTime() + HOUR_MS)) result.push(makeOccurrence(definition, new Date(cursor)));
   return result;
