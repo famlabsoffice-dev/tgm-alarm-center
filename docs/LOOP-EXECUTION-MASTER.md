@@ -108,7 +108,7 @@ Arbeitsbranch: `loop/phase7-accessibility-hardening`
 - [x] Keep visible UI free of internal engineering/audit metadata.
 
 ### PHASE 8 — Architecture convergence
-- [ ] Extract Scheduler Service from `App.tsx`.
+- [x] Extract Scheduler Service from `App.tsx`.
 - [x] Extract Entitlement Service.
 - [ ] Extract screen-level UI modules.
 - [ ] Separate platform adapters from domain contracts.
