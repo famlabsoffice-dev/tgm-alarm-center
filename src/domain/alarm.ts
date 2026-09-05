@@ -1,15 +1,33 @@
-export type AlarmType = 'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss';
-export type RepeatMode = 'once' | 'daily' | 'gw5d';
+export type AlarmType = 'bubble' | 'gwBubble' | 'cvc' | 'faction' | 'custom' | 'individual' | 'rss';
+export type RepeatMode = 'once' | 'daily' | 'gw5d' | 'cvcCycle';
 export type SoundProfile = 'pulse' | 'siren' | 'chime';
 export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'boss' | 'godfather';
 export type OccurrenceKind = 'warning' | 'main' | 'end-warning' | 'end';
+export type BubbleDurationHours = 4 | 8 | 24 | 72 | 168 | 336 | 504;
+export type FactionEvent = 'oakvale' | 'undergroundMarket' | 'otherBattleEvent';
 
 export interface Account { id: string; name: string; color: string; createdAt: string; }
-export interface Alarm { id: string; accountId: string; title: string; type: AlarmType; date: string; time: string; eventAtUtc: string; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; active: boolean; protected: boolean; completedOccurrences: Record<string, true>; createdAt: string; updatedAt: string; }
+export interface Alarm { id: string; accountId: string; title: string; type: AlarmType; date: string; time: string; eventAtUtc: string; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; active: boolean; protected: boolean; completedOccurrences: Record<string, true>; createdAt: string; updatedAt: string; durationHours?: BubbleDurationHours; factionEvent?: FactionEvent; cycleDays?: number; }
 export interface NotificationPreferences { sound: SoundProfile; warningSound: boolean; eventSound: boolean; vibration: boolean; criticalAlerts: boolean; preview: boolean; }
 export interface AppState { schemaVersion: 1; accounts: Account[]; alarms: Alarm[]; activeAccountId: string | null; tier: Tier; notificationPreferences: NotificationPreferences; testConfirmedAt: string | null; }
-export interface AlarmTemplate { title: string; type: AlarmType; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; protected: boolean; }
+export interface AlarmTemplate { title: string; type: AlarmType; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; protected: boolean; durationHours?: BubbleDurationHours; factionEvent?: FactionEvent; cycleDays?: number; }
 export interface NotificationMoment { alarmId: string; eventTime: Date; at: Date; kind: OccurrenceKind; warningMinutes?: number; endAt?: Date; }
+
+export const BUBBLE_DURATIONS: readonly { hours: BubbleDurationHours; label: string }[] = [
+  { hours: 4, label: '4 Stunden' },
+  { hours: 8, label: '8 Stunden' },
+  { hours: 24, label: '24 Stunden' },
+  { hours: 72, label: '72 Stunden' },
+  { hours: 168, label: '1 Woche' },
+  { hours: 336, label: '2 Wochen' },
+  { hours: 504, label: '3 Wochen' },
+];
+
+export const FACTION_EVENT_OPTIONS: readonly { id: FactionEvent; label: string }[] = [
+  { id: 'oakvale', label: 'Oakvale' },
+  { id: 'undergroundMarket', label: 'Underground Market' },
+  { id: 'otherBattleEvent', label: 'Faction Battle Event' },
+];
 
 export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number; individualAlarms: number; rssAlarms: number } }> = {
   free: { accounts: 1, alarms: 2, events: 1, perAccount: { bubbleAlarms: 1, eventAlarms: 1, individualAlarms: 0, rssAlarms: 0 } },
@@ -20,9 +38,11 @@ export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; event
   godfather: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
 };
 
-export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
-  bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'pulse', protected: true },
-  gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'gw5d', sound: 'siren', protected: true },
+export const TEMPLATES: Record<'bubble' | 'gwBubble' | 'cvc' | 'faction' | 'custom' | 'individual' | 'rss', AlarmTemplate> = {
+  bubble: { title: 'Bubble Alarm', type: 'bubble', warnings: [60, 15], repeat: 'once', sound: 'pulse', protected: true, durationHours: 24 },
+  gwBubble: { title: 'Massacre Alarm', type: 'gwBubble', warnings: [60, 30, 15], repeat: 'gw5d', sound: 'siren', protected: true, durationHours: 24 },
+  cvc: { title: 'CvC Event', type: 'cvc', warnings: [60, 30, 15], repeat: 'cvcCycle', sound: 'siren', protected: true, cycleDays: 7 },
+  faction: { title: 'Faction Battle Event', type: 'faction', warnings: [60, 30, 15], repeat: 'once', sound: 'siren', protected: true, factionEvent: 'undergroundMarket' },
   custom: { title: 'Event Alarm', type: 'custom', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
   individual: { title: 'Individual Timer', type: 'individual', warnings: [15], repeat: 'once', sound: 'pulse', protected: false },
   rss: { title: 'RSS Timer', type: 'rss', warnings: [15], repeat: 'once', sound: 'chime', protected: false },
@@ -69,13 +89,39 @@ function nextGwOccurrence(alarm: Alarm, now: Date): Date | null {
   for (let attempts = 0; attempts < 370; attempts += 1) { if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate; candidate = new Date(candidate.getTime() + FIVE_DAYS_MS); }
   return null;
 }
+function nextCvcOccurrence(alarm: Alarm, now: Date): Date | null {
+  const base = new Date(alarm.eventAtUtc); if (!Number.isFinite(base.getTime())) return null;
+  const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7;
+  const cycleMs = cycleDays * DAY_MS;
+  if (base.getTime() > now.getTime()) return isCompleted(alarm, base) ? new Date(base.getTime() + cycleMs) : base;
+  const cycles = Math.floor((now.getTime() - base.getTime()) / cycleMs) + 1;
+  let candidate = new Date(base.getTime() + cycles * cycleMs);
+  for (let attempts = 0; attempts < 370; attempts += 1) { if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate; candidate = new Date(candidate.getTime() + cycleMs); }
+  return null;
+}
 export function nextOccurrence(alarm: Alarm, now = new Date()): Date | null {
   if (!alarm.active) return null;
   if (alarm.repeat === 'once') { const event = new Date(alarm.eventAtUtc); return Number.isFinite(event.getTime()) && event.getTime() > now.getTime() && !isCompleted(alarm, event) ? event : null; }
-  if (alarm.repeat === 'daily') return nextDailyOccurrence(alarm, now); return nextGwOccurrence(alarm, now);
+  if (alarm.repeat === 'daily') return nextDailyOccurrence(alarm, now);
+  if (alarm.repeat === 'gw5d') return nextGwOccurrence(alarm, now);
+  return nextCvcOccurrence(alarm, now);
 }
 export function occurrenceKey(alarmId: string, eventTime: Date): string { return `${alarmId}:${eventTime.toISOString()}`; }
-export function occurrenceEnd(alarm: Alarm, eventTime: Date): Date | null { return alarm.repeat === 'gw5d' ? new Date(eventTime.getTime() + DAY_MS) : null; }
+export function occurrenceEnd(alarm: Alarm, eventTime: Date): Date | null {
+  if (alarm.type === 'cvc') return new Date(eventTime.getTime() + DAY_MS);
+  if (alarm.type === 'bubble' || alarm.type === 'gwBubble') return new Date(eventTime.getTime() + (alarm.durationHours ?? 24) * 60 * 60 * 1000);
+  return null;
+}
+export function isCvcBattleDay(alarm: Alarm, eventTime: Date, now = new Date()): boolean {
+  if (alarm.type !== 'cvc') return false;
+  const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7;
+  const cycleMs = cycleDays * DAY_MS;
+  const base = new Date(alarm.eventAtUtc);
+  if (!Number.isFinite(base.getTime()) || eventTime.getTime() < base.getTime()) return false;
+  const cycleOffset = eventTime.getTime() - base.getTime();
+  const dayIndex = Math.floor((now.getTime() - eventTime.getTime()) / DAY_MS);
+  return cycleOffset % cycleMs === 0 && dayIndex >= 0 && dayIndex < 1;
+}
 export function upcomingMoments(alarm: Alarm, now = new Date()): NotificationMoment[] {
   const eventTime = nextOccurrence(alarm, now); if (!eventTime) return []; const moments: NotificationMoment[] = [];
   for (const warningMinutes of [...alarm.warnings].sort((a, b) => b - a)) { const at = new Date(eventTime.getTime() - warningMinutes * 60 * 1000); if (at.getTime() > now.getTime()) moments.push({ alarmId: alarm.id, eventTime, at, kind: 'warning', warningMinutes }); }
@@ -86,9 +132,9 @@ export function upcomingMoments(alarm: Alarm, now = new Date()): NotificationMom
 }
 export function buildAlarm(template: AlarmTemplate, accountId: string, date: string, time: string, now = new Date()): Alarm {
   const eventAtUtc = localDateTimeToUtc(date, time); if (!eventAtUtc) throw new Error('Datum oder Uhrzeit ist ungültig');
-  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, accountId, title: template.title, type: template.type, date, time, eventAtUtc, warnings: [...template.warnings], repeat: template.repeat, sound: template.sound, active: true, protected: template.protected, completedOccurrences: {}, createdAt: now.toISOString(), updatedAt: now.toISOString() };
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, accountId, title: template.title, type: template.type, date, time, eventAtUtc, warnings: [...template.warnings], repeat: template.repeat, sound: template.sound, active: true, protected: template.protected, completedOccurrences: {}, createdAt: now.toISOString(), updatedAt: now.toISOString(), durationHours: template.durationHours, factionEvent: template.factionEvent, cycleDays: template.cycleDays };
 }
-export function soundForAlarmType(type: AlarmType): SoundProfile { if (type === 'bubble' || type === 'gwBubble') return type === 'gwBubble' ? 'siren' : 'pulse'; if (type === 'custom') return 'chime'; if (type === 'individual') return 'pulse'; return 'chime'; }
-export function alarmTypeLabel(type: AlarmType): string { if (type === 'bubble') return 'Bubble Alarm'; if (type === 'gwBubble') return 'Massacre Alarm'; if (type === 'individual') return 'Individual Timer'; if (type === 'rss') return 'RSS Timer'; return 'Event Alarm'; }
-export function repeatLabel(repeat: RepeatMode): string { if (repeat === 'daily') return 'Täglich'; if (repeat === 'gw5d') return 'Massacre Alarm · alle 5 Tage'; return 'Einmalig'; }
-export function momentLabel(moment: NotificationMoment): string { if (moment.kind === 'warning') return `${moment.warningMinutes} Min. Vorwarnung`; if (moment.kind === 'end-warning') return 'Bubble Alarm-Ende-Warnung'; if (moment.kind === 'end') return 'Bubble Alarm endet'; return 'Hauptereignis'; }
+export function soundForAlarmType(type: AlarmType): SoundProfile { if (type === 'bubble' || type === 'gwBubble') return type === 'gwBubble' ? 'siren' : 'pulse'; if (type === 'cvc' || type === 'faction') return 'siren'; if (type === 'custom') return 'chime'; if (type === 'individual') return 'pulse'; return 'chime'; }
+export function alarmTypeLabel(type: AlarmType): string { if (type === 'bubble') return 'Bubble Alarm'; if (type === 'gwBubble') return 'Massacre Alarm'; if (type === 'cvc') return 'CvC · City vs City'; if (type === 'faction') return 'Faction Battle Event'; if (type === 'individual') return 'Individual Timer'; if (type === 'rss') return 'RSS Timer'; return 'Event Alarm'; }
+export function repeatLabel(repeat: RepeatMode): string { if (repeat === 'daily') return 'Täglich'; if (repeat === 'gw5d') return 'Massacre Alarm · alle 5 Tage'; if (repeat === 'cvcCycle') return 'CvC-Zyklus'; return 'Einmalig'; }
+export function momentLabel(moment: NotificationMoment): string { if (moment.kind === 'warning') return `${moment.warningMinutes} Min. Vorwarnung`; if (moment.kind === 'end-warning') return 'Event-Ende-Warnung'; if (moment.kind === 'end') return 'Event endet'; return 'Hauptereignis'; }
