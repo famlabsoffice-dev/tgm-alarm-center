@@ -17,6 +17,8 @@ assert.match(notifications, /categoryIdentifier: 'tgm-test'/);
 assert.match(notifications, /testToken:/);
 assert.match(notifications, /setNotificationCategoryAsync\('tgm-test'/);
 assert.match(notifications, /Der lokale Gerätetest ist nur auf einem echten Android- oder iOS-Gerät verfügbar/);
+assert.match(notifications, /if \(!key\) continue;/);
+assert.doesNotMatch(notifications, /if \(!key\) \{ await Notifications\.cancelScheduledNotificationAsync/);
 assert.match(manifest, /SCHEDULE_EXACT_ALARM/);
 assert.match(manifest, /RECEIVE_BOOT_COMPLETED/);
 
@@ -30,5 +32,5 @@ assert.match(app, /Gerätetest-Signal empfangen/);
 assert.doesNotMatch(app, /Benachrichtigung erfolgreich ausgelöst/);
 
 console.log('Native notification trust-boundary verification: PASS');
-console.log('Permission state, exact-alarm gating, test identity and explicit device-signal confirmation are contract-protected.');
+console.log('Permission state, exact-alarm gating, test identity, ownership-safe reconciliation and explicit device-signal confirmation are contract-protected.');
 console.log('Automated checks do not claim guaranteed OS-level delivery.');
