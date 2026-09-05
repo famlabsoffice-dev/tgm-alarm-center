@@ -1,4 +1,5 @@
 import type { Tier } from './alarm';
+import { trustedNativeTier } from '../billing/nativeEntitlementService';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
@@ -13,8 +14,9 @@ export function isFounderAccountName(accountName: string): boolean {
   return FOUNDER_ACCOUNT_NAME_KEYS.has(accountName.trim().toLowerCase());
 }
 
+/** Legacy persisted tier is deliberately ignored for premium feature authorization. */
 export function effectiveTierForAccount(tier: Tier, accountName: string): Tier {
-  return isFounderAccountName(accountName) ? FOUNDER_ACCESS_TIER : tier;
+  return trustedNativeTier(accountName, tier);
 }
 
 export interface FreeTrialState {
@@ -90,7 +92,7 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
   godfather: {
     tier: 'godfather', name: 'Godfather',
     limits: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
-    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 }, usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68, lifetime: 927.64 }, usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 }, jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 }, jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 }, annualSavingPercent: 17,
+    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 }, usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68 }, usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 }, jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 }, jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 }, annualSavingPercent: 17,
   },
 };
 
