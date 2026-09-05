@@ -1,0 +1,92 @@
+name: technology-upgrade
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - config/tech-stack-target.json
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: tgm-technology-upgrade
+  cancel-in-progress: false
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.1
+
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+          pnpm --version
+
+      - name: Read target baseline
+        id: target
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const target = JSON.parse(fs.readFileSync('config/tech-stack-target.json', 'utf8'));
+          for (const key of ['expoSdk', 'react', 'reactNative', 'node']) {
+            if (typeof target[key] !== 'string' || target[key].length === 0) throw new Error(`Invalid technology target: ${key}`);
+          }
+          console.log(`Expo SDK ${target.expoSdk}`);
+          console.log(`React ${target.react}`);
+          console.log(`React Native ${target.reactNative}`);
+          console.log(`Node ${target.node}`);
+          NODE
+
+      - name: Upgrade Expo and React Native core
+        run: |
+          TARGET=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).expoSdk")
+          REACT=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).react")
+          RN=$(node -p "JSON.parse(require('fs').readFileSync('config/tech-stack-target.json','utf8')).reactNative")
+          pnpm add --save-exact "expo@$TARGET" "react@$REACT" "react-native@$RN"
+
+      - name: Align all Expo dependencies
+        run: pnpm exec expo install --fix
+
+      - name: Doctor
+        run: pnpm dlx expo-doctor@latest
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test suite
+        run: pnpm test
+
+      - name: Store and native gates
+        run: |
+          pnpm verify:android-reliability
+          pnpm verify:mobile-build
+          pnpm verify:store-config
+          pnpm exec expo config --type public
+
+      - name: Commit verified technology upgrade
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet; then
+            echo "Technology baseline already synchronized."
+            exit 0
+          fi
+          git status --short
+          git add package.json pnpm-lock.yaml
+          git commit -m "chore: upgrade native technology stack"
+          git push
