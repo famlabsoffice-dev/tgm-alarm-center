@@ -55,22 +55,22 @@ jobs:
           TARGET_SHA: ${{ env.RELEASE_TARGET_SHA }}
         run: |
           set -euo pipefail
-          required=(
-            "Founder Access Gate"
-            "Billing Security Gate"
-            "Repository Snapshot"
-            "TGM Web Pricing Sync"
-            "mobile-quality"
-            "android-production-build"
-            "TGM Regression Full Suite"
-            "Deploy TGM Alarm Center to GitHub Pages"
-            "TGM Release Verification · ${TARGET_SHA}"
-            "TGM Migration Gates"
+          required_paths=(
+            ".github/workflows/founder-access-gate.yml"
+            ".github/workflows/billing-security-gate.yml"
+            ".github/workflows/repository-snapshot.yml"
+            ".github/workflows/sync-web-pricing.yml"
+            ".github/workflows/mobile-quality.yml"
+            ".github/workflows/android-production-build.yml"
+            ".github/workflows/regression.yml"
+            ".github/workflows/pages.yml"
+            ".github/workflows/web-core.yml"
+            ".github/workflows/migration-gates.yml"
           )
           json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
-          for workflow in "${required[@]}"; do
-            result="$(jq -r --arg n "$workflow" --arg s "$TARGET_SHA" '[.workflow_runs[] | select(.name == $n and .head_sha == $s)] | sort_by(.updated_at) | last | if . == null then "MISSING" else (.status + ":" + (.conclusion // "")) end' <<<"$json")"
-            echo "$workflow => $result"
+          for workflow_path in "${required_paths[@]}"; do
+            result="$(jq -r --arg p "$workflow_path" --arg s "$TARGET_SHA" '[.workflow_runs[] | select(.path == $p and .head_sha == $s and .event != "workflow_run")] | sort_by(.updated_at) | last | if . == null then "MISSING" else (.status + ":" + (.conclusion // "")) end' <<<"$json")"
+            echo "$workflow_path => $result"
             test "$result" = "completed:success"
           done
 
