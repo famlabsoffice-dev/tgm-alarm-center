@@ -6,7 +6,7 @@ const app = fs.readFileSync('App.tsx', 'utf8');
 
 test('dashboard keeps Next Critical Event as the primary command-center answer', () => {
   assert.match(app, /<Text[^>]*style=\{styles\.eyebrow\}>ALS NÄCHSTES<\/Text>/u);
-  assert.match(app, /<Text[^>]*style=\{styles\.nextTitle\}>\{next\?\.alarm\.title\}/u);
+  assert.match(app, /style=\{styles\.nextTitle\}>\{next\.alarm\.title\}/u);
   assert.match(app, /formatCountdown\(next\.event, now\)/u);
 });
 
