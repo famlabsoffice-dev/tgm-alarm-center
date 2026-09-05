@@ -1,8 +1,8 @@
 # TGM Alarm Center — Autonomous Loop Execution Master
 
 Stand: 05.09.2026
-Basis: `main` at `c957ad47fa14d2c5fc4c944654feb6d502c666a5`
-Arbeitsbranch: `loop/phase4-backup-migration-hardening`
+Basis: `main` at `3649917cec00f4e0aa795405977923ec99b7a080`
+Arbeitsbranch: `loop/phase7-accessibility-hardening`
 
 ## Permanent constraints
 
@@ -103,7 +103,7 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [x] Show warning schedule.
 - [x] Show notification readiness.
 - [x] Reduce first-launch friction.
-- [ ] Add systematic accessibility review.
+- [x] Add systematic accessibility review.
 - [x] Verify touch target, focus, labels and input assistance behavior for the web shell.
 - [x] Keep visible UI free of internal engineering/audit metadata.
 
@@ -165,7 +165,7 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [ ] Typography refinement.
 - [ ] Microinteractions.
 - [ ] Sound UX refinement.
-- [x] Accessibility completion for the verified web-shell surface.
+- [x] Accessibility completion for the verified web-shell and native shared UI surface.
 - [ ] Localization layer.
 - [ ] Account presentation refinement.
 - [ ] Templates.

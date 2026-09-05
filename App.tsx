@@ -482,7 +482,7 @@ export default function App() {
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
             <View style={styles.templateGrid}>
-              {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' || key === 'gwBubble' ? 'Siren' : key === 'rss' ? 'Chime' : 'Pulse'}</Text></Pressable>)}
+              {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} hitSlop={8} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' || key === 'gwBubble' ? 'Siren' : key === 'rss' ? 'Chime' : 'Pulse'}</Text></Pressable>)}
             </View>
             <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{visibleAlarms.length} gespeichert</Text></View>
           </View>
@@ -500,9 +500,9 @@ export default function App() {
             </View>
             {Platform.OS !== 'web' ? <BillingPanel currentTier={state.tier} onTierConfirmed={confirmStoreTier} /> : null}
             <View style={styles.actionRowFooter}>
-              <Pressable accessibilityRole="button" onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
-              <Pressable accessibilityRole="button" onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Backup exportieren" hitSlop={8} onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Backup importieren" hitSlop={8} onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
+              <Pressable accessibilityRole="button" accessibilityLabel="Gerätetest starten" hitSlop={8} onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
             </View>
             <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1</Text>
           </View>
@@ -517,12 +517,12 @@ export default function App() {
               {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} onPress={() => setEditor((current) => ({ ...current, ...defaultEditor(TEMPLATES[key]), title: current.title }))} style={[styles.choice, editor.type === TEMPLATES[key].type && styles.choiceActive]}><Text style={styles.choiceText}>{alarmTypeLabel(TEMPLATES[key].type)}</Text></Pressable>)}
             </View>
             <Text style={styles.fieldLabel}>BEZEICHNUNG</Text>
-            <TextInput value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble Alarm" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />
-            <View style={styles.twoColumns}><View style={styles.column}><Text style={styles.fieldLabel}>DATUM</Text><TextInput value={editor.date} onChangeText={(date) => setEditor((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View><View style={styles.column}><Text style={styles.fieldLabel}>UHRZEIT</Text><TextInput value={editor.time} onChangeText={(time) => setEditor((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View></View>
+            <TextInput accessibilityLabel="Alarmbezeichnung" value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble Alarm" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />
+            <View style={styles.twoColumns}><View style={styles.column}><Text style={styles.fieldLabel}>DATUM</Text><TextInput accessibilityLabel="Alarmdatum" value={editor.date} onChangeText={(date) => setEditor((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View><View style={styles.column}><Text style={styles.fieldLabel}>UHRZEIT</Text><TextInput accessibilityLabel="Alarmuhrzeit" value={editor.time} onChangeText={(time) => setEditor((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View></View>
             <Text style={styles.fieldLabel}>VORWARNUNGEN</Text>
-            <View style={styles.choiceRow}>{[60, 30, 15].map((minutes) => <Pressable key={minutes} onPress={() => setEditor((current) => ({ ...current, warnings: current.warnings.includes(minutes) ? current.warnings.filter((item) => item !== minutes) : [...current.warnings, minutes] }))} style={[styles.choice, editor.warnings.includes(minutes) && styles.choiceActive]}><Text style={styles.choiceText}>{minutes} Min.</Text></Pressable>)}</View>
+            <View style={styles.choiceRow}>{[60, 30, 15].map((minutes) => <Pressable key={minutes} onPress={() => setEditor((current) => ({ ...current, warnings: current.warnings.includes(minutes) ? current.warnings.filter((item) => item !== minutes) : [...current.warnings, minutes] }))} accessibilityRole="button" accessibilityLabel={`Vorwarnung ${minutes} Minuten`} style={[styles.choice, editor.warnings.includes(minutes) && styles.choiceActive]}><Text style={styles.choiceText}>{minutes} Min.</Text></Pressable>)}</View>
             <Text style={styles.fieldLabel}>WIEDERHOLUNG</Text>
-            <View style={styles.choiceRow}>{(['once', 'daily', 'gw5d'] as Alarm['repeat'][]).map((repeat) => <Pressable key={repeat} onPress={() => setEditor((current) => ({ ...current, repeat }))} style={[styles.choice, editor.repeat === repeat && styles.choiceActive]}><Text style={styles.choiceText}>{repeatLabel(repeat)}</Text></Pressable>)}</View>
+            <View style={styles.choiceRow}>{(['once', 'daily', 'gw5d'] as Alarm['repeat'][]).map((repeat) => <Pressable key={repeat} onPress={() => setEditor((current) => ({ ...current, repeat }))} accessibilityRole="button" accessibilityLabel={`Wiederholung ${repeatLabel(repeat)}`} style={[styles.choice, editor.repeat === repeat && styles.choiceActive]}><Text style={styles.choiceText}>{repeatLabel(repeat)}</Text></Pressable>)}</View>
             <View style={styles.switchLine}><Text style={styles.switchLabel}>Als geschützt markieren</Text><Switch value={editor.protected} onValueChange={(value) => setEditor((current) => ({ ...current, protected: value }))} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={editor.protected ? COLORS.mint : '#D0D6DB'} /></View>
             <Pressable accessibilityRole="button" onPress={saveEditor} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>{editingId ? 'Änderungen speichern' : 'Alarm speichern'}</Text></Pressable>
           </View>
@@ -533,7 +533,7 @@ export default function App() {
 }
 
 function SettingRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }): React.ReactElement {
-  return <View style={styles.settingRow}><Text style={styles.settingLabel}>{label}</Text><Switch value={value} onValueChange={onValueChange} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={value ? COLORS.mint : '#D0D6DB'} /></View>;
+  return <View style={styles.settingRow}><Text style={styles.settingLabel}>{label}</Text><Switch accessibilityLabel={label} value={value} onValueChange={onValueChange} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={value ? COLORS.mint : '#D0D6DB'} /></View>;
 }
 
 const styles = StyleSheet.create({
@@ -561,7 +561,7 @@ const styles = StyleSheet.create({
   sectionTitle: { color: COLORS.text, fontSize: 20, fontWeight: '900', marginTop: 10, marginBottom: 10 },
   sectionTitleRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 8 },
   templateGrid: { gap: 9, marginBottom: 4 },
-  templateCard: { backgroundColor: COLORS.card, borderColor: COLORS.border, borderWidth: 1, borderRadius: 14, padding: 15 },
+  templateCard: { backgroundColor: COLORS.card, borderColor: COLORS.border, borderWidth: 1, borderRadius: 14, padding: 15, minHeight: 48 },
   templateTitle: { color: COLORS.text, fontSize: 16, fontWeight: '900', marginBottom: 4 },
   alarmCard: { backgroundColor: COLORS.panel, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 10 },
   alarmHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
@@ -578,11 +578,11 @@ const styles = StyleSheet.create({
   alarmTime: { color: COLORS.text, fontSize: 15, fontWeight: '800', marginTop: 4 },
   goldText: { color: COLORS.gold, fontSize: 14, fontWeight: '900', marginTop: 4 },
   actionRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 13 },
-  secondaryButton: { backgroundColor: COLORS.cardAlt, borderColor: '#444C55', borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9 },
+  secondaryButton: { backgroundColor: COLORS.cardAlt, borderColor: '#444C55', borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 9, minHeight: 44 },
   secondaryButtonText: { color: COLORS.text, fontSize: 12, fontWeight: '800' },
-  doneButton: { backgroundColor: COLORS.mint, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9 },
+  doneButton: { backgroundColor: COLORS.mint, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 9, minHeight: 44 },
   doneButtonText: { color: '#10150D', fontSize: 12, fontWeight: '900' },
-  iconButton: { backgroundColor: '#3B1D20', borderColor: '#66312E', borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 6 },
+  iconButton: { backgroundColor: '#3B1D20', borderColor: '#66312E', borderWidth: 1, borderRadius: 10, paddingHorizontal: 11, paddingVertical: 6, minHeight: 44 },
   iconButtonText: { color: '#FFB5AB', fontSize: 18, fontWeight: '700' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
   emptyCard: { backgroundColor: COLORS.panel, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, padding: 25, alignItems: 'center', marginBottom: 10 },
@@ -598,18 +598,18 @@ const styles = StyleSheet.create({
   modalCard: { backgroundColor: '#181D24', borderColor: '#414B55', borderWidth: 1, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, paddingBottom: 30, maxHeight: '94%' },
   modalHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 },
   modalTitle: { color: COLORS.text, fontSize: 22, fontWeight: '900' },
-  closeButton: { width: 38, height: 38, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.cardAlt },
+  closeButton: { width: 44, height: 44, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: COLORS.cardAlt },
   closeText: { color: COLORS.muted, fontSize: 25 },
   fieldLabel: { color: '#CDD3D8', fontSize: 10, fontWeight: '900', letterSpacing: 1, marginTop: 12, marginBottom: 6 },
   input: { backgroundColor: '#0F1419', color: '#FFF', borderColor: '#3C4650', borderWidth: 1, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 11, minHeight: 45 },
   twoColumns: { flexDirection: 'row', gap: 10 },
   column: { flex: 1 },
   choiceRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 7 },
-  choice: { backgroundColor: '#12171D', borderColor: COLORS.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9 },
+  choice: { backgroundColor: '#12171D', borderColor: COLORS.border, borderWidth: 1, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 9, minHeight: 44 },
   choiceActive: { borderColor: COLORS.gold, backgroundColor: '#2B2416' },
   choiceText: { color: COLORS.text, fontSize: 11, fontWeight: '800' },
   switchLine: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, marginBottom: 12 },
   switchLabel: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
-  primaryButton: { backgroundColor: COLORS.gold, borderRadius: 12, alignItems: 'center', paddingVertical: 14, marginTop: 10 },
+  primaryButton: { backgroundColor: COLORS.gold, borderRadius: 12, alignItems: 'center', paddingVertical: 14, minHeight: 48, marginTop: 10 },
   primaryButtonText: { color: '#1B160D', fontSize: 15, fontWeight: '900' },
 });

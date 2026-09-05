@@ -25,6 +25,20 @@ test('critical interactive controls retain accessible button semantics and label
   assert.match(app, /accessibilityLabel=\{`\$\{TEMPLATES\[key\]\.title\} erstellen`\}/u);
 });
 
+test('interactive controls expose accessible names and minimum touch targets', () => {
+  assert.match(app, /accessibilityLabel="Alarmbezeichnung"/u);
+  assert.match(app, /accessibilityLabel="Alarmdatum"/u);
+  assert.match(app, /accessibilityLabel="Alarmuhrzeit"/u);
+  assert.match(app, /accessibilityLabel="Backup exportieren"/u);
+  assert.match(app, /accessibilityLabel="Backup importieren"/u);
+  assert.match(app, /accessibilityLabel="Gerätetest starten"/u);
+  assert.match(app, /closeButton: \{ width: 44, height: 44,/u);
+  assert.match(app, /templateCard:[^\n]*minHeight: 48/u);
+  assert.match(app, /choice:[^\n]*minHeight: 44/u);
+  assert.match(app, /secondaryButton:[^\n]*minHeight: 44/u);
+  assert.match(app, /primaryButton:[^\n]*minHeight: 48/u);
+});
+
 test('customer-facing dashboard contains no engineering audit marker', () => {
   assert.doesNotMatch(app, /audit metadata|internal diagnostic|engineering metadata/iu);
 });
