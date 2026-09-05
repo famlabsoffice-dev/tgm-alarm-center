@@ -6,6 +6,15 @@ const DAY_MS = 24 * HOUR_MS;
 
 type CalendarDate = { year: number; month: number; day: number };
 
+type DatePart = { type: string; value: string };
+
+function requiredNumberPart(parts: DatePart[], type: string): number {
+  const part = parts.find((item) => item.type === type);
+  const value = part ? Number(part.value) : Number.NaN;
+  if (!Number.isInteger(value)) throw new Error(`Missing Intl date part: ${type}`);
+  return value;
+}
+
 function occurrenceId(definition: EventDefinition, startUtc: string): string {
   return `${definition.id}@${startUtc}`;
 }
@@ -57,8 +66,11 @@ function anchoredOccurrences(definition: EventDefinition, from: Date, until: Dat
 
 function localDateAt(instant: Date, timeZone: string): CalendarDate {
   const parts = new Intl.DateTimeFormat('en-US', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant);
-  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]));
-  return { year: values.year, month: values.month, day: values.day };
+  return {
+    year: requiredNumberPart(parts, 'year'),
+    month: requiredNumberPart(parts, 'month'),
+    day: requiredNumberPart(parts, 'day'),
+  };
 }
 
 function zonedLocalToUtc(date: CalendarDate, hour: number, minute: number, timeZone: string): Date {
@@ -68,8 +80,13 @@ function zonedLocalToUtc(date: CalendarDate, hour: number, minute: number, timeZ
       timeZone,
       year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
     }).formatToParts(candidate);
-    const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map((part) => [part.type, Number(part.value)]));
-    const rendered = Date.UTC(values.year, values.month - 1, values.day, values.hour, values.minute);
+    const rendered = Date.UTC(
+      requiredNumberPart(parts, 'year'),
+      requiredNumberPart(parts, 'month') - 1,
+      requiredNumberPart(parts, 'day'),
+      requiredNumberPart(parts, 'hour'),
+      requiredNumberPart(parts, 'minute'),
+    );
     const target = Date.UTC(date.year, date.month - 1, date.day, hour, minute);
     const delta = target - rendered;
     if (delta === 0) break;
