@@ -107,7 +107,7 @@ jobs:
           test -s dist/tgm-alarm-center-web.zip
           test -s dist/tgm-alarm-center-web.zip.sha256
           test -s RELEASE-SOURCE-SHA.txt
-          sha256sum -c dist/tgm-alarm-center-web.zip.sha256
+          (cd dist && sha256sum -c tgm-alarm-center-web.zip.sha256)
           grep -Fx "$RELEASE_TARGET_SHA" RELEASE-SOURCE-SHA.txt
 
       - name: Create annotated release tag at exact validated SHA
