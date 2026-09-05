@@ -123,3 +123,94 @@ Turn the current reliability fixes into permanent product contracts.
 
 ### Gate
 Full automated suite passes with no environment-dependent assertions and no known regression.
+
+---
+
+## 5. UX POLISH — command-center clarity
+
+### Objective
+Make the product feel immediate, trustworthy and effortless without adding unnecessary feature surface.
+
+### Work
+- Make the active account unmistakable.
+- Make the next critical alarm visually dominant.
+- Make alarm type, warning stage and remaining time instantly scannable.
+- Keep primary actions reachable on mobile.
+- Make empty states useful and action-oriented.
+- Make pause/reactivate/delete/duplicate behavior predictable.
+- Prevent stale UI after account switching.
+- Preserve state after reload without confusing transitions.
+- Keep the interface clean and customer-facing; no internal technical metadata in the product UI.
+- Preserve accessibility, touch-target quality and responsive behavior.
+- Keep the Command Center mental model visible through information hierarchy, without prematurely exposing deferred features.
+
+### Gate
+A new user can understand the current account, next alarm and available action immediately on mobile and desktop without explanation.
+
+---
+
+## 6. MONETIZATION — monetize the proven core
+
+### Objective
+Attach monetization to reliability and value, not to unfinished functionality.
+
+### Work
+- Preserve the existing Free → Street Boss → Caporegime → Underboss → Godfather tier model already defined in the product.
+- Keep plan limits deterministic and locally enforced where the current architecture requires local enforcement.
+- Keep pricing data centralized and consistent across UI and validation.
+- Ensure upgrade/downgrade state never destroys user data.
+- Ensure expired trials/subscriptions do not delete existing data.
+- Ensure Lifetime access remains permanent once granted.
+- Keep founder/group lifetime entitlement detection stable across restart and restore.
+- Verify premium gating does not leak or alter another account's alarms.
+- Ensure monetization UI never blocks core reliability workflows unnecessarily.
+
+### Gate
+Plan logic, limits, entitlement persistence and data preservation pass regression coverage.
+
+---
+
+## 7. RELEASE — only after all gates pass
+
+### Objective
+Produce a reproducible, trustworthy release candidate.
+
+### Release checklist
+- Full test suite PASS.
+- Typecheck PASS.
+- JavaScript syntax checks PASS.
+- Web-core verification PASS.
+- Reliability regression PASS.
+- Account-isolation regression PASS.
+- Notification scheduling regression PASS.
+- Backup/restore regression PASS.
+- Mobile UX verification PASS.
+- No known release-blocking defect.
+- Release manifest/checksum/release hygiene remain intact.
+- No native build artifacts are committed where repository policy forbids them.
+- Release notes reflect the actual tested state.
+
+### Final release gate
+**RELEASE only when every mandatory gate is PASS.**
+
+---
+
+## Deferred Command Center roadmap
+
+These are strategic extensions, not current release blockers:
+
+1. Event-time planning
+2. Faction/team coordination
+3. Multi-account command views
+4. Battle timelines
+5. Group planning
+6. Event history and searchable history
+7. Intelligent reusable presets
+8. Personal/team statistics
+9. Synchronized team data
+
+They must reuse the same account-isolation, persistence, absolute-time and scheduler contracts established by the current core.
+
+## Current next action
+
+Start with **Reliability**, then immediately complete the **Account Isolation** verification boundary. Do not begin deferred Command Center feature development until these gates are proven by tests and the existing real-world test remains stable.
