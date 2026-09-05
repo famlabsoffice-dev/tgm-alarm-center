@@ -25,7 +25,7 @@ assert.match(manifest, /RECEIVE_BOOT_COMPLETED/);
 assert.match(app, /Platform\.OS === 'android' && !readiness\.exactAlarm/);
 assert.match(app, /Exakte Alarme freigeben/);
 assert.match(app, /Notification-Test geplant/);
-assert.match(app, /positive Bestätigung erfolgt erst, wenn das Gerät das Signal tatsächlich meldet/);
+assert.match(app, /Für die sichtbare Systemanzeige bleibt der Gerätetest maßgeblich/);
 assert.match(app, /data\.kind === 'local-test'/);
 assert.match(app, /getLastNotificationResponseAsync\(\)/);
 assert.match(app, /Gerätetest-Signal empfangen/);
