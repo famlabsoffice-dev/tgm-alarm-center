@@ -11,6 +11,7 @@ import { validateEventDefinition } from '../src/domain/eventModel';
 import { MAFIA_COMMAND_CENTER_TOKENS } from '../src/domain/designTokens';
 import { buildNotificationPlan as buildNativeNotificationPlan, isWithinRollingNotificationWindow, NOTIFICATION_ROLLING_WINDOW_MS } from '../src/native/notificationSchedule';
 import { type Alarm } from '../src/domain/alarm';
+import { clearVerifiedNativeEntitlement, getNativeEntitlementState, setVerifiedNativeEntitlement } from '../src/billing/nativeEntitlementService';
 
 test('all built-in event definitions satisfy the strict model contract', () => {
   for (const definition of MASTER_EVENT_CATALOG) assert.deepEqual(validateEventDefinition(definition), [], definition.id);
@@ -110,4 +111,24 @@ test('rolling notification planner excludes out-of-window 500-alarm schedules wh
   });
   const plan = buildNativeNotificationPlan(alarms, prefs, now);
   assert.equal(plan.length, 700); assert.equal(plan.every((entry) => isWithinRollingNotificationWindow(new Date(entry.at), now)), true); assert.equal(new Set(plan.map((entry) => entry.alarmId)).size, 350);
+});
+
+test('persisted paid tier cannot unlock native features without verified entitlement', () => {
+  clearVerifiedNativeEntitlement();
+  const tamperedTier = 'godfather' as const;
+  const state = getNativeEntitlementState('ordinary-player', tamperedTier);
+  assert.equal(state.tier, 'free');
+  assert.equal(state.source, 'none');
+  assert.equal(TIER_LIMITS[state.tier].alarms, TIER_LIMITS.free.alarms);
+});
+
+test('only active unexpired server entitlement unlocks native premium features', () => {
+  clearVerifiedNativeEntitlement();
+  const base = { status: 'active' as const, tier: 'streetBoss' as const, productKey: 'street-boss-monthly', productId: 'street-boss-monthly', platform: 'android' as const, environment: 'production' as const, expiresAt: '2026-09-06T00:00:00.000Z', verifiedAt: '2026-09-05T00:00:00.000Z', source: 'server' as const };
+  setVerifiedNativeEntitlement(base);
+  assert.equal(getNativeEntitlementState('ordinary-player', 'free').tier, 'streetBoss');
+  clearVerifiedNativeEntitlement();
+  setVerifiedNativeEntitlement({ ...base, status: 'expired', expiresAt: '2026-09-04T00:00:00.000Z' });
+  assert.equal(getNativeEntitlementState('ordinary-player', 'godfather').tier, 'free');
+  clearVerifiedNativeEntitlement();
 });
