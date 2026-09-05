@@ -7,6 +7,7 @@ const read = (path) => readFileSync(resolve(root, path), 'utf8');
 const pricing = read('src/domain/pricing.ts');
 const alarm = read('src/domain/alarm.ts');
 const storage = read('src/storage/store.ts');
+const storageTransaction = read('src/storage/storageTransaction.ts');
 const backup = read('src/backup/backup.ts');
 const notifications = read('src/native/notifications.ts');
 const nativeIndex = read('modules/tgm-exact-alarm/index.ts');
@@ -16,19 +17,25 @@ const manifest = read('modules/tgm-exact-alarm/android/src/main/AndroidManifest.
 
 for (const founder of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) assert.match(pricing, new RegExp(founder));
 assert.match(pricing, /FOUNDER_ACCESS_TIER:\s*Tier\s*=\s*'godfather'/);
-assert.match(pricing, /return isFounderAccountName\(accountName\) \? FOUNDER_ACCESS_TIER : tier;/);
+assert.match(pricing, /return isFounderAccountName\(accountName\) \? FOUNDER_ACCESS_TIER :/);
 
 assert.match(alarm, /function nextGwOccurrence/);
 assert.match(alarm, /if \(base\.getTime\(\) > now\.getTime\(\)/);
 assert.match(alarm, /const cycles = Math\.floor\(delta \/ FIVE_DAYS_MS\) \+ 1/);
 
-assert.match(storage, /:pending/);
-assert.match(storage, /:last-known-good/);
+for (const source of [storage, storageTransaction]) {
+  assert.match(source, /:pending/);
+  assert.match(source, /:last-known-good/);
+}
 assert.match(storage, /decodePersistedState/);
 assert.match(storage, /recoveredFromPending/);
 assert.match(storage, /recoveredFromLastKnownGood/);
 assert.match(storage, /volatileStateRevision/);
-assert.match(storage, /await AsyncStorage\.setItem\(TEMP_STORAGE_KEY, serialized\);\n  await AsyncStorage\.setItem\(STORAGE_KEY, serialized\);\n  await AsyncStorage\.setItem\(LAST_KNOWN_GOOD_STORAGE_KEY, serialized\);\n  await AsyncStorage\.removeItem\(TEMP_STORAGE_KEY\);/);
+assert.match(storage, /persistWithRecoveryLadder\(AsyncStorage/);
+assert.match(storageTransaction, /await adapter\.setItem\(keys\.pending, serialized\);/);
+assert.match(storageTransaction, /await adapter\.setItem\(keys\.primary, serialized\);/);
+assert.match(storageTransaction, /await adapter\.setItem\(keys\.lastKnownGood, serialized\);/);
+assert.match(storageTransaction, /await adapter\.removeItem\(keys\.pending\);/);
 assert.doesNotMatch(storage, /finally \{\n\s*await AsyncStorage\.removeItem\(TEMP_STORAGE_KEY\)/);
 assert.doesNotMatch(storage, /catch \{ return emptyState\(\); \}/);
 
