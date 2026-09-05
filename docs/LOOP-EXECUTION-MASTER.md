@@ -65,7 +65,7 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [x] Add malformed, oversized and cross-reference backup adversarial cases.
 
 ### PHASE 5 — Native reliability verification preparation
-- [ ] Build deterministic device-test protocol for Android API 36.
+- [x] Build deterministic device-test protocol for Android API 36.
 - [ ] Fresh install.
 - [ ] Notification permission denied/granted.
 - [ ] Exact alarm denied/regranted.
@@ -76,7 +76,7 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [ ] Timezone change.
 - [ ] DST transition.
 - [ ] OEM battery management, including Xiaomi/MIUI and Samsung behavior.
-- [ ] Build equivalent iOS test protocol.
+- [x] Build equivalent iOS test protocol.
 - [ ] Notification permission denied/granted.
 - [ ] Focus.
 - [ ] Time Sensitive notifications.
