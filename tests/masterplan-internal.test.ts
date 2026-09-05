@@ -17,7 +17,7 @@ test('all built-in event definitions satisfy the strict model contract', () => {
 
 test('catalog definitions generate deterministic personal-event occurrences', () => {
   const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
-  assert.ok(definition);
+  if (!definition) throw new Error('personal-event definition missing');
   const from = new Date('2026-09-05T08:00:00.000Z');
   const until = new Date('2026-09-05T17:00:00.000Z');
   const first = generateOccurrences(definition, from, until);
@@ -32,9 +32,9 @@ test('catalog definitions generate deterministic personal-event occurrences', ()
 
 test('unconfirmed variants remain predicted until explicit confirmation', () => {
   const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
-  assert.ok(definition);
+  if (!definition) throw new Error('personal-event definition missing');
   const occurrence = generateOccurrences(definition, new Date('2026-09-05T08:00:00.000Z'), new Date('2026-09-05T09:01:00.000Z'))[0];
-  assert.ok(occurrence);
+  if (!occurrence) throw new Error('personal-event occurrence missing');
   assert.equal(occurrence.variant, null);
   assert.equal(occurrence.status, 'predicted');
   const confirmed = mergeOccurrenceConfirmation(occurrence, 'Construction', 0.97, 'community:tester');
@@ -44,17 +44,22 @@ test('unconfirmed variants remain predicted until explicit confirmation', () => 
 });
 
 test('community reports produce weighted consensus and preserve conflicts', () => {
+  const definition = MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event');
+  if (!definition) throw new Error('personal-event definition missing');
   const occurrence = generateOccurrences(
-    MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event')!,
+    definition,
     new Date('2026-09-05T08:00:00.000Z'),
     new Date('2026-09-05T09:01:00.000Z'),
   )[0];
+  if (!occurrence) throw new Error('personal-event occurrence missing');
   const reports: EventReport[] = [
     { id: 'r-1', occurrenceId: occurrence.id, reporterId: 'alice', variant: 'Construction', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:30:00.000Z' },
     { id: 'r-2', occurrenceId: occurrence.id, reporterId: 'bob', variant: 'Construction', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:31:00.000Z' },
     { id: 'r-3', occurrenceId: occurrence.id, reporterId: 'alice', variant: 'Recruitment', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:32:00.000Z' },
   ];
-  assert.deepEqual(validateEventReport(reports[0]), []);
+  const firstReport = reports[0];
+  if (!firstReport) throw new Error('first report missing');
+  assert.deepEqual(validateEventReport(firstReport), []);
   const consensus = buildConsensus(occurrence, reports, [
     { reporterId: 'alice', correctConfirmations: 8, consistentReports: 8, independentConfirmations: 4 },
     { reporterId: 'bob', correctConfirmations: 4, consistentReports: 4, independentConfirmations: 2 },
@@ -109,7 +114,7 @@ test('notification health returns the first actionable failure and all reasons',
 
 test('remote config requires valid structure, signature verification and monotonic versions', () => {
   const baseRule = MASTER_EVENT_CATALOG[0];
-  assert.ok(baseRule);
+  if (!baseRule) throw new Error('catalog is empty');
   const candidate: RemoteEventConfig = {
     schema: 3,
     configVersion: 2,
