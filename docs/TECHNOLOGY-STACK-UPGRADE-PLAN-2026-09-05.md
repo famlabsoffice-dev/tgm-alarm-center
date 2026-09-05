@@ -27,14 +27,14 @@ node -v
 ## 2. Expo / React Native aktualisieren
 
 ### Sollstand
-- Expo SDK 57.0.17.
+- Expo SDK 57.0.20.
 - React Native 0.86.3.
 - React 19.2.3.
 - Hermes V1.
 - Android compile/target SDK 36.
 - iOS Deployment Target 16.4+.
 
-Expo SDK 57 ist der aktuelle stabile SDK-Zweig; Expo dokumentiert RN 0.86 und React 19.2.3 für SDK 57. Der Patchstand 57.0.17 enthält die späteren SDK-57-Korrekturen. Canary 58 bleibt ausgeschlossen, weil Stabilität Vorrang vor Vorabversionen hat.
+Expo SDK 57 ist der aktuelle stabile SDK-Zweig; Expo dokumentiert RN 0.86 und React 19.2.3 für SDK 57. Der Patchstand 57.0.20 enthält die freigegebenen SDK-57-Korrekturen. Canary 58 bleibt ausgeschlossen, weil Stabilität Vorrang vor Vorabversionen hat.
 
 ### Umsetzung
 ```bash
@@ -78,7 +78,9 @@ CI führt den Clean-Prebuild non-interactive aus. Die generierten nativen Projek
 
 ## 5. Toolchain auf aktuelle stabile Qualitätslinie anheben
 
-- TypeScript 7.0.2.
+- TypeScript 6.0.3.
+- Jest 29.7.0.
+- `@types/react` 19.2.18 aus der React-19.2-Typdefinitionslinie.
 - ESLint 10.9.1.
 - Node 24.20.0.
 - pnpm bleibt auf dem reproduzierbaren Projektstand 10.15.1, bis ein konkreter kompatibler Upgradebedarf nachgewiesen ist.
