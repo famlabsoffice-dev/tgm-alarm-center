@@ -21,7 +21,7 @@
     },
     "plugins": [
       "expo-iap",
-      ["expo-notifications", {"sounds": ["./assets/notifications/alarm-pulse.wav", "./assets/notifications/alarm-siren.wav", "./assets/notifications/alarm-chime.wav"]}],
+      ["expo-notifications", {"sounds": ["./assets/notifications/alarm_pulse.wav", "./assets/notifications/alarm_siren.wav", "./assets/notifications/alarm_chime.wav"]}],
       ["expo-build-properties", {"android": {"compileSdkVersion": 36, "targetSdkVersion": 36, "buildToolsVersion": "36.0.0", "enableMinifyInReleaseBuilds": true}, "ios": {"deploymentTarget": "16.4"}, "useHermesV1": true, "reactNativeReleaseLevel": "stable"}]
     ]
   }
