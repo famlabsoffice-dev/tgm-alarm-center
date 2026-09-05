@@ -1,0 +1,7 @@
+{
+  "expoSdk": "57.0.3",
+  "react": "19.2.3",
+  "reactNative": "0.86.0",
+  "node": "22.13.1",
+  "rationale": "Stable production baseline for the current TGM Alarm Center native architecture. Keep Android API 36, move iOS minimum to 16.4, retain stable React Native release level and Hermes V1."
+}
