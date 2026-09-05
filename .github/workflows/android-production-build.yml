@@ -69,7 +69,13 @@ jobs:
       - name: Build signed production Android AAB
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          GITHUB_SHA: ${{ github.sha }}
         run: pnpm build:android:aab 2>&1 | tee android-production-build.log
+
+      - name: Verify downloaded signed production AAB
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        run: pnpm verify:production-artifact android
 
       - name: Write production build metadata
         shell: bash
@@ -88,12 +94,16 @@ jobs:
             echo "Expo: $expo_version"
           } > android-production-build-metadata.txt
 
-      - name: Upload production build evidence
+      - name: Upload production build artifact and evidence
         uses: actions/upload-artifact@v4
         with:
           name: tgm-android-production-build
           path: |
+            *.aab
+            *.aab.sha256
+            *.eas-build-id
             android-production-build.log
             android-production-build-metadata.txt
+            android-production-artifact-metadata.txt
           if-no-files-found: error
           retention-days: 30
