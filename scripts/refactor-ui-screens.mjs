@@ -41,7 +41,7 @@ function removeFunction(text, signature) {
 }
 
 const original = source;
-requireOnce(source.includes("from './src/ui/screens/" ) === false, 'App.tsx is already partially refactored; refusing a non-idempotent rewrite');
+requireOnce(!source.includes("from './src/ui/screens/AlarmCard';"), 'App.tsx is already partially refactored; refusing a non-idempotent rewrite');
 
 source = source.replace('  KeyboardAvoidingView,\n', '').replace('  Modal,\n', '').replace('  SafeAreaView,\n', '').replace('  Switch,\n', '').replace('  TextInput,\n', '');
 source = source.replace("  momentLabel,\n", '').replace("  upcomingMoments,\n", '');
@@ -64,13 +64,13 @@ const defaultBlock = extractBalancedBlock(source, defaultOpen);
 source = source.slice(0, defaultStart) + source.slice(defaultBlock.end);
 
 source = removeFunction(source, 'function isOccurrenceCompleted(');
+source = removeFunction(source, 'function SettingRow(');
 
 const renderStart = source.indexOf('  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {');
 requireOnce(renderStart >= 0, 'renderAlarm block missing');
 const renderOpen = source.indexOf('{', renderStart);
 const renderBlock = extractBalancedBlock(source, renderOpen);
 source = source.slice(0, renderStart) + source.slice(renderBlock.end);
-
 source = source.replace('renderItem={renderAlarm}', 'renderItem={({ item }) => <AlarmCard alarm={item} now={now} onEdit={openEdit} onToggle={toggleAlarm} onComplete={completeAlarm} onDelete={deleteAlarm} />}');
 
 const footerMarker = '        ListFooterComponent={';
