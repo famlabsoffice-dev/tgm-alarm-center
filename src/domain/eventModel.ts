@@ -25,7 +25,7 @@ export interface CriticalMomentRule {
 
 export interface Provenance {
   id: string;
-  sourceType: 'official' | 'community' | 'user';
+  sourceType: 'official' | 'community' | 'user' | 'configured';
   label: string;
   reference: string;
   observedAt: string;
@@ -97,7 +97,7 @@ export function validateEventDefinition(definition: EventDefinition): string[] {
   if (definition.schedule.intervalMinutes !== undefined && (!Number.isInteger(definition.schedule.intervalMinutes) || definition.schedule.intervalMinutes <= 0)) errors.push('invalid-interval');
   if (definition.duration && (!Number.isInteger(definition.duration.minutes) || definition.duration.minutes <= 0)) errors.push('invalid-duration');
   for (const source of definition.sources) {
-    if (!source.id || !source.label || !source.reference || !isValidIsoUtc(source.observedAt)) errors.push('invalid-provenance');
+    if (!source.id || !source.label || !isValidIsoUtc(source.observedAt)) errors.push('invalid-provenance');
   }
   return [...new Set(errors)];
 }
