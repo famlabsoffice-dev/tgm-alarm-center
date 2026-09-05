@@ -5,14 +5,20 @@ const root = new URL('..', import.meta.url);
 const read = (name) => readFileSync(new URL(name, root), 'utf8');
 const html = read('index.html');
 const css = read('styles.css');
+const accessibilityCss = read('styles-accessibility.css');
 const js = read('app.js');
 const sw = read('sw.js');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 
 assert(html.includes('href="styles.css?v=5"'), 'CSS stylesheet is not linked.');
+assert(html.includes('href="styles-accessibility.css?v=1"'), 'Accessibility stylesheet is not linked.');
+assert(html.includes('<a class="skip-link" href="#app">'), 'Skip navigation link is missing.');
+assert(html.includes('<div id="app" role="main" tabindex="-1"'), 'Main application landmark is missing.');
 assert(/<script src="app\.js(?:\?[^\"]+)?" defer><\/script>/.test(html), 'Application JavaScript is not linked.');
 assert(html.includes('alarmOverlay'), 'Alarm overlay root is missing.');
 assert(css.includes('.alarm-overlay'), 'Alarm overlay styles are missing.');
+assert(accessibilityCss.includes('.skip-link') && accessibilityCss.includes('prefers-reduced-motion'), 'Accessibility hardening stylesheet is incomplete.');
+assert(accessibilityCss.includes('min-height: 44px'), 'Touch-target hardening is missing.');
 new Function(js);
 new Function(sw);
 for (const runtimeMarker of [
@@ -83,7 +89,7 @@ for (const price of ['weekly:4.99', 'sixMonth:129.99', 'yearly:199.99', 'lifetim
   assert(js.includes(price), `Tier pricing value is missing: ${price}`);
 }
 for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
-  assert(!new RegExp(marker, 'i').test(js + html + css), `Placeholder marker found: ${marker}`);
+  assert(!new RegExp(marker, 'i').test(js + html + css + accessibilityCss), `Placeholder marker found: ${marker}`);
 }
 
 assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=17'), 'Offline shell does not cache the versioned application files.');
