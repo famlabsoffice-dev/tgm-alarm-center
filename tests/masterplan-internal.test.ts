@@ -1,15 +1,18 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MASTER_EVENT_CATALOG } from '../src/domain/eventCatalog';
+import { buildConsensus, validateEventReport, type EventReport } from '../src/domain/eventIntelligence';
 import { generateOccurrences, mergeOccurrenceConfirmation } from '../src/domain/eventEngine';
 import { evaluateNotificationHealth } from '../src/domain/notificationHealth';
 import { buildNotificationPlan } from '../src/domain/notificationPlan';
 import { acceptRemoteConfig, validateRemoteConfig, type RemoteEventConfig } from '../src/domain/remoteConfig';
 import { PRODUCT_IDENTITIES, assertTrackBIdentity } from '../src/domain/productTracks';
 import { validateEventDefinition } from '../src/domain/eventModel';
+import { MAFIA_COMMAND_CENTER_TOKENS } from '../src/domain/designTokens';
 
 test('all built-in event definitions satisfy the strict model contract', () => {
   for (const definition of MASTER_EVENT_CATALOG) assert.deepEqual(validateEventDefinition(definition), [], definition.id);
+  assert.equal(MASTER_EVENT_CATALOG.length >= 30, true);
 });
 
 test('catalog definitions generate deterministic personal-event occurrences', () => {
@@ -38,6 +41,27 @@ test('unconfirmed variants remain predicted until explicit confirmation', () => 
   assert.equal(confirmed.variant, 'Construction');
   assert.equal(confirmed.status, 'communityConfirmed');
   assert.equal(confirmed.confidence, 0.97);
+});
+
+test('community reports produce weighted consensus and preserve conflicts', () => {
+  const occurrence = generateOccurrences(
+    MASTER_EVENT_CATALOG.find((item) => item.id === 'personal-event')!,
+    new Date('2026-09-05T08:00:00.000Z'),
+    new Date('2026-09-05T09:01:00.000Z'),
+  )[0];
+  const reports: EventReport[] = [
+    { id: 'r-1', occurrenceId: occurrence.id, reporterId: 'alice', variant: 'Construction', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:30:00.000Z' },
+    { id: 'r-2', occurrenceId: occurrence.id, reporterId: 'bob', variant: 'Construction', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:31:00.000Z' },
+    { id: 'r-3', occurrenceId: occurrence.id, reporterId: 'alice', variant: 'Recruitment', startUtc: occurrence.startUtc, endUtc: null, reference: null, submittedAt: '2026-09-05T08:32:00.000Z' },
+  ];
+  assert.deepEqual(validateEventReport(reports[0]), []);
+  const consensus = buildConsensus(occurrence, reports, [
+    { reporterId: 'alice', correctConfirmations: 8, consistentReports: 8, independentConfirmations: 4 },
+    { reporterId: 'bob', correctConfirmations: 4, consistentReports: 4, independentConfirmations: 2 },
+  ]);
+  assert.equal(consensus.variant, 'construction');
+  assert.equal(consensus.disputed, false);
+  assert.deepEqual(consensus.reportIds, ['r-1', 'r-2', 'r-3']);
 });
 
 test('notification plans use stable occurrence ownership ids and chronological order', () => {
@@ -101,8 +125,10 @@ test('remote config requires valid structure, signature verification and monoton
   assert.throws(() => acceptRemoteConfig(accepted, { ...candidate, configVersion: 2 }, true), /not newer/);
 });
 
-test('track B cannot silently opt into licensed assets or forbidden official identity', () => {
+test('Track B identity and design tokens are internally constrained', () => {
   assert.doesNotThrow(() => assertTrackBIdentity(PRODUCT_IDENTITIES.B));
   assert.throws(() => assertTrackBIdentity({ ...PRODUCT_IDENTITIES.B, usesLicensedAssets: true }), /licensed\/original assets/);
   assert.throws(() => assertTrackBIdentity({ ...PRODUCT_IDENTITIES.B, name: 'TGM Alarm Center' }), /unauthorized official affiliation/);
+  assert.equal(MAFIA_COMMAND_CENTER_TOKENS.background, '#0B0D0F');
+  assert.equal(MAFIA_COMMAND_CENTER_TOKENS.gold, '#D1A84D');
 });
