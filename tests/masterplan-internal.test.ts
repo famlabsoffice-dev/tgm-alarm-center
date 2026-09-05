@@ -119,7 +119,6 @@ test('persisted paid tier cannot unlock native features without verified entitle
   const state = getNativeEntitlementState('ordinary-player', tamperedTier);
   assert.equal(state.tier, 'free');
   assert.equal(state.source, 'none');
-  assert.equal(TIER_LIMITS[state.tier].alarms, TIER_LIMITS.free.alarms);
 });
 
 test('only active unexpired server entitlement unlocks native premium features', () => {
