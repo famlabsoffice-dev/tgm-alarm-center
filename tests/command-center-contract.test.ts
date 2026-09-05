@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
-import { fileURLToPath } from 'node:url';
 import fs from 'node:fs';
 import test from 'node:test';
 
-const app = fs.readFileSync(fileURLToPath(new URL('../App.tsx', import.meta.url)), 'utf8');
+const app = fs.readFileSync('App.tsx', 'utf8');
 
 test('dashboard keeps Next Critical Event as the primary command-center answer', () => {
   assert.match(app, /<Text[^>]*style=\{styles\.eyebrow\}>ALS NÄCHSTES<\/Text>/u);
