@@ -1,0 +1,43 @@
+name: autonomous-ui-refactor
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source of truth
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Execute deterministic screen extraction
+        run: node scripts/refactor-ui-screens.mjs
+      - name: Validate generated source
+        run: pnpm typecheck && pnpm lint
+      - name: Commit generated architecture change
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "UI screen architecture already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add App.tsx src/ui/screens scripts/refactor-ui-screens.mjs
+          git commit -m "refactor(ui): extract screen responsibilities from App"
+          git push origin HEAD:main
