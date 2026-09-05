@@ -32,27 +32,37 @@ interface Database {
 const EMPTY_DATABASE: Database = { entitlements: [], events: [] };
 
 export class BillingRepository {
-  private database: Database = { ...EMPTY_DATABASE };
+  private database: Database = { ...EMPTY_DATABASE, entitlements: [], events: [] };
   private loaded = false;
+  private loading: Promise<void> | null = null;
+  private persistQueue: Promise<void> = Promise.resolve();
 
   constructor(private readonly filePath: string) {}
 
   async load(): Promise<void> {
     if (this.loaded) return;
-    try {
-      const raw = await readFile(this.filePath, 'utf8');
-      const parsed: unknown = JSON.parse(raw);
-      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Billing-Speicher ist ungültig.');
-      const value = parsed as Partial<Database>;
-      this.database = {
-        entitlements: Array.isArray(value.entitlements) ? value.entitlements : [],
-        events: Array.isArray(value.events) ? value.events : [],
-      };
-    } catch (error: unknown) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
-      this.database = { entitlements: [], events: [] };
-    }
-    this.loaded = true;
+    if (this.loading) return this.loading;
+    this.loading = (async () => {
+      try {
+        const raw = await readFile(this.filePath, 'utf8');
+        const parsed: unknown = JSON.parse(raw);
+        if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Billing-Speicher ist ungültig.');
+        const value = parsed as Partial<Database>;
+        this.database = {
+          entitlements: Array.isArray(value.entitlements) ? value.entitlements : [],
+          events: Array.isArray(value.events) ? value.events : [],
+        };
+      } catch (error: unknown) {
+        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+        this.database = { entitlements: [], events: [] };
+      }
+      this.loaded = true;
+      this.loading = null;
+    })().catch((error: unknown) => {
+      this.loading = null;
+      throw error;
+    });
+    return this.loading;
   }
 
   async hasEvent(eventId: string): Promise<boolean> {
@@ -94,10 +104,14 @@ export class BillingRepository {
   }
 
   private async persist(): Promise<void> {
-    await mkdir(dirname(this.filePath), { recursive: true });
-    const temporary = `${this.filePath}.tmp`;
-    await writeFile(temporary, JSON.stringify(this.database, null, 2), { encoding: 'utf8', mode: 0o600 });
-    await rename(temporary, this.filePath);
+    const write = this.persistQueue.then(async () => {
+      await mkdir(dirname(this.filePath), { recursive: true });
+      const temporary = `${this.filePath}.tmp`;
+      await writeFile(temporary, JSON.stringify(this.database, null, 2), { encoding: 'utf8', mode: 0o600 });
+      await rename(temporary, this.filePath);
+    });
+    this.persistQueue = write.catch(() => undefined);
+    await write;
   }
 }
 
