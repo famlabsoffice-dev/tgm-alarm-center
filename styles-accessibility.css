@@ -1,0 +1,36 @@
+/* Product UX hardening: accessible navigation, touch targets and motion preferences. */
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 1000;
+  transform: translateY(-180%);
+  padding: 10px 14px;
+  color: #1b160d;
+  background: #f4c969;
+  border: 2px solid #b98427;
+  border-radius: 10px;
+  font-weight: 900;
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+  transition: transform .16s ease;
+}
+.skip-link:focus { transform: translateY(0); }
+#app:focus { outline: none; }
+.nav button, .btn, .template, .alarm-action, .account-pill, .language-toggle { min-height: 44px; }
+@media (max-width: 720px) {
+  .app-shell { padding-inline: 14px; padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+  .topbar { padding-bottom: 12px; }
+  .toolbar { width: 100%; justify-content: flex-start; }
+  .hero, .next-panel, .card.pad { padding: 18px; }
+  .grid-hero, .grid-2, .grid-3, .grid-4, .template-grid, .stats { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+}
