@@ -10,7 +10,7 @@
     "ios": "expo run:ios",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "tsx --test tests/*.test.ts && node --test tests/billing-security.test.mjs && node scripts/verify-production-floor.mjs && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-p0-hardening.mjs && node scripts/verify-internal-optimization.mjs",
+    "test": "tsx --test tests/*.test.ts && node --test tests/billing-security.test.mjs && node scripts/verify-production-floor.mjs && node scripts/verify-web-core.mjs && node scripts/verify-pricing.mjs && node scripts/verify-p0-hardening.mjs && node scripts/verify-internal-optimization.mjs && node scripts/verify-native-notification-contract.mjs",
     "verify:billing-security": "node scripts/harden-web-billing.mjs && node --test tests/billing-security.test.mjs",
     "verify:production-floor": "node scripts/verify-production-floor.mjs",
     "verify:p0-hardening": "node scripts/verify-p0-hardening.mjs",
