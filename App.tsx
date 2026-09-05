@@ -2,15 +2,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   Alert,
   FlatList,
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
-  Switch,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
@@ -27,17 +22,13 @@ import {
   alarmsForAccount,
   buildAlarm,
   localInputFromUtc,
-  momentLabel,
   nextOccurrence,
   occurrenceKey,
-  repeatLabel,
   titleIsValid,
-  upcomingMoments,
   validateDateTime,
 } from './src/domain/alarm';
 import { effectiveTierForAccount } from './src/domain/pricing';
 import { updateAccountAlarm, deleteAccountAlarm, toggleAccountAlarm, completeAccountOccurrence } from './src/domain/accountAlarmActions';
-import { BillingPanel } from './src/billing/BillingPanel';
 import { exportBackup, restoreBackup } from './src/backup/backup';
 import { emptyState, loadState, saveState } from './src/storage/store';
 import {
@@ -47,6 +38,10 @@ import {
   scheduleLocalTestNotification,
 } from './src/native/notifications';
 import { reconcileAlarmNotifications } from './src/native/schedulerService';
+import { AlarmCard } from './src/ui/screens/AlarmCard';
+import { AlarmEditorModal, defaultEditor, type EditorValues } from './src/ui/screens/AlarmEditorModal';
+import { CommandCenterScreen } from './src/ui/screens/CommandCenterScreen';
+import { SettingsScreen } from './src/ui/screens/SettingsScreen';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -73,8 +68,6 @@ const COLORS = {
 
 const nowIso = (): string => new Date().toISOString();
 const makeId = (): string => `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-const localDate = (date: Date): string => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-const localTime = (date: Date): string => `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
 const formatDateTime = (date: Date): string => date.toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 const formatCountdown = (date: Date, now: number): string => {
   const remaining = Math.max(0, date.getTime() - now);
@@ -88,30 +81,8 @@ const formatCountdown = (date: Date, now: number): string => {
 
 type TemplateKey = keyof typeof TEMPLATES;
 
-type EditorValues = {
-  type: Alarm['type'];
-  title: string;
-  date: string;
-  time: string;
-  warnings: number[];
-  repeat: Alarm['repeat'];
-  sound: Alarm['sound'];
-  protected: boolean;
-};
 
-const defaultEditor = (template: AlarmTemplate): EditorValues => {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
-  return {
-    type: template.type,
-    title: template.title,
-    date: localDate(date),
-    time: localTime(date),
-    warnings: [...template.warnings],
-    repeat: template.repeat,
-    sound: template.sound,
-    protected: template.protected,
-  };
-};
+;
 
 function readinessText(readiness: NotificationReadiness): string {
   if (!readiness.supported) return 'Gerätetest erforderlich';
@@ -120,9 +91,7 @@ function readinessText(readiness: NotificationReadiness): string {
   return 'Bereit';
 }
 
-function isOccurrenceCompleted(alarm: Alarm, event: Date): boolean {
-  return alarm.completedOccurrences[occurrenceKey(alarm.id, event)] === true;
-}
+
 
 export default function App() {
   const [state, setState] = useState<AppState>(emptyState());
@@ -415,49 +384,16 @@ export default function App() {
     }
   };
 
-  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {
-    const event = nextOccurrence(item, new Date(now));
-    const moments = upcomingMoments(item, new Date(now));
-    const completed = event ? isOccurrenceCompleted(item, event) : false;
-    return (
-      <View style={styles.alarmCard}>
-        <View style={styles.alarmHeader}>
-          <View style={styles.flex}>
-            <Text style={styles.alarmTitle}>{item.title}</Text>
-            <Text style={styles.muted}>{alarmTypeLabel(item.type)} · {repeatLabel(item.repeat)}</Text>
-          </View>
-          <View style={[styles.statusPill, item.active ? styles.activePill : styles.pausedPill]}>
-            <Text style={styles.statusText}>{item.active ? 'AKTIV' : 'PAUSIERT'}</Text>
-          </View>
-        </View>
-        <View style={styles.badgeRow}>
-          {item.protected ? <Text style={styles.badgeGold}>GESCHÜTZT</Text> : null}
-          {item.repeat === 'gw5d' ? <Text style={styles.badgeBlue}>24 STD. BUBBLE</Text> : null}
-          {moments[0] ? <Text style={styles.badgeNeutral}>{momentLabel(moments[0])}</Text> : null}
-        </View>
-        <View style={styles.alarmTimeBox}>
-          <Text style={styles.muted}>NÄCHSTER TERMIN</Text>
-          <Text style={styles.alarmTime}>{event ? formatDateTime(event) : completed ? 'Für diesen Zyklus erledigt' : 'Kein zukünftiger Termin'}</Text>
-          {event ? <Text style={styles.goldText}>{formatCountdown(event, now)}</Text> : null}
-        </View>
-        <View style={styles.actionRow}>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${item.title} bearbeiten`} onPress={() => openEdit(item)} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Bearbeiten</Text></Pressable>
-          <Pressable accessibilityRole="button" accessibilityLabel={`${item.title} ${item.active ? 'pausieren' : 'aktivieren'}`} onPress={() => toggleAlarm(item.id)} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>{item.active ? 'Pausieren' : 'Aktivieren'}</Text></Pressable>
-          {event ? <Pressable accessibilityRole="button" accessibilityLabel={`${item.title} erledigen`} onPress={() => completeAlarm(item)} style={({ pressed }) => [styles.doneButton, pressed && styles.pressed]}><Text style={styles.doneButtonText}>Erledigt</Text></Pressable> : null}
-          <Pressable accessibilityRole="button" accessibilityLabel={`${item.title} löschen`} onPress={() => deleteAlarm(item)} style={({ pressed }) => [styles.iconButton, pressed && styles.pressed]}><Text style={styles.iconButtonText}>×</Text></Pressable>
-        </View>
-      </View>
-    );
-  };
+;
 
-  if (!ready) return <SafeAreaView style={styles.root}><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></SafeAreaView>;
+  if (!ready) return <CommandCenterScreen><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></CommandCenterScreen>;
 
   return (
-    <SafeAreaView style={styles.root}>
+    <CommandCenterScreen>
       <FlatList
         data={visibleAlarms}
         keyExtractor={(item) => item.id}
-        renderItem={renderAlarm}
+        renderItem={({ item }) => <AlarmCard alarm={item} now={now} onEdit={openEdit} onToggle={toggleAlarm} onComplete={completeAlarm} onDelete={deleteAlarm} />}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View>
@@ -483,52 +419,32 @@ export default function App() {
         }
         ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart oder erstelle einen Event Alarm.</Text></View>}
         ListFooterComponent={
-          <View>
-            {storageError ? <View style={styles.errorBanner}><Text style={styles.errorText}>{storageError}</Text></View> : null}
-            <Text style={styles.sectionTitle}>Benachrichtigungen</Text>
-            <View style={styles.settingsCard}>
-              <SettingRow label="Vorwarnungen mit Ton" value={state.notificationPreferences.warningSound} onValueChange={(value) => updatePreference('warningSound', value)} />
-              <SettingRow label="Hauptereignisse mit Ton" value={state.notificationPreferences.eventSound} onValueChange={(value) => updatePreference('eventSound', value)} />
-              <SettingRow label="Vibration" value={state.notificationPreferences.vibration} onValueChange={(value) => updatePreference('vibration', value)} />
-              <SettingRow label="Zeitkritische Hinweise" value={state.notificationPreferences.criticalAlerts} onValueChange={(value) => updatePreference('criticalAlerts', value)} />
-            </View>
-            {Platform.OS !== 'web' ? <BillingPanel currentTier={state.tier} onTierConfirmed={confirmStoreTier} /> : null}
-            <View style={styles.actionRowFooter}>
-              <Pressable accessibilityRole="button" accessibilityLabel="Backup exportieren" hitSlop={8} onPress={exportCurrentBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup exportieren</Text></Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Backup importieren" hitSlop={8} onPress={importBackup} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Backup importieren</Text></Pressable>
-              <Pressable accessibilityRole="button" accessibilityLabel="Gerätetest starten" hitSlop={8} onPress={runDeviceTest} style={({ pressed }) => [styles.secondaryButton, pressed && styles.pressed]}><Text style={styles.secondaryButtonText}>Gerätetest</Text></Pressable>
-            </View>
-            <Text style={styles.footer}>UTC wird intern gespeichert · Anzeige in lokaler Gerätezeit · Schema 1</Text>
-          </View>
+          <SettingsScreen
+            storageError={storageError}
+            notificationPreferences={state.notificationPreferences}
+            currentTier={state.tier}
+            showBilling={Platform.OS !== 'web'}
+            onUpdatePreference={updatePreference}
+            onTierConfirmed={confirmStoreTier}
+            onExportBackup={exportCurrentBackup}
+            onImportBackup={importBackup}
+            onDeviceTest={runDeviceTest}
+          />
         }
       />
-      <Modal visible={editorVisible} animationType="slide" transparent onRequestClose={() => setEditorVisible(false)}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalWrap}>
-          <View style={styles.modalCard}>
-            <View style={styles.modalHeader}><Text style={styles.modalTitle}>{editingId ? 'Alarm bearbeiten' : 'Neuer Alarm'}</Text><Pressable accessibilityRole="button" accessibilityLabel="Editor schließen" onPress={() => setEditorVisible(false)} style={styles.closeButton}><Text style={styles.closeText}>×</Text></Pressable></View>
-            <Text style={styles.fieldLabel}>SCHNELLSTART-TYP</Text>
-            <View style={styles.choiceRow}>
-              {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} onPress={() => setEditor((current) => ({ ...current, ...defaultEditor(TEMPLATES[key]), title: current.title }))} style={[styles.choice, editor.type === TEMPLATES[key].type && styles.choiceActive]}><Text style={styles.choiceText}>{alarmTypeLabel(TEMPLATES[key].type)}</Text></Pressable>)}
-            </View>
-            <Text style={styles.fieldLabel}>BEZEICHNUNG</Text>
-            <TextInput accessibilityLabel="Alarmbezeichnung" value={editor.title} onChangeText={(title) => setEditor((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble Alarm" placeholderTextColor={COLORS.muted} maxLength={80} style={styles.input} returnKeyType="done" />
-            <View style={styles.twoColumns}><View style={styles.column}><Text style={styles.fieldLabel}>DATUM</Text><TextInput accessibilityLabel="Alarmdatum" value={editor.date} onChangeText={(date) => setEditor((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View><View style={styles.column}><Text style={styles.fieldLabel}>UHRZEIT</Text><TextInput accessibilityLabel="Alarmuhrzeit" value={editor.time} onChangeText={(time) => setEditor((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor={COLORS.muted} keyboardType="numbers-and-punctuation" style={styles.input} /></View></View>
-            <Text style={styles.fieldLabel}>VORWARNUNGEN</Text>
-            <View style={styles.choiceRow}>{[60, 30, 15].map((minutes) => <Pressable key={minutes} onPress={() => setEditor((current) => ({ ...current, warnings: current.warnings.includes(minutes) ? current.warnings.filter((item) => item !== minutes) : [...current.warnings, minutes] }))} accessibilityRole="button" accessibilityLabel={`Vorwarnung ${minutes} Minuten`} style={[styles.choice, editor.warnings.includes(minutes) && styles.choiceActive]}><Text style={styles.choiceText}>{minutes} Min.</Text></Pressable>)}</View>
-            <Text style={styles.fieldLabel}>WIEDERHOLUNG</Text>
-            <View style={styles.choiceRow}>{(['once', 'daily', 'gw5d'] as Alarm['repeat'][]).map((repeat) => <Pressable key={repeat} onPress={() => setEditor((current) => ({ ...current, repeat }))} accessibilityRole="button" accessibilityLabel={`Wiederholung ${repeatLabel(repeat)}`} style={[styles.choice, editor.repeat === repeat && styles.choiceActive]}><Text style={styles.choiceText}>{repeatLabel(repeat)}</Text></Pressable>)}</View>
-            <View style={styles.switchLine}><Text style={styles.switchLabel}>Als geschützt markieren</Text><Switch value={editor.protected} onValueChange={(value) => setEditor((current) => ({ ...current, protected: value }))} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={editor.protected ? COLORS.mint : '#D0D6DB'} /></View>
-            <Pressable accessibilityRole="button" onPress={saveEditor} style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}><Text style={styles.primaryButtonText}>{editingId ? 'Änderungen speichern' : 'Alarm speichern'}</Text></Pressable>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
-    </SafeAreaView>
+      <AlarmEditorModal
+        visible={editorVisible}
+        editingId={editingId}
+        editor={editor}
+        onChange={setEditor}
+        onClose={() => setEditorVisible(false)}
+        onSave={saveEditor}
+      />
+    </CommandCenterScreen>
   );
 }
 
-function SettingRow({ label, value, onValueChange }: { label: string; value: boolean; onValueChange: (value: boolean) => void }): React.ReactElement {
-  return <View style={styles.settingRow}><Text style={styles.settingLabel}>{label}</Text><Switch accessibilityLabel={label} value={value} onValueChange={onValueChange} trackColor={{ false: COLORS.border, true: '#60783D' }} thumbColor={value ? COLORS.mint : '#D0D6DB'} /></View>;
-}
+
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
