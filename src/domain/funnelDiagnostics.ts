@@ -86,8 +86,8 @@ export function parseFunnelSnapshot(value: unknown): FunnelSnapshot {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Funnel event ist ungültig');
     const event = raw as Record<string, unknown>;
     const occurredAt = normalizeIso(event.occurredAt);
-    const count = event.count;
-    if (!validStage(event.stage) || !occurredAt || !Number.isInteger(count) || count < 1 || count > 100000) throw new Error('Funnel event ist ungültig');
+    const count = typeof event.count === 'number' ? event.count : null;
+    if (!validStage(event.stage) || !occurredAt || count === null || !Number.isInteger(count) || count < 1 || count > 100000) throw new Error('Funnel event ist ungültig');
     return { stage: event.stage, occurredAt, count };
   });
   return {
