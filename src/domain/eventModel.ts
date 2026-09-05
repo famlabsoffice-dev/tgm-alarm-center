@@ -36,6 +36,8 @@ export interface EventSchedule {
   intervalMinutes?: number;
   anchorUtc?: string;
   localTime?: string;
+  /** IANA timezone used for dailyLocal/fixedLocal schedules; omitted means UTC. */
+  timezoneId?: string;
   durationMinutes?: number;
   windowStartUtc?: string;
   windowEndUtc?: string;
@@ -96,6 +98,14 @@ export function validateEventDefinition(definition: EventDefinition): string[] {
   if (definition.effectiveFrom && definition.effectiveUntil && Date.parse(definition.effectiveFrom) >= Date.parse(definition.effectiveUntil)) errors.push('invalid-effective-range');
   if (definition.schedule.intervalMinutes !== undefined && (!Number.isInteger(definition.schedule.intervalMinutes) || definition.schedule.intervalMinutes <= 0)) errors.push('invalid-interval');
   if (definition.duration && (!Number.isInteger(definition.duration.minutes) || definition.duration.minutes <= 0)) errors.push('invalid-duration');
+  if (definition.schedule.timezoneId !== undefined) {
+    try {
+      new Intl.DateTimeFormat('en-US', { timeZone: definition.schedule.timezoneId }).format(new Date(0));
+    } catch {
+      errors.push('invalid-timezone');
+    }
+  }
+  if (definition.schedule.localTime !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(definition.schedule.localTime)) errors.push('invalid-local-time');
   for (const source of definition.sources) {
     if (!source.id || !source.label || !isValidIsoUtc(source.observedAt)) errors.push('invalid-provenance');
   }
