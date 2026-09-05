@@ -46,7 +46,9 @@ const original = source;
 requireOnce(!source.includes("from './src/ui/screens/AlarmCard';"), 'App.tsx is already partially refactored; refusing a non-idempotent rewrite');
 
 source = source.replace('  KeyboardAvoidingView,\n', '').replace('  Modal,\n', '').replace('  SafeAreaView,\n', '').replace('  Switch,\n', '').replace('  TextInput,\n', '');
-source = source.replace("  momentLabel,\n", '').replace("  upcomingMoments,\n", '');
+source = source.replace("  momentLabel,\n", '').replace("  repeatLabel,\n", '').replace("  upcomingMoments,\n", '');
+source = source.replace("  AlarmTemplate,\n", '').replace("  Tier,\n", '').replace("  TIER_LIMITS,\n", '');
+source = source.replace("  localInputFromUtc,\n", '');
 source = source.replace("import { BillingPanel } from './src/billing/BillingPanel';\n", '');
 
 const alarmImport = "import { reconcileAlarmNotifications } from './src/native/schedulerService';\n";
@@ -86,6 +88,8 @@ requireOnce(modalEnd >= 0, 'editor Modal closing tag missing');
 const modalReplacement = `      <AlarmEditorModal\n        visible={editorVisible}\n        editingId={editingId}\n        editor={editor}\n        onChange={setEditor}\n        onClose={() => setEditorVisible(false)}\n        onSave={saveEditor}\n      />`;
 source = source.slice(0, modalStart) + modalReplacement + source.slice(modalEnd + modalEndTag.length);
 
+source = source.replace(/^const localDate = .*?;\n/m, '').replace(/^const localTime = .*?;\n/m, '');
+
 source = source.replace('<SafeAreaView style={styles.root}><View style={styles.loading}>', '<CommandCenterScreen><View style={styles.loading}>');
 source = source.replace('</View></SafeAreaView>;', '</View></CommandCenterScreen>;');
 source = source.replace('    <SafeAreaView style={styles.root}>', '    <CommandCenterScreen>');
@@ -98,6 +102,9 @@ requireOnce(source.includes('<CommandCenterScreen>'), 'CommandCenterScreen not w
 requireOnce(!source.includes('renderAlarm'), 'renderAlarm inline responsibility remains');
 requireOnce(!source.includes('<Modal '), 'Modal inline responsibility remains');
 requireOnce(!source.includes('function SettingRow'), 'SettingRow inline responsibility remains');
+requireOnce(!source.includes('localDate ='), 'localDate inline helper remains');
+requireOnce(!source.includes('localTime ='), 'localTime inline helper remains');
+requireOnce(!source.includes('repeatLabel'), 'repeatLabel inline import remains');
 
 writeFileSync(appPath, source, 'utf8');
 console.log(`UI screen refactor PASS: ${Buffer.byteLength(original)} -> ${Buffer.byteLength(source)} bytes`);
