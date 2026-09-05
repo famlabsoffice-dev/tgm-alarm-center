@@ -10,7 +10,7 @@ const js = read('app.js');
 const sw = read('sw.js');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 
-assert(html.includes('href="styles.css?v=5"'), 'CSS stylesheet is not linked.');
+assert(html.includes('href="styles.css?v=6"'), 'CSS stylesheet is not linked.');
 assert(html.includes('href="styles-accessibility.css?v=1"'), 'Accessibility stylesheet is not linked.');
 assert(html.includes('<a class="skip-link" href="#app">'), 'Skip navigation link is missing.');
 assert(html.includes('<div id="app" role="main" tabindex="-1"'), 'Main application landmark is missing.');
@@ -92,7 +92,7 @@ for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
   assert(!new RegExp(marker, 'i').test(js + html + css + accessibilityCss), `Placeholder marker found: ${marker}`);
 }
 
-assert(sw.includes('./styles.css?v=5') && sw.includes('./app.js?v=17'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./styles.css?v=6') && sw.includes('./app.js?v=18'), 'Offline shell does not cache the versioned application files.');
 assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');
