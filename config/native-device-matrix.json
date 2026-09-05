@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "matrixVersion": "2026-09-05",
+  "physicalEvidenceRequired": true,
+  "platforms": {
+    "android": {
+      "requiredOsFamily": "Android 16 / API 36",
+      "slots": [
+        { "id": "android-aosp-api36", "family": "AOSP/Pixel-class", "focus": ["permission", "lockscreen", "background", "reboot", "doze", "timezone", "dst"] },
+        { "id": "android-samsung-api36", "family": "Samsung/One UI", "focus": ["permission", "lockscreen", "background", "reboot", "battery-oem", "timezone", "dst"] },
+        { "id": "android-xiaomi-api36", "family": "Xiaomi/HyperOS", "focus": ["permission", "lockscreen", "background", "reboot", "battery-oem", "timezone", "dst"] }
+      ],
+      "cases": [
+        "fresh-install",
+        "notification-denied",
+        "notification-granted",
+        "exact-alarm-denied-regranted",
+        "lockscreen-delivery",
+        "background-delivery",
+        "process-death",
+        "force-stop",
+        "reboot",
+        "doze-battery-saver",
+        "oem-battery-restriction",
+        "timezone-change",
+        "dst-transition"
+      ]
+    },
+    "ios": {
+      "requiredOsFamily": "current supported iOS release",
+      "slots": [
+        { "id": "ios-phone-current", "family": "current supported iPhone", "focus": ["permission", "lockscreen", "background", "focus", "time-sensitive", "timezone", "dst"] },
+        { "id": "ios-tablet-current", "family": "current supported iPad", "focus": ["permission", "lockscreen", "background", "focus", "time-sensitive", "timezone", "dst"] }
+      ],
+      "cases": [
+        "fresh-install",
+        "notification-denied",
+        "notification-granted",
+        "lockscreen-delivery",
+        "background-delivery",
+        "app-kill-relaunch",
+        "focus-mode",
+        "time-sensitive",
+        "timezone-change",
+        "dst-transition"
+      ]
+    }
+  },
+  "evidenceFields": [
+    "caseId",
+    "platform",
+    "osVersion",
+    "deviceModel",
+    "appBuild",
+    "executedAt",
+    "prerequisites",
+    "actions",
+    "expected",
+    "observed",
+    "result",
+    "evidenceReference"
+  ],
+  "allowedResults": ["PASS", "FAIL", "BLOCKED"]
+}
