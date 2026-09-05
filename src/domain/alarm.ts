@@ -14,19 +14,11 @@ export interface AlarmTemplate { title: string; type: AlarmType; warnings: numbe
 export interface NotificationMoment { alarmId: string; eventTime: Date; at: Date; kind: OccurrenceKind; warningMinutes?: number; endAt?: Date; }
 
 export const BUBBLE_DURATIONS: readonly { hours: BubbleDurationHours; label: string }[] = [
-  { hours: 4, label: '4 Stunden' },
-  { hours: 8, label: '8 Stunden' },
-  { hours: 24, label: '24 Stunden' },
-  { hours: 72, label: '72 Stunden' },
-  { hours: 168, label: '1 Woche' },
-  { hours: 336, label: '2 Wochen' },
-  { hours: 504, label: '3 Wochen' },
+  { hours: 4, label: '4 Stunden' }, { hours: 8, label: '8 Stunden' }, { hours: 24, label: '24 Stunden' }, { hours: 72, label: '72 Stunden' },
+  { hours: 168, label: '1 Woche' }, { hours: 336, label: '2 Wochen' }, { hours: 504, label: '3 Wochen' },
 ];
-
 export const FACTION_EVENT_OPTIONS: readonly { id: FactionEvent; label: string }[] = [
-  { id: 'oakvale', label: 'Oakvale' },
-  { id: 'undergroundMarket', label: 'Underground Market' },
-  { id: 'otherBattleEvent', label: 'Faction Battle Event' },
+  { id: 'oakvale', label: 'Oakvale' }, { id: 'undergroundMarket', label: 'Underground Market' }, { id: 'otherBattleEvent', label: 'Faction Battle Event' },
 ];
 
 export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number; individualAlarms: number; rssAlarms: number } }> = {
@@ -84,18 +76,15 @@ function nextDailyOccurrence(alarm: Alarm, now: Date): Date | null {
 function nextGwOccurrence(alarm: Alarm, now: Date): Date | null {
   const base = new Date(alarm.eventAtUtc); if (!Number.isFinite(base.getTime())) return null;
   if (base.getTime() > now.getTime()) return isCompleted(alarm, base) ? new Date(base.getTime() + FIVE_DAYS_MS) : base;
-  const delta = now.getTime() - base.getTime(); const cycles = Math.floor(delta / FIVE_DAYS_MS) + 1;
-  let candidate = new Date(base.getTime() + cycles * FIVE_DAYS_MS);
+  const delta = now.getTime() - base.getTime(); const cycles = Math.floor(delta / FIVE_DAYS_MS) + 1; let candidate = new Date(base.getTime() + cycles * FIVE_DAYS_MS);
   for (let attempts = 0; attempts < 370; attempts += 1) { if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate; candidate = new Date(candidate.getTime() + FIVE_DAYS_MS); }
   return null;
 }
 function nextCvcOccurrence(alarm: Alarm, now: Date): Date | null {
   const base = new Date(alarm.eventAtUtc); if (!Number.isFinite(base.getTime())) return null;
-  const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7;
-  const cycleMs = cycleDays * DAY_MS;
+  const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7; const cycleMs = cycleDays * DAY_MS;
   if (base.getTime() > now.getTime()) return isCompleted(alarm, base) ? new Date(base.getTime() + cycleMs) : base;
-  const cycles = Math.floor((now.getTime() - base.getTime()) / cycleMs) + 1;
-  let candidate = new Date(base.getTime() + cycles * cycleMs);
+  const cycles = Math.floor((now.getTime() - base.getTime()) / cycleMs) + 1; let candidate = new Date(base.getTime() + cycles * cycleMs);
   for (let attempts = 0; attempts < 370; attempts += 1) { if (candidate.getTime() > now.getTime() && !isCompleted(alarm, candidate)) return candidate; candidate = new Date(candidate.getTime() + cycleMs); }
   return null;
 }
@@ -108,19 +97,18 @@ export function nextOccurrence(alarm: Alarm, now = new Date()): Date | null {
 }
 export function occurrenceKey(alarmId: string, eventTime: Date): string { return `${alarmId}:${eventTime.toISOString()}`; }
 export function occurrenceEnd(alarm: Alarm, eventTime: Date): Date | null {
-  if (alarm.type === 'cvc') return new Date(eventTime.getTime() + DAY_MS);
+  if (alarm.type === 'cvc') { const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7; return new Date(eventTime.getTime() + cycleDays * DAY_MS); }
   if (alarm.type === 'bubble' || alarm.type === 'gwBubble') return new Date(eventTime.getTime() + (alarm.durationHours ?? 24) * 60 * 60 * 1000);
   return null;
 }
-export function isCvcBattleDay(alarm: Alarm, eventTime: Date, now = new Date()): boolean {
-  if (alarm.type !== 'cvc') return false;
+export function cvcBattleDayAt(alarm: Alarm, eventTime: Date): Date | null {
+  if (alarm.type !== 'cvc') return null;
   const cycleDays = alarm.cycleDays && alarm.cycleDays > 0 ? alarm.cycleDays : 7;
-  const cycleMs = cycleDays * DAY_MS;
-  const base = new Date(alarm.eventAtUtc);
-  if (!Number.isFinite(base.getTime()) || eventTime.getTime() < base.getTime()) return false;
-  const cycleOffset = eventTime.getTime() - base.getTime();
-  const dayIndex = Math.floor((now.getTime() - eventTime.getTime()) / DAY_MS);
-  return cycleOffset % cycleMs === 0 && dayIndex >= 0 && dayIndex < 1;
+  return new Date(eventTime.getTime() + (cycleDays - 1) * DAY_MS);
+}
+export function isCvcBattleDay(alarm: Alarm, eventTime: Date, now = new Date()): boolean {
+  const battleDay = cvcBattleDayAt(alarm, eventTime); if (!battleDay) return false;
+  return now.getTime() >= battleDay.getTime() && now.getTime() < battleDay.getTime() + DAY_MS;
 }
 export function upcomingMoments(alarm: Alarm, now = new Date()): NotificationMoment[] {
   const eventTime = nextOccurrence(alarm, now); if (!eventTime) return []; const moments: NotificationMoment[] = [];
