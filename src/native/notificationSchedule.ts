@@ -1,5 +1,7 @@
 import { Alarm, NotificationMoment, NotificationPreferences, upcomingMoments } from '../domain/alarm';
 
+export const NOTIFICATION_ROLLING_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+
 export interface NotificationPlanEntry {
   alarmId: string;
   accountId: string;
@@ -17,11 +19,20 @@ export function activeAlarmsForNotification(alarms: readonly Alarm[]): Alarm[] {
   return alarms.filter((alarm) => alarm.active);
 }
 
+export function isWithinRollingNotificationWindow(at: Date, now: Date, windowMs = NOTIFICATION_ROLLING_WINDOW_MS): boolean {
+  const timestamp = at.getTime();
+  const lower = now.getTime();
+  const upper = lower + windowMs;
+  return Number.isFinite(timestamp) && Number.isFinite(lower) && Number.isFinite(upper) && timestamp > lower && timestamp <= upper;
+}
+
 export function buildNotificationPlan(
   alarms: Alarm[],
   preferences: NotificationPreferences,
   now = new Date(),
+  windowMs = NOTIFICATION_ROLLING_WINDOW_MS,
 ): NotificationPlanEntry[] {
+  if (!Number.isFinite(now.getTime()) || !Number.isFinite(windowMs) || windowMs <= 0) throw new Error('Invalid notification rolling window');
   const entries = activeAlarmsForNotification(alarms)
     .flatMap((alarm) => upcomingMoments(alarm, now).map((moment) => ({
       alarmId: alarm.id,
@@ -35,7 +46,8 @@ export function buildNotificationPlan(
       soundEnabled: moment.kind === 'warning' || moment.kind === 'end-warning'
         ? preferences.warningSound
         : preferences.eventSound,
-    })));
+    })))
+    .filter((entry) => isWithinRollingNotificationWindow(new Date(entry.at), now, windowMs));
 
   const unique = new Map<string, NotificationPlanEntry>();
   for (const entry of entries) {
