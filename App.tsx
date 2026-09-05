@@ -42,13 +42,11 @@ import { exportBackup, restoreBackup } from './src/backup/backup';
 import { emptyState, loadState, saveState } from './src/storage/store';
 import {
   NotificationReadiness,
-  cancelAllScheduled,
   initializeNotifications,
   registerCategories,
-  scheduleAlarm,
   scheduleLocalTestNotification,
 } from './src/native/notifications';
-import { activeAlarmsForNotification } from './src/native/notificationSchedule';
+import { reconcileAlarmNotifications } from './src/native/schedulerService';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -173,12 +171,8 @@ export default function App() {
     let cancelled = false;
     const reconcile = async (): Promise<void> => {
       if (cancelled || generation !== notificationGeneration.current) return;
-      await cancelAllScheduled();
+      await reconcileAlarmNotifications(state.alarms, state.notificationPreferences);
       if (cancelled || generation !== notificationGeneration.current) return;
-      for (const alarm of activeAlarmsForNotification(state.alarms)) {
-        if (cancelled || generation !== notificationGeneration.current) return;
-        await scheduleAlarm(alarm, state.notificationPreferences);
-      }
     };
     reconcile().catch(() => setStorageError('Benachrichtigungen konnten nicht neu geplant werden.'));
     return () => { cancelled = true; };

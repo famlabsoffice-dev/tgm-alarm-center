@@ -14,6 +14,7 @@ const notificationPlan = read('src/native/notificationSchedule.ts');
 const backup = read('src/backup/backup.ts');
 const accountActions = read('src/domain/accountAlarmActions.ts');
 const app = read('App.tsx');
+const schedulerService = read('src/native/schedulerService.ts');
 const storage = read('src/storage/store.ts');
 const packageJson = JSON.parse(read('package.json'));
 const appJson = JSON.parse(read('app.json')).expo;
@@ -25,6 +26,7 @@ for (const path of [
   'src/domain/accountAlarmActions.ts',
   'src/native/notifications.ts',
   'src/native/notificationSchedule.ts',
+  'src/native/schedulerService.ts',
   'src/backup/backup.ts',
   'src/storage/store.ts',
   'tests/billing-security.test.mjs',
@@ -72,7 +74,8 @@ requireValue(accountActions.includes('accountId'), 'Account-scoped alarm actions
 requireValue(app.includes('alarmsForAccount(state.alarms, state.activeAccountId)'), 'UI alarm list must remain account-scoped.');
 requireValue(app.includes('effectiveTierForAccount(state.tier, activeAccount?.name ?? \'\')'), 'Native UI must apply the effective account tier.');
 requireValue(app.includes('completeAccountOccurrence'), 'Notification completion must remain account-scoped.');
-requireValue(app.includes('scheduleAlarm(alarm, state.notificationPreferences)'), 'Active alarms must be reconciled into native notifications.');
+requireValue(app.includes('reconcileAlarmNotifications(state.alarms, state.notificationPreferences)'), 'App must delegate active-alarm reconciliation to the Scheduler Service.');
+requireValue(schedulerService.includes('reconcileScheduledNotifications(alarms, preferences)'), 'Scheduler Service must delegate to the canonical native reconciliation queue.');
 
 requireValue(appJson.orientation === 'landscape', 'Production mobile orientation must remain landscape.');
 requireValue(appJson.android?.package === 'com.tgm.alarmcenter', 'Android application ID mismatch.');
