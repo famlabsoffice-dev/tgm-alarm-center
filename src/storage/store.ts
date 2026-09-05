@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { persistWithRecoveryLadder } from './storageTransaction';
 import {
   Alarm,
   AlarmType,
@@ -25,207 +26,24 @@ const HEX_COLOR = /^#[0-9a-fA-F]{6}$/;
 let volatileState: AppState | null = null;
 let volatileStateRevision = 0;
 
-export const defaultPreferences: NotificationPreferences = {
-  sound: 'pulse',
-  warningSound: true,
-  eventSound: true,
-  vibration: true,
-  criticalAlerts: true,
-  preview: true,
-};
-
-export const emptyState = (): AppState => ({
-  schemaVersion: 1,
-  accounts: [],
-  alarms: [],
-  activeAccountId: null,
-  tier: 'free',
-  notificationPreferences: { ...defaultPreferences },
-  testConfirmedAt: null,
-});
-
+export const defaultPreferences: NotificationPreferences = { sound: 'pulse', warningSound: true, eventSound: true, vibration: true, criticalAlerts: true, preview: true };
+export const emptyState = (): AppState => ({ schemaVersion: 1, accounts: [], alarms: [], activeAccountId: null, tier: 'free', notificationPreferences: { ...defaultPreferences }, testConfirmedAt: null });
 export function getVolatileState(): AppState | null { return volatileState; }
 export function getVolatileStateRevision(): number { return volatileStateRevision; }
+function isRecord(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === 'object' && !Array.isArray(value); }
+function stringOr(value: unknown, fallback: string): string { return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback; }
+function isoOr(value: unknown, fallback: string): string { if (typeof value !== 'string') return fallback; const parsed = new Date(value); return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback; }
+function validType(value: unknown): AlarmType { return value === 'bubble' || value === 'gwBubble' || value === 'custom' || value === 'individual' || value === 'rss' ? value : 'custom'; }
+function validRepeat(value: unknown, type: AlarmType, legacyGwCycle: unknown): RepeatMode { if (value === 'daily' || value === 'gw5d') return value; if (legacyGwCycle === true && type === 'gwBubble') return 'gw5d'; return 'once'; }
+function validSound(value: unknown): SoundProfile { return value === 'siren' || value === 'chime' || value === 'pulse' ? value : 'pulse'; }
+function validWarnings(value: unknown, fallback: number[]): number[] { if (!Array.isArray(value)) return [...fallback]; const warnings = value.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= 7 * 24 * 60).filter((item, index, all) => all.indexOf(item) === index).sort((a, b) => b - a).slice(0, MAX_WARNINGS); return warnings.length > 0 ? warnings : [...fallback]; }
+function defaultWarnings(type: AlarmType): number[] { if (type === 'gwBubble') return [60, 30, 15]; if (type === 'bubble') return [60, 15]; return [15]; }
+function migrateCompleted(value: unknown, alarmId: string): Record<string, true> { const completed: Record<string, true> = {}; if (Array.isArray(value)) { for (const entry of value.slice(0, MAX_COMPLETED_OCCURRENCES)) if (typeof entry === 'string') { const separator = entry.indexOf('|'); const key = separator >= 0 ? `${alarmId}:${entry.slice(separator + 1)}` : `${alarmId}:${entry}`; completed[key] = true; } return completed; } if (isRecord(value)) for (const [key, item] of Object.entries(value).slice(0, MAX_COMPLETED_OCCURRENCES)) if (item === true && key.length <= 180) completed[key] = true; return completed; }
+function normalizeAlarm(value: unknown, accountIds: Set<string>): Alarm | null { if (!isRecord(value)) return null; const type = validType(value.type); const accountId = stringOr(value.accountId, ''); if (!accountId || !accountIds.has(accountId)) return null; const id = stringOr(value.id, ''); const title = stringOr(value.title, ''); if (!id || !title || title.length > 80) return null; let date = typeof value.date === 'string' ? value.date : ''; let time = typeof value.time === 'string' ? value.time : ''; let eventAtUtc = typeof value.eventAtUtc === 'string' ? value.eventAtUtc : ''; if (!Number.isFinite(new Date(eventAtUtc).getTime()) && validateDateTime(date, time)) eventAtUtc = localDateTimeToUtc(date, time) ?? ''; if (!Number.isFinite(new Date(eventAtUtc).getTime())) return null; if (!validateDateTime(date, time)) { try { ({ date, time } = localInputFromUtc(eventAtUtc)); } catch { return null; } } const createdAt = isoOr(value.createdAt, new Date().toISOString()); const updatedAt = isoOr(value.updatedAt, createdAt); return { id, accountId, title, type, date, time, eventAtUtc: new Date(eventAtUtc).toISOString(), warnings: validWarnings(value.warnings, defaultWarnings(type)), repeat: validRepeat(value.repeat, type, value.gwCycle), sound: validSound(value.sound), active: value.active !== false, protected: value.protected === true, completedOccurrences: migrateCompleted(value.completedOccurrences, id), createdAt, updatedAt }; }
+function normalizeState(value: unknown): AppState { const base = emptyState(); if (!isRecord(value)) return base; const accounts = Array.isArray(value.accounts) ? value.accounts.slice(0, MAX_ACCOUNTS).filter(isRecord).map((account) => ({ id: stringOr(account.id, ''), name: stringOr(account.name, ''), color: HEX_COLOR.test(stringOr(account.color, '')) ? stringOr(account.color, '') : '#F0C76A', createdAt: isoOr(account.createdAt, new Date().toISOString()) })).filter((account) => account.id && account.name && account.name.length <= 80) : []; const uniqueAccounts = accounts.filter((account, index, all) => all.findIndex((item) => item.id === account.id) === index); const accountIds = new Set(uniqueAccounts.map((account) => account.id)); const alarms = Array.isArray(value.alarms) ? value.alarms.slice(0, MAX_ALARMS).map((alarm) => normalizeAlarm(alarm, accountIds)).filter((alarm): alarm is Alarm => alarm !== null) : []; const legacyTier = value.tierId === 'street' ? 'streetBoss' : value.tierId === 'caporegime' ? 'caporegime' : value.tierId === 'godfather' ? 'godfather' : value.tier; const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'underboss' || legacyTier === 'boss' || legacyTier === 'godfather' ? legacyTier : 'free'; const rawPreferences = isRecord(value.notificationPreferences) ? value.notificationPreferences : isRecord(value.preferences) ? value.preferences : {}; const preferences: NotificationPreferences = { sound: validSound(rawPreferences.sound), warningSound: rawPreferences.warningSound !== false, eventSound: rawPreferences.eventSound !== false && rawPreferences.alarmSound !== false, vibration: rawPreferences.vibration !== false, criticalAlerts: rawPreferences.criticalAlerts !== false && rawPreferences.criticalAlertsEnabled !== false, preview: rawPreferences.preview !== false }; const requestedAccount = typeof value.activeAccountId === 'string' && accountIds.has(value.activeAccountId) ? value.activeAccountId : null; const activeAccountId = requestedAccount ?? uniqueAccounts[0]?.id ?? null; const testConfirmedAt = value.testConfirmedAt === null || value.testConfirmedAt === undefined ? null : (() => { const normalized = isoOr(value.testConfirmedAt, ''); return normalized || null; })(); return { schemaVersion: 1, accounts: uniqueAccounts, alarms, activeAccountId, tier, notificationPreferences: preferences, testConfirmedAt }; }
+function decodePersistedState(raw: string | null): AppState | null { if (!raw || raw.length > MAX_STORAGE_BYTES) return null; try { const parsed = JSON.parse(raw) as unknown; if (!isRecord(parsed) || parsed.schemaVersion !== 1) return null; const normalized = normalizeState(parsed); if (!Array.isArray(parsed.accounts) || !Array.isArray(parsed.alarms)) return null; return normalized; } catch { return null; } }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
+export async function loadState(): Promise<AppState> { const [primary, pending, lastKnownGood] = await Promise.all([AsyncStorage.getItem(STORAGE_KEY), AsyncStorage.getItem(TEMP_STORAGE_KEY), AsyncStorage.getItem(LAST_KNOWN_GOOD_STORAGE_KEY)]); const current = decodePersistedState(primary); if (current) { const serialized = JSON.stringify(current); if (serialized !== primary) await AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => undefined); await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized).catch(() => undefined); volatileState = current; volatileStateRevision += 1; return current; } const recoveredFromPending = decodePersistedState(pending); if (recoveredFromPending) { const serialized = JSON.stringify(recoveredFromPending); await AsyncStorage.setItem(STORAGE_KEY, serialized); await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized); await AsyncStorage.removeItem(TEMP_STORAGE_KEY); volatileState = recoveredFromPending; volatileStateRevision += 1; return recoveredFromPending; } const recoveredFromLastKnownGood = decodePersistedState(lastKnownGood); if (recoveredFromLastKnownGood) { const serialized = JSON.stringify(recoveredFromLastKnownGood); await AsyncStorage.setItem(STORAGE_KEY, serialized); await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized); await AsyncStorage.removeItem(TEMP_STORAGE_KEY); volatileState = recoveredFromLastKnownGood; volatileStateRevision += 1; return recoveredFromLastKnownGood; } const fresh = emptyState(); volatileState = fresh; volatileStateRevision += 1; return fresh; }
 
-function stringOr(value: unknown, fallback: string): string {
-  return typeof value === 'string' && value.trim().length > 0 ? value.trim() : fallback;
-}
-
-function isoOr(value: unknown, fallback: string): string {
-  if (typeof value !== 'string') return fallback;
-  const parsed = new Date(value);
-  return Number.isFinite(parsed.getTime()) ? parsed.toISOString() : fallback;
-}
-
-function validType(value: unknown): AlarmType {
-  return value === 'bubble' || value === 'gwBubble' || value === 'custom' || value === 'individual' || value === 'rss' ? value : 'custom';
-}
-
-function validRepeat(value: unknown, type: AlarmType, legacyGwCycle: unknown): RepeatMode {
-  if (value === 'daily' || value === 'gw5d') return value;
-  if (legacyGwCycle === true && type === 'gwBubble') return 'gw5d';
-  return 'once';
-}
-
-function validSound(value: unknown): SoundProfile {
-  return value === 'siren' || value === 'chime' || value === 'pulse' ? value : 'pulse';
-}
-
-function validWarnings(value: unknown, fallback: number[]): number[] {
-  if (!Array.isArray(value)) return [...fallback];
-  const warnings = value
-    .filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= 7 * 24 * 60)
-    .filter((item, index, all) => all.indexOf(item) === index)
-    .sort((a, b) => b - a)
-    .slice(0, MAX_WARNINGS);
-  return warnings.length > 0 ? warnings : [...fallback];
-}
-
-function defaultWarnings(type: AlarmType): number[] {
-  if (type === 'gwBubble') return [60, 30, 15];
-  if (type === 'bubble') return [60, 15];
-  return [15];
-}
-
-function migrateCompleted(value: unknown, alarmId: string): Record<string, true> {
-  const completed: Record<string, true> = {};
-  if (Array.isArray(value)) {
-    for (const entry of value.slice(0, MAX_COMPLETED_OCCURRENCES)) {
-      if (typeof entry === 'string') {
-        const separator = entry.indexOf('|');
-        const key = separator >= 0 ? `${alarmId}:${entry.slice(separator + 1)}` : `${alarmId}:${entry}`;
-        completed[key] = true;
-      }
-    }
-    return completed;
-  }
-  if (isRecord(value)) {
-    for (const [key, item] of Object.entries(value).slice(0, MAX_COMPLETED_OCCURRENCES)) if (item === true && key.length <= 180) completed[key] = true;
-  }
-  return completed;
-}
-
-function normalizeAlarm(value: unknown, accountIds: Set<string>): Alarm | null {
-  if (!isRecord(value)) return null;
-  const type = validType(value.type);
-  const accountId = stringOr(value.accountId, '');
-  if (!accountId || !accountIds.has(accountId)) return null;
-  const id = stringOr(value.id, '');
-  const title = stringOr(value.title, '');
-  if (!id || !title || title.length > 80) return null;
-  let date = typeof value.date === 'string' ? value.date : '';
-  let time = typeof value.time === 'string' ? value.time : '';
-  let eventAtUtc = typeof value.eventAtUtc === 'string' ? value.eventAtUtc : '';
-  if (!Number.isFinite(new Date(eventAtUtc).getTime()) && validateDateTime(date, time)) eventAtUtc = localDateTimeToUtc(date, time) ?? '';
-  if (!Number.isFinite(new Date(eventAtUtc).getTime())) return null;
-  if (!validateDateTime(date, time)) {
-    try { ({ date, time } = localInputFromUtc(eventAtUtc)); } catch { return null; }
-  }
-  const createdAt = isoOr(value.createdAt, new Date().toISOString());
-  const updatedAt = isoOr(value.updatedAt, createdAt);
-  return { id, accountId, title, type, date, time, eventAtUtc: new Date(eventAtUtc).toISOString(), warnings: validWarnings(value.warnings, defaultWarnings(type)), repeat: validRepeat(value.repeat, type, value.gwCycle), sound: validSound(value.sound), active: value.active !== false, protected: value.protected === true, completedOccurrences: migrateCompleted(value.completedOccurrences, id), createdAt, updatedAt };
-}
-
-function normalizeState(value: unknown): AppState {
-  const base = emptyState();
-  if (!isRecord(value)) return base;
-  const accounts = Array.isArray(value.accounts)
-    ? value.accounts.slice(0, MAX_ACCOUNTS).filter(isRecord).map((account) => ({
-      id: stringOr(account.id, ''),
-      name: stringOr(account.name, ''),
-      color: HEX_COLOR.test(stringOr(account.color, '')) ? stringOr(account.color, '') : '#F0C76A',
-      createdAt: isoOr(account.createdAt, new Date().toISOString()),
-    })).filter((account) => account.id && account.name && account.name.length <= 80)
-    : [];
-  const uniqueAccounts = accounts.filter((account, index, all) => all.findIndex((item) => item.id === account.id) === index);
-  const accountIds = new Set(uniqueAccounts.map((account) => account.id));
-  const alarms = Array.isArray(value.alarms)
-    ? value.alarms.slice(0, MAX_ALARMS).map((alarm) => normalizeAlarm(alarm, accountIds)).filter((alarm): alarm is Alarm => alarm !== null)
-    : [];
-  const legacyTier = value.tierId === 'street' ? 'streetBoss' : value.tierId === 'caporegime' ? 'caporegime' : value.tierId === 'godfather' ? 'godfather' : value.tier;
-  const tier: Tier = legacyTier === 'streetBoss' || legacyTier === 'caporegime' || legacyTier === 'underboss' || legacyTier === 'boss' || legacyTier === 'godfather' ? legacyTier : 'free';
-  const rawPreferences = isRecord(value.notificationPreferences) ? value.notificationPreferences : isRecord(value.preferences) ? value.preferences : {};
-  const preferences: NotificationPreferences = { sound: validSound(rawPreferences.sound), warningSound: rawPreferences.warningSound !== false, eventSound: rawPreferences.eventSound !== false && rawPreferences.alarmSound !== false, vibration: rawPreferences.vibration !== false, criticalAlerts: rawPreferences.criticalAlerts !== false && rawPreferences.criticalAlertsEnabled !== false, preview: rawPreferences.preview !== false };
-  const requestedAccount = typeof value.activeAccountId === 'string' && accountIds.has(value.activeAccountId) ? value.activeAccountId : null;
-  const activeAccountId = requestedAccount ?? uniqueAccounts[0]?.id ?? null;
-  const testConfirmedAt = value.testConfirmedAt === null || value.testConfirmedAt === undefined ? null : (() => { const normalized = isoOr(value.testConfirmedAt, ''); return normalized || null; })();
-  return { schemaVersion: 1, accounts: uniqueAccounts, alarms, activeAccountId, tier, notificationPreferences: preferences, testConfirmedAt };
-}
-
-function decodePersistedState(raw: string | null): AppState | null {
-  if (!raw || raw.length > MAX_STORAGE_BYTES) return null;
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    if (!isRecord(parsed) || parsed.schemaVersion !== 1) return null;
-    const normalized = normalizeState(parsed);
-    if (!Array.isArray(parsed.accounts) || !Array.isArray(parsed.alarms)) return null;
-    return normalized;
-  } catch {
-    return null;
-  }
-}
-
-async function promoteRecovery(recovered: AppState): Promise<AppState> {
-  const serialized = JSON.stringify(recovered);
-  await AsyncStorage.setItem(STORAGE_KEY, serialized);
-  await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
-  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
-  volatileState = recovered;
-  volatileStateRevision += 1;
-  return recovered;
-}
-
-export async function loadState(): Promise<AppState> {
-  const [primary, pending, lastKnownGood] = await Promise.all([
-    AsyncStorage.getItem(STORAGE_KEY),
-    AsyncStorage.getItem(TEMP_STORAGE_KEY),
-    AsyncStorage.getItem(LAST_KNOWN_GOOD_STORAGE_KEY),
-  ]);
-
-  const current = decodePersistedState(primary);
-  if (current) {
-    const serialized = JSON.stringify(current);
-    if (serialized !== primary) await AsyncStorage.setItem(STORAGE_KEY, serialized).catch(() => undefined);
-    await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized).catch(() => undefined);
-    volatileState = current;
-    volatileStateRevision += 1;
-    return current;
-  }
-
-  const recoveredFromPending = decodePersistedState(pending);
-  if (recoveredFromPending) return promoteRecovery(recoveredFromPending);
-
-  const recoveredFromLastKnownGood = decodePersistedState(lastKnownGood);
-  if (recoveredFromLastKnownGood) return promoteRecovery(recoveredFromLastKnownGood);
-
-  const fresh = emptyState();
-  volatileState = fresh;
-  volatileStateRevision += 1;
-  return fresh;
-}
-
-export async function saveState(state: AppState): Promise<void> {
-  const normalized = normalizeState(state);
-  const serialized = JSON.stringify(normalized);
-  if (serialized.length > MAX_STORAGE_BYTES) throw new Error('Der lokale Speicher ist voll. Bitte lösche alte Alarme oder exportiere ein Backup.');
-  volatileState = normalized;
-  volatileStateRevision += 1;
-  await AsyncStorage.setItem(TEMP_STORAGE_KEY, serialized);
-  await AsyncStorage.setItem(STORAGE_KEY, serialized);
-  await AsyncStorage.setItem(LAST_KNOWN_GOOD_STORAGE_KEY, serialized);
-  await AsyncStorage.removeItem(TEMP_STORAGE_KEY);
-}
-
-export async function resetState(): Promise<void> {
-  await Promise.all([
-    AsyncStorage.removeItem(STORAGE_KEY),
-    AsyncStorage.removeItem(TEMP_STORAGE_KEY),
-    AsyncStorage.removeItem(LAST_KNOWN_GOOD_STORAGE_KEY),
-  ]);
-  volatileState = null;
-  volatileStateRevision += 1;
-}
+export async function saveState(state: AppState): Promise<void> { const normalized = normalizeState(state); const serialized = JSON.stringify(normalized); if (serialized.length > MAX_STORAGE_BYTES) throw new Error('Der lokale Speicher ist voll. Bitte lösche alte Alarme oder exportiere ein Backup.'); volatileState = normalized; volatileStateRevision += 1; await persistWithRecoveryLadder(AsyncStorage, { pending: TEMP_STORAGE_KEY, primary: STORAGE_KEY, lastKnownGood: LAST_KNOWN_GOOD_STORAGE_KEY }, serialized); }
+export async function resetState(): Promise<void> { await Promise.all([AsyncStorage.removeItem(STORAGE_KEY), AsyncStorage.removeItem(TEMP_STORAGE_KEY), AsyncStorage.removeItem(LAST_KNOWN_GOOD_STORAGE_KEY)]); volatileState = null; volatileStateRevision += 1; }
