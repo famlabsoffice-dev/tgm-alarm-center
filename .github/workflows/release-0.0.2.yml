@@ -1,0 +1,203 @@
+name: TGM Release 0.0.2
+run-name: TGM Release 0.0.2 · ${{ github.event.before }}
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: tgm-release-0.0.2
+  cancel-in-progress: false
+
+env:
+  RELEASE_TAG: v0.0.2
+  RELEASE_TITLE: TGM Alarm Center v0.0.2
+  RELEASE_TARGET_SHA: ${{ github.event.before }}
+
+jobs:
+  release:
+    name: Validate, package, tag, publish and verify v0.0.2
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Validate release target
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$RELEASE_TARGET_SHA"
+          if [[ "$RELEASE_TARGET_SHA" == "0000000000000000000000000000000000000000" ]]; then
+            echo "Invalid release target: initial push has no parent commit."
+            exit 1
+          fi
+
+      - name: Checkout exact release target
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TARGET_SHA }}
+          fetch-depth: 1
+
+      - name: Confirm checkout SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          ACTUAL_SHA="$(git rev-parse HEAD)"
+          test "$ACTUAL_SHA" = "$RELEASE_TARGET_SHA"
+          printf '%s\n' "$ACTUAL_SHA" > RELEASE-SOURCE-SHA.txt
+
+      - name: Verify completed CI for exact release target
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.RELEASE_TARGET_SHA }}
+        run: |
+          set -euo pipefail
+          required=(
+            "Founder Access Gate"
+            "Billing Security Gate"
+            "Repository Snapshot"
+            "TGM Web Pricing Sync"
+            "mobile-quality"
+            "android-production-build"
+            "TGM Regression Full Suite"
+            "Deploy TGM Alarm Center to GitHub Pages"
+            "TGM Release Verification · ${TARGET_SHA}"
+            "TGM Migration Gates"
+          )
+          json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
+          for workflow in "${required[@]}"; do
+            result="$(jq -r --arg n "$workflow" '[.workflow_runs[] | select(.name == $n and .head_sha == "'"'"$TARGET_SHA"'"'") ] | sort_by(.updated_at) | last | if . == null then "MISSING" else (.status + ":" + (.conclusion // "")) end' <<<"$json")"
+            echo "$workflow => $result"
+            test "$result" = "completed:success"
+          done
+
+      - name: Setup pinned pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+          run_install: false
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install exact lockfile dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Bootstrap pinned Playwright for browser smoke
+        run: |
+          npx --yes --package=playwright@1.62.1 playwright --version
+          npx --yes --package=playwright@1.62.1 playwright install chromium
+
+      - name: Re-run canonical release verification on tagged source
+        env:
+          CI: true
+          GITHUB_SHA: ${{ env.RELEASE_TARGET_SHA }}
+        run: pnpm run verify:release
+
+      - name: Validate deterministic release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s dist/tgm-alarm-center-web.zip
+          test -s dist/tgm-alarm-center-web.zip.sha256
+          test -s RELEASE-SOURCE-SHA.txt
+          sha256sum -c dist/tgm-alarm-center-web.zip.sha256
+          grep -Fx "$RELEASE_TARGET_SHA" RELEASE-SOURCE-SHA.txt
+
+      - name: Create annotated release tag at exact validated SHA
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            existing="$(git ls-remote origin "refs/tags/${RELEASE_TAG}" | awk '{print $1}')"
+            expected="$RELEASE_TARGET_SHA"
+            git fetch --tags --force origin "$RELEASE_TAG"
+            tagged="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
+            test "$tagged" = "$expected" || { echo "${RELEASE_TAG} already points to ${tagged}, expected ${expected}"; exit 1; }
+          else
+            git tag -a "$RELEASE_TAG" "$RELEASE_TARGET_SHA" -m "TGM Alarm Center v0.0.2"
+            git push origin "$RELEASE_TAG"
+          fi
+
+      - name: Create GitHub release and upload verified assets
+        uses: actions/github-script@v8
+        env:
+          RELEASE_TAG: ${{ env.RELEASE_TAG }}
+          RELEASE_TITLE: ${{ env.RELEASE_TITLE }}
+          RELEASE_TARGET_SHA: ${{ env.RELEASE_TARGET_SHA }}
+        with:
+          script: |
+            const fs = require('node:fs');
+            const path = require('node:path');
+            const { owner, repo } = context.repo;
+            let release;
+            try {
+              release = await github.rest.repos.getReleaseByTag({ owner, repo, tag: process.env.RELEASE_TAG });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              const created = await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: process.env.RELEASE_TAG,
+                target_commitish: process.env.RELEASE_TARGET_SHA,
+                name: process.env.RELEASE_TITLE,
+                body: `Verified release for ${process.env.RELEASE_TARGET_SHA}.\n\nArtifacts: deterministic web package + SHA-256 checksum.`,
+                draft: false,
+                prerelease: false,
+              });
+              release = created;
+            }
+            const releaseId = release.data.id;
+            const assets = [
+              'dist/tgm-alarm-center-web.zip',
+              'dist/tgm-alarm-center-web.zip.sha256',
+              'RELEASE-SOURCE-SHA.txt',
+            ];
+            for (const file of assets) {
+              const name = path.basename(file);
+              const existing = release.data.assets.find(asset => asset.name === name);
+              if (existing) {
+                await github.rest.repos.deleteReleaseAsset({ owner, repo, asset_id: existing.id });
+              }
+              await github.rest.repos.uploadReleaseAsset({
+                owner,
+                repo,
+                release_id: releaseId,
+                name,
+                data: fs.readFileSync(file),
+              });
+            }
+
+      - name: Download published assets and verify SHA-256
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ env.RELEASE_TARGET_SHA }}
+        run: |
+          set -euo pipefail
+          rm -rf release-verify && mkdir -p release-verify
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/releases/tags/${RELEASE_TAG}" > release-verify/release.json
+          jq -e --arg tag "$RELEASE_TAG" '.tag_name == $tag and .draft == false and .prerelease == false' release-verify/release.json >/dev/null
+          jq -r '.assets[] | select(.name == "tgm-alarm-center-web.zip") | .browser_download_url' release-verify/release.json > release-verify/archive.url
+          jq -r '.assets[] | select(.name == "tgm-alarm-center-web.zip.sha256") | .browser_download_url' release-verify/release.json > release-verify/checksum.url
+          jq -r '.assets[] | select(.name == "RELEASE-SOURCE-SHA.txt") | .browser_download_url' release-verify/release.json > release-verify/source.url
+          test -s release-verify/archive.url
+          test -s release-verify/checksum.url
+          test -s release-verify/source.url
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/octet-stream' "$(cat release-verify/archive.url)" -o release-verify/tgm-alarm-center-web.zip
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/octet-stream' "$(cat release-verify/checksum.url)" -o release-verify/tgm-alarm-center-web.zip.sha256
+          curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/octet-stream' "$(cat release-verify/source.url)" -o release-verify/RELEASE-SOURCE-SHA.txt
+          cp release-verify/tgm-alarm-center-web.zip.sha256 release-verify/expected.sha256
+          (cd release-verify && sha256sum -c expected.sha256)
+          grep -Fx "$TARGET_SHA" release-verify/RELEASE-SOURCE-SHA.txt
+          test "$(git rev-parse "$TARGET_SHA")" = "$TARGET_SHA"
+          echo "TGM v0.0.2 release verification: PASS"
