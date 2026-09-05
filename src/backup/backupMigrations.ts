@@ -17,6 +17,7 @@ export type SupportedBackup = BackupV1 | BackupV2;
 
 const isRecord = (value: unknown): value is Record<string, unknown> => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 const isIso = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
+const cloneAppState = (data: AppState): AppState => JSON.parse(JSON.stringify(data)) as AppState;
 
 export function upgradeBackupV1ToV2(backup: BackupV1): BackupV2 {
   if (backup.version !== V1_VERSION || backup.schemaVersion !== 1) throw new Error('Nur Backup Schema 1 kann auf Schema 2 migriert werden');
@@ -25,7 +26,7 @@ export function upgradeBackupV1ToV2(backup: BackupV1): BackupV2 {
     version: 2,
     exportedAt: backup.exportedAt,
     schemaVersion: 2,
-    data: structuredClone(backup.data),
+    data: cloneAppState(backup.data),
     migrations: ['backup-v1-to-v2'],
   };
 }
@@ -33,7 +34,13 @@ export function upgradeBackupV1ToV2(backup: BackupV1): BackupV2 {
 export function validateBackupV2(value: unknown): BackupV2 {
   if (!isRecord(value) || value.format !== V1_FORMAT || value.version !== CURRENT_BACKUP_VERSION || value.schemaVersion !== CURRENT_BACKUP_SCHEMA_VERSION || !isIso(value.exportedAt) || !isRecord(value.data) || !Array.isArray(value.migrations) || !value.migrations.every((item) => typeof item === 'string' && item.length > 0 && item.length <= 120)) throw new Error('Backup Schema 2 ist ungültig');
   if (!value.migrations.includes('backup-v1-to-v2')) throw new Error('Backup Schema 2 benötigt den Migrationsnachweis');
-  const source = { ...value, version: 1, schemaVersion: 1 };
+  const source = {
+    format: value.format,
+    version: 1,
+    exportedAt: value.exportedAt,
+    schemaVersion: 1,
+    data: value.data,
+  };
   validateBackup(source);
   return value as unknown as BackupV2;
 }
@@ -53,6 +60,6 @@ export function rollbackBackupV2ToV1(backup: BackupV2): BackupV1 {
     version: 1,
     exportedAt: backup.exportedAt,
     schemaVersion: 1,
-    data: structuredClone(backup.data),
+    data: cloneAppState(backup.data),
   };
 }
