@@ -18,7 +18,7 @@ export interface FunnelSnapshot {
 }
 
 const MAX_EVENTS = 64;
-const STAGE_ORDER: FunnelStage[] = ['install', 'first_alarm', 'notification_engagement', 'return'];
+const STAGE_ORDER: readonly FunnelStage[] = ['install', 'first_alarm', 'notification_engagement', 'return'];
 const ISO_UTC = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
 function validStage(value: unknown): value is FunnelStage {
@@ -77,19 +77,23 @@ export function parseFunnelSnapshot(value: unknown): FunnelSnapshot {
   if (input.schemaVersion !== 1) throw new Error('Funnel-Schema ist nicht kompatibel');
   const firstSeenAt = input.firstSeenAt === null ? null : normalizeIso(input.firstSeenAt);
   if (input.firstSeenAt !== null && firstSeenAt === null) throw new Error('Funnel firstSeenAt ist ungültig');
-  if (!Array.isArray(input.completedStages) || !input.completedStages.every(validStage)) throw new Error('Funnel stages sind ungültig');
-  if (!Array.isArray(input.events) || input.events.length > MAX_EVENTS) throw new Error('Funnel event buffer ist ungültig');
-  const events = input.events.map((raw) => {
+  const rawStages = input.completedStages;
+  if (!Array.isArray(rawStages) || !rawStages.every(validStage)) throw new Error('Funnel stages sind ungültig');
+  const completedStages = STAGE_ORDER.filter((stage) => rawStages.includes(stage));
+  const rawEvents = input.events;
+  if (!Array.isArray(rawEvents) || rawEvents.length > MAX_EVENTS) throw new Error('Funnel event buffer ist ungültig');
+  const events: FunnelEvent[] = rawEvents.map((raw) => {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Funnel event ist ungültig');
     const event = raw as Record<string, unknown>;
     const occurredAt = normalizeIso(event.occurredAt);
-    if (!validStage(event.stage) || !occurredAt || !Number.isInteger(event.count) || event.count < 1 || event.count > 100000) throw new Error('Funnel event ist ungültig');
-    return { stage: event.stage, occurredAt, count: event.count };
+    const count = event.count;
+    if (!validStage(event.stage) || !occurredAt || !Number.isInteger(count) || count < 1 || count > 100000) throw new Error('Funnel event ist ungültig');
+    return { stage: event.stage, occurredAt, count };
   });
   return {
     schemaVersion: 1,
     firstSeenAt,
-    completedStages: STAGE_ORDER.filter((stage) => input.completedStages.includes(stage)),
+    completedStages,
     events,
   };
 }
