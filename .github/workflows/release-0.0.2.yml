@@ -16,7 +16,7 @@ concurrency:
 env:
   RELEASE_TAG: v0.0.2
   RELEASE_TITLE: TGM Alarm Center v0.0.2
-  RELEASE_TARGET_SHA: e59d039d924d119211a4aa49b38154bfbc8ef42a
+  RELEASE_TARGET_SHA: ${{ github.sha }}
 
 jobs:
   release:
@@ -110,6 +110,32 @@ jobs:
           (cd dist && sha256sum -c tgm-alarm-center-web.zip.sha256)
           grep -Fx "$RELEASE_TARGET_SHA" RELEASE-SOURCE-SHA.txt
 
+      - name: Remove stale v0.0.2 release and tag when target changed
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}"
+          release_json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/releases/tags/${RELEASE_TAG}" || true)"
+          if [[ -n "$release_json" ]] && jq -e '.id != null' <<<"$release_json" >/dev/null 2>&1; then
+            release_id="$(jq -r '.id' <<<"$release_json")"
+            current_target="$(jq -r '.target_commitish // ""' <<<"$release_json")"
+            if [[ "$current_target" != "$RELEASE_TARGET_SHA" ]]; then
+              curl -fsSL -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/releases/${release_id}"
+            fi
+          fi
+
+          tag_ref="${api}/git/ref/tags/${RELEASE_TAG}"
+          tag_json="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "$tag_ref" || true)"
+          if [[ -n "$tag_json" ]] && jq -e '.ref == "refs/tags/'"${RELEASE_TAG}"'"' <<<"$tag_json" >/dev/null 2>&1; then
+            tag_target="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/ref/tags/${RELEASE_TAG}" | jq -r '.object.sha')"
+            target_commit="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/commits/${RELEASE_TARGET_SHA}" | jq -r '.sha')"
+            if [[ "$tag_target" != "$target_commit" ]]; then
+              curl -fsSL -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/refs/tags/${RELEASE_TAG}"
+            fi
+          fi
+
       - name: Create annotated release tag at exact validated SHA
         shell: bash
         run: |
@@ -119,13 +145,13 @@ jobs:
           if git ls-remote --exit-code --tags origin "refs/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
             git fetch --tags --force origin "$RELEASE_TAG"
             tagged="$(git rev-parse "refs/tags/${RELEASE_TAG}^{commit}")"
-            test "$tagged" = "$RELEASE_TARGET_SHA" || { echo "${RELEASE_TAG} already points to ${tagged}, expected ${RELEASE_TARGET_SHA}"; exit 1; }
+            test "$tagged" = "$RELEASE_TARGET_SHA"
           else
             git tag -a "$RELEASE_TAG" "$RELEASE_TARGET_SHA" -m "TGM Alarm Center v0.0.2"
             git push origin "$RELEASE_TAG"
           fi
 
-      - name: Create GitHub release and upload verified assets
+      - name: Create or refresh GitHub release and upload verified assets
         uses: actions/github-script@v8
         env:
           RELEASE_TAG: ${{ env.RELEASE_TAG }}
