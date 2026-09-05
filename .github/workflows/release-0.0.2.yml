@@ -22,7 +22,7 @@ jobs:
   release:
     name: Validate, package, tag, publish and verify v0.0.2
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Validate release target
         shell: bash
@@ -67,11 +67,30 @@ jobs:
             ".github/workflows/web-core.yml"
             ".github/workflows/migration-gates.yml"
           )
-          json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100")"
-          for workflow_path in "${required_paths[@]}"; do
-            result="$(jq -r --arg p "$workflow_path" --arg s "$TARGET_SHA" '[.workflow_runs[] | select(.path == $p and .head_sha == $s and .event != "workflow_run")] | sort_by(.updated_at) | last | if . == null then "MISSING" else (.status + ":" + (.conclusion // "")) end' <<<"$json")"
-            echo "$workflow_path => $result"
-            test "$result" = "completed:success"
+          api="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs?head_sha=${TARGET_SHA}&per_page=100"
+          for attempt in {1..60}; do
+            json="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "$api")"
+            all_passed=true
+            for workflow_path in "${required_paths[@]}"; do
+              result="$(jq -r --arg p "$workflow_path" --arg s "$TARGET_SHA" '[.workflow_runs[] | select(.path == $p and .head_sha == $s and .event != "workflow_run")] | sort_by(.updated_at) | last | if . == null then "MISSING" else (.status + ":" + (.conclusion // "")) end' <<<"$json")"
+              echo "$workflow_path => $result"
+              if [[ "$result" != "completed:success" ]]; then
+                all_passed=false
+                if [[ "$result" == "completed:"* && "$result" != "completed:success" ]]; then
+                  echo "Required workflow failed: $workflow_path"
+                  exit 1
+                fi
+              fi
+            done
+            if [[ "$all_passed" == true ]]; then
+              echo "Exact-head CI gate: PASS"
+              exit 0
+            fi
+            if (( attempt == 60 )); then
+              echo "Timed out waiting for exact-head CI completion."
+              exit 1
+            fi
+            sleep 15
           done
 
       - name: Setup pinned pnpm
@@ -126,12 +145,16 @@ jobs:
             fi
           fi
 
-          tag_ref="${api}/git/ref/tags/${RELEASE_TAG}"
-          tag_json="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "$tag_ref" || true)"
+          tag_json="$(curl -sS -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/ref/tags/${RELEASE_TAG}" || true)"
           if [[ -n "$tag_json" ]] && jq -e '.ref == "refs/tags/'"${RELEASE_TAG}"'"' <<<"$tag_json" >/dev/null 2>&1; then
-            tag_target="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/ref/tags/${RELEASE_TAG}" | jq -r '.object.sha')"
-            target_commit="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/commits/${RELEASE_TARGET_SHA}" | jq -r '.sha')"
-            if [[ "$tag_target" != "$target_commit" ]]; then
+            tag_target_ref="$(jq -r '.object.sha' <<<"$tag_json")"
+            tag_type="$(jq -r '.object.type' <<<"$tag_json")"
+            if [[ "$tag_type" == "commit" ]]; then
+              resolved_target="$tag_target_ref"
+            else
+              resolved_target="$(curl -fsSL -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/tags/${tag_target_ref}" | jq -r '.object.sha')"
+            fi
+            if [[ "$resolved_target" != "$RELEASE_TARGET_SHA" ]]; then
               curl -fsSL -X DELETE -H "Authorization: Bearer ${GH_TOKEN}" -H 'Accept: application/vnd.github+json' "${api}/git/refs/tags/${RELEASE_TAG}"
             fi
           fi
