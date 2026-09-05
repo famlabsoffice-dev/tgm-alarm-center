@@ -2,7 +2,7 @@ import type { EventDefinition } from './eventModel';
 
 const source = {
   id: 'internal-masterplan',
-  sourceType: 'official' as const,
+  sourceType: 'configured' as const,
   label: 'Configured product rule',
   reference: 'local://masterplan/event-rules',
   observedAt: '2026-09-05T00:00:00.000Z',
@@ -27,13 +27,13 @@ export const MASTER_EVENT_CATALOG: readonly EventDefinition[] = [
   },
   {
     id: 'hell-event', version: 1, category: 'personal', titleKey: 'event.hell', ruleType: 'fixedUtc',
-    schedule: { ruleType: 'fixedUtc', localTime: ':00', durationMinutes: 55 },
+    schedule: { ruleType: 'fixedUtc', localTime: '00:00', durationMinutes: 55 },
     variantSource: { mode: 'unknownUntilConfirmed' },
     duration: { minutes: 55 }, criticalMoments: moments([15]), sources: [source], confidence: 1,
   },
   {
     id: 'six-hour-task-cycle', version: 1, category: 'tasks', titleKey: 'event.sixHourTasks', ruleType: 'intervalFromAnchor',
-    schedule: { ruleType: 'intervalFromAnchor', intervalMinutes: 360 },
+    schedule: { ruleType: 'intervalFromAnchor', anchorUtc: '2026-01-01T00:00:00.000Z', intervalMinutes: 360 },
     criticalMoments: moments([15]), sources: [source], confidence: 1,
   },
   {
