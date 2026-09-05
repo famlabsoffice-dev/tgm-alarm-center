@@ -25,6 +25,7 @@
     "verify:mobile-build": "node scripts/verify-mobile-build.mjs",
     "verify:android-reliability": "node scripts/verify-android-reliability.mjs",
     "verify:native-device-matrix": "node scripts/verify-native-device-matrix.mjs",
+    "verify:production-artifact": "node scripts/verify-production-artifact.mjs",
     "verify:release": "node scripts/verify-release.mjs",
     "verify:full-release": "node scripts/verify-full-release.mjs",
     "build:android:aab": "node scripts/build-store.mjs android",
