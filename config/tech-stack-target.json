@@ -1,4 +1,5 @@
 {
+  "baselineRevision": "2026-09-05.1",
   "expoSdk": "57.0.3",
   "react": "19.2.3",
   "reactNative": "0.86.0",
