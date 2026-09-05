@@ -58,9 +58,19 @@ for (const fragment of [
 ]) {
   if (!nativeModule.includes(fragment)) throw new Error(`Android native readiness hook missing: ${fragment}`);
 }
-for (const fragment of ['ACTION_BOOT_COMPLETED', 'ACTION_MY_PACKAGE_REPLACED', 'ACTION_PACKAGE_REPLACED', 'SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED']) {
-  if (!recoveryReceiver.includes(fragment) || !manifest.includes(fragment)) throw new Error(`Android recovery hook missing: ${fragment}`);
+
+const recoveryContract = [
+  { name: 'ACTION_BOOT_COMPLETED', receiver: ['Intent.ACTION_BOOT_COMPLETED', 'android.intent.action.BOOT_COMPLETED'], manifest: 'android.intent.action.BOOT_COMPLETED' },
+  { name: 'ACTION_MY_PACKAGE_REPLACED', receiver: ['Intent.ACTION_MY_PACKAGE_REPLACED', 'android.intent.action.MY_PACKAGE_REPLACED'], manifest: 'android.intent.action.MY_PACKAGE_REPLACED' },
+  { name: 'ACTION_PACKAGE_REPLACED', receiver: ['Intent.ACTION_PACKAGE_REPLACED', 'android.intent.action.PACKAGE_REPLACED'], manifest: 'android.intent.action.PACKAGE_REPLACED' },
+  { name: 'SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED', receiver: ['SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED', 'android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED'], manifest: 'android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED' },
+];
+for (const requirement of recoveryContract) {
+  if (!requirement.receiver.some((fragment) => recoveryReceiver.includes(fragment)) || !manifest.includes(requirement.manifest)) {
+    throw new Error(`Android recovery hook missing: ${requirement.name}`);
+  }
 }
+
 for (const fragment of ['lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC', 'AppState.addEventListener', 'canScheduleExactAlarms()', 'interruptionLevel: preferences.criticalAlerts ? \'timeSensitive\' : \'active\'']) {
   if (!notifications.includes(fragment)) throw new Error(`Native notification behavior missing: ${fragment}`);
 }
