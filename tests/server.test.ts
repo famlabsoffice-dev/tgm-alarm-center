@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { generateKeyPairSync, createSign } from 'node:crypto';
@@ -39,6 +39,21 @@ test('records each webhook event only once', async () => {
     assert.equal(await repository.recordEvent(event), true);
     assert.equal(await repository.recordEvent(event), false);
     assert.equal(await repository.hasEvent(event.eventId), true);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test('serializes concurrent billing repository writes without losing state', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'tgm-billing-concurrent-'));
+  const repository = new BillingRepository(join(directory, 'store.json'));
+  try {
+    await Promise.all([
+      repository.recordEvent({ eventId: 'event-a', platform: 'ios', receivedAt: '2030-01-01T00:00:00.000Z', payloadDigest: 'digest-a' }),
+      repository.recordEvent({ eventId: 'event-b', platform: 'android', receivedAt: '2030-01-01T00:00:01.000Z', payloadDigest: 'digest-b' }),
+    ]);
+    const persisted = JSON.parse(await readFile(join(directory, 'store.json'), 'utf8')) as { events: Array<{ eventId: string }> };
+    assert.deepEqual(new Set(persisted.events.map((event) => event.eventId)), new Set(['event-a', 'event-b']));
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
