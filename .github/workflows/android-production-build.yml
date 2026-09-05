@@ -84,7 +84,8 @@ jobs:
             echo "Commit: $(git rev-parse HEAD)"
             echo "Branch: main"
             echo "Node: $(node --version)"
-            echo "Expo: $(node -p \"require('./node_modules/expo/package.json').version\")"
+            expo_version=$(node -p "require('./node_modules/expo/package.json').version")
+            echo "Expo: $expo_version"
           } > android-production-build-metadata.txt
 
       - name: Upload production build evidence
