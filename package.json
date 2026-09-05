@@ -1,6 +1,6 @@
 {
   "name": "tgm-alarm-center-native",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "private": true,
   "main": "index.js",
   "packageManager": "pnpm@10.15.1",

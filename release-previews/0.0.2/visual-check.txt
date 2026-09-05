@@ -1,0 +1,10 @@
+Visual check 2026-09-05
+
+01-dashboard.png: sichtbare deutschsprachige Startansicht mit TGM-Branding, nächstem Gaming-Schritt, Schnellstartkarten, Statuskarten und responsiver mobiler Navigation.
+02-alarm-editor.png: sichtbarer Alarm-Editor mit Titel, Alarmtyp, Datum, Uhrzeit, 60-/30-/15-Minuten-Vorwarnungen, Wiederholung, Ton, Schutz- und Aktiv-Schaltern sowie Speichern/Abbrechen.
+
+Both images rendered successfully as RGB PNG files at 1440 px width; no blank canvas or broken UI was observed.
+03-alarm-dashboard.png: sichtbarer aktiver Alarm „Abend-Bubble“ mit 59-Minuten-Countdown, Account-Auswahl, Schutzstatus, Warnzeitpunkten und Schnellstart.
+04-settings-backup.png: sichtbare Einstellungsansicht mit Ton-/Vibrationsoptionen, Backup-Export, Backup-Import, lokaler Datenlöschung und Gerätespeicher-Übersicht.
+
+Both images rendered successfully as RGB PNG files at 1440 px width; no blank canvas or broken UI was observed.
