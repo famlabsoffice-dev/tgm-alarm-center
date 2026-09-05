@@ -3,13 +3,6 @@ name: Billing Security Gate
 on:
   push:
     branches: [main]
-    paths:
-      - 'app.js'
-      - 'src/domain/pricing.ts'
-      - 'src/billing/**'
-      - 'scripts/harden-web-billing.mjs'
-      - 'tests/billing-security.test.mjs'
-      - '.github/workflows/billing-security-gate.yml'
   pull_request:
     paths:
       - 'app.js'
