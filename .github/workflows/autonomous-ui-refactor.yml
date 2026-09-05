@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'scripts/refactor-ui-screens.mjs'
+      - 'src/ui/screens/**'
+      - 'docs/ui-refactor-trigger.txt'
 
 permissions:
   contents: write
@@ -20,7 +24,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
       - name: Enable pnpm
         run: corepack enable
       - name: Install dependencies
