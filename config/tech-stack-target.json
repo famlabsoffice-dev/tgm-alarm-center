@@ -1,8 +1,14 @@
 {
-  "baselineRevision": "2026-09-05.3",
-  "expoSdk": "57.0.3",
+  "baselineRevision": "2026-09-05.4",
+  "expoSdk": "57.0.17",
   "react": "19.2.3",
-  "reactNative": "0.86.0",
-  "node": "22.13.1",
-  "rationale": "Stable production baseline for the current TGM Alarm Center native architecture. Keep Android API 36, move iOS minimum to 16.4, retain stable React Native release level and Hermes V1."
+  "reactNative": "0.86.3",
+  "node": "24.20.0",
+  "typescript": "7.0.2",
+  "eslint": "10.9.1",
+  "androidCompileSdk": 36,
+  "androidTargetSdk": 36,
+  "iosDeploymentTarget": "16.4",
+  "hermes": "v1",
+  "rationale": "Latest stable production-compatible stack for the current TGM Alarm Center architecture. Expo SDK 57.0.17 includes React Native 0.86.3 fixes; Node 24.20.0 is the current LTS; TypeScript 7.0.2 and ESLint 10.9.1 are current stable toolchain releases. Android API 36, iOS 16.4+, and Hermes V1 remain aligned with Expo SDK 57."
 }
