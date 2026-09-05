@@ -41,7 +41,7 @@ jobs:
         run: pnpm dlx expo-doctor@latest
 
       - name: Rebuild native projects from clean state
-        run: pnpm exec expo prebuild --clean --non-interactive
+        run: CI=1 pnpm exec expo prebuild --clean
 
       - name: Run Android reliability gate
         run: |
@@ -66,13 +66,13 @@ jobs:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
         run: npx --yes eas-cli@latest whoami
 
-      - name: Build signed production Android AAB
+      - name: Build production Android AAB
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
           GITHUB_SHA: ${{ github.sha }}
         run: pnpm build:android:aab 2>&1 | tee android-production-build.log
 
-      - name: Verify downloaded signed production AAB
+      - name: Verify downloaded production Android AAB
         env:
           GITHUB_SHA: ${{ github.sha }}
         run: pnpm verify:production-artifact android
