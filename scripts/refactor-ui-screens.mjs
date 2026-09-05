@@ -88,6 +88,18 @@ source = source.slice(0, modalStart) + modalReplacement + source.slice(modalEnd 
 
 source = source.replace(/^const localDate = .*?;\n/m, '').replace(/^const localTime = .*?;\n/m, '');
 
+const loadingReplacement = 'if (!ready) return <CommandCenterScreen><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></CommandCenterScreen>;';
+const loadingPattern = /if \(!ready\) return <SafeAreaView style=\{styles\.root\}>[\s\S]*?<\/SafeAreaView>;/m;
+requireOnce(loadingPattern.test(source), 'loading shell not found');
+source = source.replace(loadingPattern, loadingReplacement);
+
+const rootReturnPattern = /return \(\n    <SafeAreaView style=\{styles\.root\}>/;
+requireOnce(rootReturnPattern.test(source), 'main SafeAreaView root not found');
+source = source.replace(rootReturnPattern, 'return (\n    <CommandCenterScreen>');
+const rootClosePattern = /\n    <\/SafeAreaView>\n  \);/;
+requireOnce(rootClosePattern.test(source), 'main SafeAreaView closing tag not found');
+source = source.replace(rootClosePattern, '\n    </CommandCenterScreen>\n  );');
+
 requireOnce(source.includes('<AlarmCard '), 'AlarmCard not wired');
 requireOnce(source.includes('<SettingsScreen'), 'SettingsScreen not wired');
 requireOnce(source.includes('<AlarmEditorModal'), 'AlarmEditorModal not wired');
