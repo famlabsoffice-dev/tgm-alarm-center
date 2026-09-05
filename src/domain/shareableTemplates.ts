@@ -30,9 +30,9 @@ export function makeShareableTemplate(template: AlarmTemplate): ShareableAlarmTe
 
 export function validateShareableTemplate(value: unknown): ShareableAlarmTemplate {
   if (!isRecord(value) || value.format !== SHAREABLE_TEMPLATE_FORMAT || value.version !== SHAREABLE_TEMPLATE_VERSION) throw new Error('Vorlagenformat ist nicht kompatibel');
-  if (typeof value.title !== 'string' || value.title.trim().length < 1 || value.title.length > MAX_TITLE) throw new Error('Vorlagentitel ist ungültig');
+  if (typeof value.title !== 'string' || value.title.trim().length < 1 || value.title.length > MAX_TITLE) throw new Error('Vorlagen-Titel ist ungültig');
   if (typeof value.type !== 'string' || !TYPES.has(value.type as AlarmType)) throw new Error('Vorlagentyp ist ungültig');
-  if (!Array.isArray(value.warnings) || value.warnings.length > MAX_WARNINGS || !value.warnings.every((item) => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= MAX_WARNING_MINUTES)) throw new Error('Vorlagenwarnungen sind ungültig');
+  if (!Array.isArray(value.warnings) || value.warnings.length > MAX_WARNINGS || !value.warnings.every((item) => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= MAX_WARNING_MINUTES)) throw new Error('Vorlagen-Warnungen sind ungültig');
   const warnings = [...new Set(value.warnings as number[])].sort((a, b) => b - a);
   if (typeof value.repeat !== 'string' || !REPEATS.has(value.repeat as RepeatMode)) throw new Error('Vorlagenwiederholung ist ungültig');
   if (typeof value.sound !== 'string' || !SOUNDS.has(value.sound as SoundProfile)) throw new Error('Vorlagenton ist ungültig');
