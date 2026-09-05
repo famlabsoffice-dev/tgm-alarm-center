@@ -1,5 +1,5 @@
 import type { Tier } from './alarm';
-import { trustedNativeTier } from '../billing/nativeEntitlementService';
+import { FOUNDER_TEST_ACCOUNT_NAMES, trustedNativeTier } from '../billing/nativeEntitlementService';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
@@ -7,7 +7,7 @@ export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
 export const FOUNDER_ACCESS_TIER: Tier = 'godfather';
-export const FOUNDER_ACCOUNT_NAMES = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'] as const;
+export const FOUNDER_ACCOUNT_NAMES = FOUNDER_TEST_ACCOUNT_NAMES;
 const FOUNDER_ACCOUNT_NAME_KEYS = new Set(FOUNDER_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
 
 export function isFounderAccountName(accountName: string): boolean {
@@ -92,7 +92,7 @@ export const TIER_PRICING: Record<Tier, TierPricing> = {
   godfather: {
     tier: 'godfather', name: 'Godfather',
     limits: { accounts: Number.POSITIVE_INFINITY, alarms: Number.POSITIVE_INFINITY, events: Number.POSITIVE_INFINITY, perAccount: { bubbleAlarms: Number.POSITIVE_INFINITY, eventAlarms: Number.POSITIVE_INFINITY, individualAlarms: Number.POSITIVE_INFINITY, rssAlarms: Number.POSITIVE_INFINITY } },
-    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 }, usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68 }, usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 }, jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 }, jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 }, annualSavingPercent: 17,
+    eur: { weekly: 19.99, monthly: 69.99, sixMonth: 399.99, yearly: 599.99, lifetime: 799.99 }, usdDirect: { weekly: 23.18, monthly: 81.10, sixMonth: 463.96, yearly: 695.68, lifetime: 927.64 }, usdStore: { weekly: 22.99, monthly: 79.99, sixMonth: 449.99, yearly: 699.99, lifetime: 899.99 }, jpyDirect: { weekly: 3702, monthly: 12956, sixMonth: 74086, yearly: 111061, lifetime: 148106 }, jpyStore: { weekly: 3700, monthly: 13000, sixMonth: 74000, yearly: 111000, lifetime: 148000 }, annualSavingPercent: 17,
   },
 };
 
