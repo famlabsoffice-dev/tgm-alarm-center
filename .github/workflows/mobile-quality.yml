@@ -37,6 +37,9 @@ jobs:
       - name: Domain and repository tests
         run: pnpm test
 
+      - name: Native device matrix gate
+        run: pnpm verify:native-device-matrix
+
       - name: Android reliability contract
         run: pnpm verify:android-reliability
 
