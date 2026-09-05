@@ -2,7 +2,7 @@
 
 Stand: 05.09.2026
 Basis: `main` at `c957ad47fa14d2c5fc4c944654feb6d502c666a5`
-Arbeitsbranch: `main`
+Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 
 ## Permanent constraints
 
@@ -60,9 +60,9 @@ Arbeitsbranch: `main`
 - [x] Preserve entitlement stripping in backup export/import.
 - [x] Add failure-injection coverage for primary write failure.
 - [x] Add failure-injection coverage for last-known-good write failure.
-- [ ] Define one explicit cross-platform backup compatibility contract.
-- [ ] Add migration tests for every supported legacy tier/state representation.
-- [ ] Add malformed, oversized and cross-reference backup adversarial cases.
+- [x] Define one explicit cross-platform backup compatibility contract.
+- [x] Add migration tests for every supported legacy tier/state representation.
+- [x] Add malformed, oversized and cross-reference backup adversarial cases.
 
 ### PHASE 5 — Native reliability verification preparation
 - [ ] Build deterministic device-test protocol for Android API 36.
