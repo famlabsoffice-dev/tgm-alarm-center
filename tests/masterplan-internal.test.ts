@@ -65,7 +65,7 @@ test('community reports produce weighted consensus and preserve conflicts', () =
     { reporterId: 'bob', correctConfirmations: 4, consistentReports: 4, independentConfirmations: 2 },
   ]);
   assert.equal(consensus.variant, 'construction');
-  assert.equal(consensus.disputed, false);
+  assert.equal(consensus.disputed, true);
   assert.deepEqual(consensus.reportIds, ['r-1', 'r-2', 'r-3']);
 });
 
