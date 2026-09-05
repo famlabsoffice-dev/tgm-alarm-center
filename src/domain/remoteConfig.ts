@@ -36,5 +36,5 @@ export function acceptRemoteConfig(
   if (validation.length) throw new Error(`Remote config rejected: ${validation.join(',')}`);
   if (!signatureVerified) throw new Error('Remote config signature verification failed');
   if (current && candidate.configVersion <= current.configVersion) throw new Error('Remote config is not newer than the cached version');
-  return structuredClone(candidate);
+  return JSON.parse(JSON.stringify(candidate)) as RemoteEventConfig;
 }
