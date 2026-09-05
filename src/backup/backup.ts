@@ -1,14 +1,13 @@
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import type { AppState } from '../domain/alarm';
-import { FORMAT, VERSION, MAX_BACKUP_BYTES, makeBackup as makeBackupContract, restoreBackup as restoreBackupContract, validateBackup as validateBackupContract, stripEntitlement, type Backup } from './backupContract';
+import { FORMAT, VERSION, MAX_BACKUP_BYTES, makeBackup as makeBackupContract, validateBackup as validateBackupContract, stripEntitlement, type Backup } from './backupContract';
 
 export { FORMAT, VERSION, MAX_BACKUP_BYTES, stripEntitlement, type Backup } from './backupContract';
 
 export function makeBackup(data: AppState): Backup {
-  const backup = makeBackupContract(data);
   if (!data.accounts || !Array.isArray(data.accounts)) throw new Error('Backup-Struktur ist ungültig');
-  return backup;
+  return { ...makeBackupContract(data), data: stripEntitlement(data) };
 }
 
 export function validateBackup(value: unknown): Backup {
