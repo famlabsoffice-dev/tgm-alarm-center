@@ -1,5 +1,5 @@
 {
-  "baselineRevision": "2026-09-05.7",
+  "baselineRevision": "2026-09-05.8",
   "expoSdk": "57.0.20",
   "react": "19.2.3",
   "reactNative": "0.86.3",
@@ -12,5 +12,5 @@
   "androidTargetSdk": 36,
   "iosDeploymentTarget": "16.4",
   "hermes": "v1",
-  "rationale": "Latest stable Expo SDK 57 patch currently published, with the React Native 0.86.3 and React 19.2.3 compatibility line. Node 24.20.0 is the current LTS. Expo SDK 57 compatibility tooling resolves TypeScript 6.0.3, Jest 29.7.0 and React types 19.2.x for this project. ESLint remains on the current latest stable 10.9.1. Android API 36, iOS 16.4+ and Hermes V1 remain aligned with the native architecture."
+  "rationale": "Latest stable Expo SDK 57 patch currently published, with the React Native 0.86.3 and React 19.2.3 compatibility line. Node 24.20.0 is the current LTS. Expo SDK 57 compatibility tooling resolves TypeScript 6.0.3, Jest 29.7.0 and React types 19.2.x for this project. ESLint remains on the current latest stable 10.9.1. Android API 36, iOS 16.4+ and Hermes V1 remain aligned with the native architecture. Android notification sound resource names use underscore-safe filenames required by the SDK 57 config plugin."
 }
