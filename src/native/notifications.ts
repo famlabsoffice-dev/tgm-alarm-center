@@ -173,7 +173,7 @@ async function reconcileScheduledNotificationsInternal(alarms: readonly Alarm[],
   const current = new Map<string, string>();
   for (const notification of pending) {
     const key = pendingOwnershipKey(notification);
-    if (!key) { await Notifications.cancelScheduledNotificationAsync(notification.identifier); continue; }
+    if (!key) continue;
     if (!desired.has(key) || current.has(key)) { await Notifications.cancelScheduledNotificationAsync(notification.identifier); continue; }
     current.set(key, notification.identifier);
   }
