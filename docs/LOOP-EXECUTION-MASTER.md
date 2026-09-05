@@ -68,7 +68,7 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [x] Build deterministic device-test protocol for Android API 36.
 - [ ] Fresh install.
 - [ ] Notification permission denied/granted.
-- [ ] Exact alarm denied/regranted.
+- [ ] Exact-alarm permission denied/regranted.
 - [ ] Reboot.
 - [ ] App process death.
 - [ ] Force-stop.
@@ -96,13 +96,13 @@ Arbeitsbranch: `loop/phase4-backup-migration-hardening`
 - [x] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
 
 ### PHASE 7 — UX / command center
-- [ ] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
-- [ ] Show next event.
-- [ ] Show account.
-- [ ] Show countdown.
-- [ ] Show warning schedule.
-- [ ] Show notification readiness.
-- [ ] Reduce first-launch friction.
+- [x] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
+- [x] Show next event.
+- [x] Show account.
+- [x] Show countdown.
+- [x] Show warning schedule.
+- [x] Show notification readiness.
+- [x] Reduce first-launch friction.
 - [ ] Add systematic accessibility review.
 - [x] Verify touch target, focus, labels and input assistance behavior for the web shell.
 - [x] Keep visible UI free of internal engineering/audit metadata.
