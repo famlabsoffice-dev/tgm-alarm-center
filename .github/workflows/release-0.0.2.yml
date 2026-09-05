@@ -99,10 +99,10 @@ jobs:
           version: 10.15.1
           run_install: false
 
-      - name: Setup Node.js 22
+      - name: Setup Node.js 24.20.0 LTS
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24.20.0
           cache: pnpm
 
       - name: Install exact lockfile dependencies
