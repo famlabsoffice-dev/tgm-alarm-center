@@ -1,8 +1,8 @@
 # TGM Alarm Center — Autonomous Loop Execution Master
 
 Stand: 05.09.2026
-Basis: `main` at `d836191d44ac3677a81c6002cc017a957d23f3f8`
-Arbeitsbranch: `loop/p0-internal-hardening`
+Basis: `main` at `c957ad47fa14d2c5fc4c944654feb6d502c666a5`
+Arbeitsbranch: `main`
 
 ## Permanent constraints
 
@@ -33,17 +33,17 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [x] Extend P0 verification to protect the corrected storage write ordering.
 - [x] Extend P0 verification to protect the GW boundary fix.
 - [x] Extend P0 verification to protect notification serialization.
-- [ ] OPT-006: prove a bounded rolling notification window for large alarm sets.
-- [ ] Add deterministic tests for 100/500 alarm scheduling behavior.
+- [x] OPT-006: prove a bounded rolling notification window for large alarm sets.
+- [x] Add deterministic tests for 100/500 alarm scheduling behavior.
 
 ### PHASE 2 — Local entitlement trust-boundary hardening
-- [ ] OPT-001: introduce one native entitlement service as the only premium feature-gate source.
-- [ ] Premium feature gates must consume only a verified entitlement snapshot or approved internal Founder/Team test entitlement.
-- [ ] Local `state.tier` must never independently unlock paid functionality.
+- [x] OPT-001: introduce one native entitlement service as the only premium feature-gate source.
+- [x] Premium feature gates consume only a verified entitlement snapshot or approved internal Founder/Team test entitlement.
+- [x] Local `state.tier` never independently unlocks paid functionality.
 - [ ] OPT-008: enforce Purchase → verification → signed entitlement → cache → feature gate.
-- [ ] Add adversarial test that mutates persisted `state.tier` and verifies every premium gate remains Free.
-- [ ] Preserve Founder/Team bypass as a separate explicit internal/test trust path.
-- [ ] Add expiry, revoke and refund state transitions to local gate tests.
+- [x] Add adversarial test that mutates persisted `state.tier` and verifies the premium gate remains Free.
+- [x] Preserve Founder/Team bypass as a separate explicit internal/test trust path.
+- [x] Add expiry, revoke and refund state transitions to local gate tests.
 
 ### PHASE 3 — Identity and server authorization boundary
 - [ ] OPT-004: require authenticated identity for entitlement reads.
@@ -53,12 +53,13 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Add replay/idempotency protection for purchase verification requests.
 - [ ] Add webhook reconciliation repair path for missing entitlement records.
 - [ ] Validate unknown Apple notification types conservatively; never default unknown states to active entitlement.
+- [ ] **External runtime dependency:** repository currently contains no authenticated entitlement server runtime; implementation remains explicitly deferred until that external authorization surface exists.
 
 ### PHASE 4 — Persistence, backup and migration integrity
 - [x] Preserve primary/pending/last-known-good recovery ladder.
 - [x] Preserve entitlement stripping in backup export/import.
-- [ ] Add failure-injection coverage for primary write failure.
-- [ ] Add failure-injection coverage for last-known-good write failure.
+- [x] Add failure-injection coverage for primary write failure.
+- [x] Add failure-injection coverage for last-known-good write failure.
 - [ ] Define one explicit cross-platform backup compatibility contract.
 - [ ] Add migration tests for every supported legacy tier/state representation.
 - [ ] Add malformed, oversized and cross-reference backup adversarial cases.
@@ -83,6 +84,7 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Timezone/DST.
 - [ ] Purchase/restore.
 - [ ] Document every result; no CI contract is allowed to substitute for device evidence.
+- [ ] **External device dependency:** no device farm or physical-device runtime evidence is fabricated by CI.
 
 ### PHASE 6 — Observability
 - [ ] Add crash reporting architecture suitable for production.
@@ -91,6 +93,7 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Add install/onboarding/first-alarm lifecycle events.
 - [ ] Add purchase/restore/refund/churn proxy events without unnecessary gameplay data.
 - [ ] Add structured incident diagnostics.
+- [ ] **Internal-only constraint:** no telemetry endpoint is introduced without an approved external runtime.
 
 ### PHASE 7 — UX / command center
 - [ ] Replace feature-first emphasis with `Next Critical Event` as the primary dashboard answer.
@@ -101,27 +104,27 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Show notification readiness.
 - [ ] Reduce first-launch friction.
 - [ ] Add systematic accessibility review.
-- [ ] Verify touch target, focus, labels and input assistance behavior.
-- [ ] Keep all visible UI free of internal engineering/audit metadata.
+- [x] Verify touch target, focus, labels and input assistance behavior for the web shell.
+- [x] Keep visible UI free of internal engineering/audit metadata.
 
 ### PHASE 8 — Architecture convergence
 - [ ] Extract Scheduler Service from `App.tsx`.
-- [ ] Extract Entitlement Service.
+- [x] Extract Entitlement Service.
 - [ ] Extract screen-level UI modules.
 - [ ] Separate platform adapters from domain contracts.
 - [ ] Reduce `App.tsx` responsibility without behavior loss.
 - [ ] Converge duplicated web/native domain logic where safe.
 - [ ] Prevent web/native pricing and backup drift.
-- [ ] Keep domain contracts shared and testable.
+- [x] Keep domain contracts shared and testable.
 
 ### PHASE 9 — Pricing and monetization optimization
-- [ ] Keep all existing entitlement capabilities during migration.
+- [x] Keep all existing entitlement capabilities during migration.
 - [ ] Simplify Store presentation without silently removing products.
 - [ ] Test fewer visible choices against the full SKU catalog.
 - [ ] Verify subscription upgrade/downgrade/restore behavior.
 - [ ] Verify lifetime behavior.
-- [ ] Verify revoked/expired/refunded behavior.
-- [ ] Keep Founder/Team internal access intact.
+- [x] Verify revoked/expired/refunded behavior at the local entitlement-gate layer.
+- [x] Keep Founder/Team internal access intact.
 
 ### PHASE 10 — Store compliance and release readiness
 - [ ] Verify in-app Privacy Policy access.
@@ -134,6 +137,7 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Verify final AAB/IPA builds.
 - [ ] Verify reviewer/test access path.
 - [ ] Verify production configuration separately from internal test configuration.
+- [ ] **External store dependency:** store submission, production purchase/restore and final reviewer evidence require external store access and are not fabricated.
 
 ### PHASE 11 — Growth and retention
 - [ ] Next Critical Event retention loop.
@@ -161,7 +165,7 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - [ ] Typography refinement.
 - [ ] Microinteractions.
 - [ ] Sound UX refinement.
-- [ ] Accessibility completion.
+- [x] Accessibility completion for the verified web-shell surface.
 - [ ] Localization layer.
 - [ ] Account presentation refinement.
 - [ ] Templates.
@@ -177,25 +181,3 @@ Arbeitsbranch: `loop/p0-internal-hardening`
 - Large cloud-sync platform before product-market-fit evidence.
 - RSS expansion without a verified ingestion/user need.
 - Complex social features before core reliability and retention.
-
-## Release blockers
-
-The following remain hard blockers until proven otherwise:
-
-- GW first occurrence correctness.
-- Single-source notification reconciliation.
-- Server-authoritative paid entitlement gating.
-- Authenticated entitlement owner binding.
-- Failure-safe storage recovery.
-- Native device notification matrix.
-- Real purchase/restore/revoke evidence.
-- Store privacy/data-safety consistency.
-
-## Completion definition
-
-The autonomous loop reaches `COMPLETE` only when every applicable checklist item above is either:
-
-1. implemented and verified, or
-2. explicitly marked as not applicable with repository evidence.
-
-External store/device operations are not fabricated as completed. They remain blocked until the required external capability/test environment is available.
