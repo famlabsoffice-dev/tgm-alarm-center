@@ -16,7 +16,7 @@ assert.match(notifications, /canScheduleExactAlarms\(\)/);
 assert.match(notifications, /categoryIdentifier: 'tgm-test'/);
 assert.match(notifications, /testToken:/);
 assert.match(notifications, /setNotificationCategoryAsync\('tgm-test'/);
-assert.match(notifications, /The local device test is only available/);
+assert.match(notifications, /Der lokale Gerätetest ist nur auf einem echten Android- oder iOS-Gerät verfügbar/);
 assert.match(manifest, /SCHEDULE_EXACT_ALARM/);
 assert.match(manifest, /RECEIVE_BOOT_COMPLETED/);
 
