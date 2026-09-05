@@ -3,12 +3,12 @@ import test from 'node:test';
 import { createDiagnosticEvent, LocalDiagnosticBuffer, MAX_DIAGNOSTIC_EVENTS, sanitizeMetadata, toCrashReportEnvelope } from '../src/domain/diagnostics';
 
 test('diagnostic metadata uses an explicit privacy allowlist and finite scalar values', () => {
-  assert.deepEqual(sanitizeMetadata({ durationMs: 25, scheduledCount: 4, privateUserId: 'user-123', token: 'secret', ok: true, badNumber: Number.NaN, note: ' ready ' }), {
-    durationMs: 25,
-    scheduledCount: 4,
-    ok: true,
-    note: 'ready',
-  });
+  const sanitized = sanitizeMetadata({ durationMs: 25, scheduledCount: 4, privateUserId: 'user-123', token: 'secret', ok: true, badNumber: Number.NaN, note: ' ready ' });
+  assert.deepEqual(sanitized, { durationMs: 25, scheduledCount: 4 });
+  assert.equal('privateUserId' in sanitized, false);
+  assert.equal('token' in sanitized, false);
+  assert.equal('ok' in sanitized, false);
+  assert.equal('note' in sanitized, false);
 });
 
 test('diagnostic events reject invalid timestamps and preserve only bounded identity fields', () => {
