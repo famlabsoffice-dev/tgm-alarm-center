@@ -87,7 +87,9 @@ type TemplateKey = keyof typeof TEMPLATES;
 function readinessText(readiness: NotificationReadiness): string {
   if (!readiness.supported) return 'Gerätetest erforderlich';
   if (!readiness.permission) return 'Berechtigung fehlt';
+  if (Platform.OS === 'android' && !readiness.exactAlarm) return 'Exakte Alarme freigeben';
   if (!readiness.channel && Platform.OS === 'android') return 'Kanal fehlt';
+  if (readiness.recoveryPending) return 'Wiederherstellung wird geprüft';
   return 'Bereit';
 }
 
@@ -174,8 +176,9 @@ export default function App() {
 
   const completeFromNotification = useCallback((response: Notifications.NotificationResponse | null) => {
     const data = response?.notification.request.content.data as { alarmId?: unknown; accountId?: unknown; eventTime?: unknown; kind?: unknown } | undefined;
-    if (!data || typeof data.alarmId !== 'string' || typeof data.accountId !== 'string') return;
+    if (!data) return;
     if (data.kind === 'local-test') return;
+    if (typeof data.alarmId !== 'string' || typeof data.accountId !== 'string') return;
     if (response?.actionIdentifier === 'open') {
       openAlarmFromNotification(data.alarmId, data.accountId);
       return;
@@ -190,14 +193,25 @@ export default function App() {
   }, [openAlarmFromNotification]);
 
   useEffect(() => {
-    const responseSubscription = Notifications.addNotificationResponseReceivedListener(completeFromNotification);
+    const responseSubscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { kind?: unknown } | undefined;
+      if (data?.kind === 'local-test') {
+        setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
+        return;
+      }
+      completeFromNotification(response);
+    });
     const receivedSubscription = Notifications.addNotificationReceivedListener((notification) => {
       const data = notification.request.content.data as { kind?: unknown } | undefined;
       if (data?.kind !== 'local-test') return;
       setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
-      Alert.alert('Notification-Test erfolgreich', 'Die lokale Benachrichtigung wurde vom Gerät empfangen.');
+      Alert.alert('Gerätetest-Signal empfangen', 'Dieses Gerät hat das lokale Notification-Signal an die App gemeldet. Für die sichtbare Systemanzeige bleibt der Gerätetest maßgeblich.');
     });
-    Notifications.getLastNotificationResponseAsync().then(completeFromNotification).catch(() => undefined);
+    Notifications.getLastNotificationResponseAsync().then((response) => {
+      const data = response?.notification.request.content.data as { kind?: unknown } | undefined;
+      if (data?.kind === 'local-test') setState((current) => ({ ...current, testConfirmedAt: nowIso() }));
+      else completeFromNotification(response);
+    }).catch(() => undefined);
     return () => {
       responseSubscription.remove();
       receivedSubscription.remove();
@@ -376,9 +390,13 @@ export default function App() {
       Alert.alert('Notification-Test nicht möglich', 'Aktiviere zuerst die Benachrichtigungsberechtigung auf dem Gerät.');
       return;
     }
+    if (Platform.OS === 'android' && !readiness.exactAlarm) {
+      Alert.alert('Notification-Test nicht möglich', 'Aktiviere zuerst „Alarme & Erinnerungen“ für TGM ALARM CENTER.');
+      return;
+    }
     try {
       await scheduleLocalTestNotification();
-      Alert.alert('Notification-Test geplant', 'Das Gerät sendet die lokale Testbenachrichtigung in Kürze. Der Status wird nach dem tatsächlichen Empfang bestätigt.');
+      Alert.alert('Notification-Test geplant', 'Die lokale Testbenachrichtigung wird jetzt geplant. Eine positive Bestätigung erfolgt erst, wenn das Gerät das Signal tatsächlich meldet.');
     } catch (error: unknown) {
       Alert.alert('Notification-Test fehlgeschlagen', error instanceof Error ? error.message : 'Der lokale Test konnte nicht geplant werden.');
     }
@@ -408,7 +426,7 @@ export default function App() {
             <View style={styles.statsRow}>
               <View style={styles.statCard}><Text style={styles.eyebrow}>ALARME</Text><Text style={styles.statValue}>{alarmLimitText}</Text><Text style={styles.muted}>im aktuellen Plan</Text></View>
               <View style={styles.statCard}><Text style={styles.eyebrow}>BUBBLE ALARM</Text><Text style={styles.statValue}>{visibleAlarms.filter((alarm) => alarm.repeat === 'gw5d' && alarm.active).length}</Text><Text style={styles.muted}>Massacre Alarm-Zyklen aktiv</Text></View>
-              <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Exakte Alarmberechtigung nicht verifiziert'}</Text></View>
+              <View style={styles.statCard}><Text style={styles.eyebrow}>NOTIFICATIONS</Text><Text style={[styles.statValue, readiness.permission && readiness.exactAlarm && (Platform.OS !== 'android' || readiness.channel) ? styles.mintText : styles.warningText]}>{readinessText(readiness)}</Text><Text style={styles.muted}>{readiness.exactAlarm ? 'Exact Alarm geprüft' : 'Exakte Alarmberechtigung nicht verifiziert'}</Text></View>
             </View>
             <Text style={styles.sectionTitle}>Schnellstart</Text>
             <View style={styles.templateGrid}>
