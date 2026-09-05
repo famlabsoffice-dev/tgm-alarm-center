@@ -17,15 +17,15 @@ concurrency:
 jobs:
   mobile-quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v6
 
-      - name: Setup Node
+      - name: Setup Node LTS
         uses: actions/setup-node@v7
         with:
-          node-version: 22.13.1
+          node-version: 24.20.0
           package-manager-cache: false
 
       - name: Install exact pnpm toolchain
@@ -37,10 +37,13 @@ jobs:
         run: pnpm install --no-frozen-lockfile
 
       - name: Align Expo-managed dependencies
-        run: pnpm exec expo install --fix
+        run: pnpm exec expo install expo@57.0.17 react-native@0.86.3 && pnpm exec expo install --fix
 
       - name: Expo Doctor
         run: pnpm dlx expo-doctor@latest
+
+      - name: Clean native prebuild
+        run: pnpm exec expo prebuild --clean --non-interactive
 
       - name: Typecheck
         run: pnpm typecheck
