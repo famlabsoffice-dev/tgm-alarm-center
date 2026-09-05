@@ -1,5 +1,5 @@
 import type { Tier } from './alarm';
-import { FOUNDER_TEST_ACCOUNT_NAMES, trustedNativeTier } from '../billing/nativeEntitlementService';
+import { trustedNativeTier } from '../billing/nativeEntitlementService';
 
 export type BillingPeriod = 'weekly' | 'monthly' | 'sixMonth' | 'yearly' | 'lifetime';
 export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
@@ -7,7 +7,7 @@ export type CurrencyCode = 'EUR' | 'USD' | 'JPY';
 export const FREE_TRIAL_DURATION_MS = 3 * 24 * 60 * 60 * 1000;
 export const FREE_TRIAL_TIER: Tier = 'godfather';
 export const FOUNDER_ACCESS_TIER: Tier = 'godfather';
-export const FOUNDER_ACCOUNT_NAMES = FOUNDER_TEST_ACCOUNT_NAMES;
+export const FOUNDER_ACCOUNT_NAMES = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'] as const;
 const FOUNDER_ACCOUNT_NAME_KEYS = new Set(FOUNDER_ACCOUNT_NAMES.map((name) => name.toLowerCase()));
 
 export function isFounderAccountName(accountName: string): boolean {
