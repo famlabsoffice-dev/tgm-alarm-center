@@ -1,5 +1,3 @@
-import * as FileSystem from 'expo-file-system';
-import * as Sharing from 'expo-sharing';
 import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, Tier, validateDateTime } from '../domain/alarm';
 
 export const FORMAT = 'tgm-alarm-center-backup';
@@ -72,6 +70,10 @@ export function restoreBackup(payload: string | unknown): AppState {
 }
 
 export async function exportBackup(data: AppState): Promise<void> {
+  const [{ default: FileSystem }, Sharing] = await Promise.all([
+    import('expo-file-system'),
+    import('expo-sharing'),
+  ]);
   const file = `${FileSystem.cacheDirectory}tgm-alarm-center-${Date.now()}.json`;
   const payload = JSON.stringify(makeBackup(data), null, 2);
   if (payload.length > MAX_BACKUP_BYTES) throw new Error('Backup-Datei wäre zu groß');
