@@ -13,17 +13,17 @@ test('persisted paid tier cannot unlock native features without verified entitle
 
 test('only active unexpired server entitlement unlocks native premium features', () => {
   clearVerifiedNativeEntitlement();
-  const active = { status: 'active' as const, tier: 'streetBoss' as const, productKey: 'street-boss-monthly', productId: 'street-boss-monthly', platform: 'android' as const, environment: 'production' as const, expiresAt: '2026-09-06T00:00:00.000Z', verifiedAt: '2026-09-05T00:00:00.000Z', source: 'server' as const };
+  const active = { status: 'active' as const, tier: 'streetBoss' as const, productKey: 'street-boss-monthly', productId: 'street-boss-monthly', platform: 'android' as const, environment: 'production' as const, expiresAt: '2099-12-31T23:59:59.000Z', verifiedAt: '2026-09-05T00:00:00.000Z', source: 'server' as const };
   setVerifiedNativeEntitlement(active);
   assert.equal(getNativeEntitlementState('ordinary-player', 'free').tier, 'streetBoss');
 
-  setVerifiedNativeEntitlement({ ...active, status: 'expired', expiresAt: '2026-09-04T00:00:00.000Z' });
+  setVerifiedNativeEntitlement({ ...active, status: 'expired', expiresAt: '2000-01-01T00:00:00.000Z' });
   assert.equal(getNativeEntitlementState('ordinary-player', 'godfather').tier, 'free');
 
-  setVerifiedNativeEntitlement({ ...active, status: 'pending', expiresAt: '2026-09-06T00:00:00.000Z' });
+  setVerifiedNativeEntitlement({ ...active, status: 'pending', expiresAt: '2099-12-31T23:59:59.000Z' });
   assert.equal(getNativeEntitlementState('ordinary-player', 'godfather').tier, 'free');
 
-  setVerifiedNativeEntitlement({ ...active, status: 'revoked', expiresAt: '2026-09-06T00:00:00.000Z' });
+  setVerifiedNativeEntitlement({ ...active, status: 'revoked', expiresAt: '2099-12-31T23:59:59.000Z' });
   assert.equal(getNativeEntitlementState('ordinary-player', 'godfather').tier, 'free');
   clearVerifiedNativeEntitlement();
 });
