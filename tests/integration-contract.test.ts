@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { fromTGMhubEvent, toTGMhubIntegrationOutput } from '../src/integration/tgmhub-contract';
+import { canonicalRequest, validateBulkSize, validatePartnerRequest, type PartnerEvent, type PartnerRequest } from '../src/integration/partner-contract';
+import { toAlarmIntent, UTILITY_DEFAULTS, validateUtilityEvent } from '../src/integration/utility-events';
+
+test('utility categories normalize into alarm intents', () => {
+  for (const category of Object.keys(UTILITY_DEFAULTS) as Array<keyof typeof UTILITY_DEFAULTS>) {
+    const intent = toAlarmIntent({ id: `evt-${category}`, category, title: category, accountId: 'account-1', startAtUtc: '2030-01-01T12:00:00.000Z', endAtUtc: null, metadata: {}, ...UTILITY_DEFAULTS[category] });
+    assert.equal(intent.sourceEventId, `evt-${category}`);
+    assert.equal(intent.accountId, 'account-1');
+  }
+});
+
+test('invalid utility events fail closed', () => {
+  assert.throws(() => validateUtilityEvent({ id: 'x', category: 'event', title: '', accountId: 'account-1', startAtUtc: 'bad', endAtUtc: null, metadata: {}, ...UTILITY_DEFAULTS.event }));
+  assert.throws(() => validateUtilityEvent({ id: 'x', category: 'event', title: 'x', accountId: 'account-1', startAtUtc: '2030-01-01T12:00:00.000Z', endAtUtc: '2029-01-01T12:00:00.000Z', metadata: {}, ...UTILITY_DEFAULTS.event }));
+});
+
+test('TGMhub adapter preserves identity and produces schedule, notification and preference output', () => {
+  const intent = fromTGMhubEvent({ event: 'GW', start: '2030-01-01T12:00:00.000Z', end: '2030-01-02T12:00:00.000Z', category: 'gw', metadata: { season: 4 } }, { eventId: 'hub-1', accountId: 'account-1' }, UTILITY_DEFAULTS.gw);
+  const preferences = { sound: 'siren' as const, warningSound: true, eventSound: true, vibration: true, criticalAlerts: true, preview: false };
+  const output = toTGMhubIntegrationOutput(intent, preferences);
+  assert.equal(output.eventId, 'hub-1');
+  assert.deepEqual(output.schedule.map((item) => item.warningMinutes), [60, 30, 15, undefined]);
+  assert.equal(output.schedule.length, 4);
+  assert.equal(output.notifications.enabled, true);
+  assert.equal(output.notifications.critical, true);
+  assert.equal(output.tone, 'siren');
+  assert.deepEqual(output.userPreferences, preferences);
+});
+
+test('partner canonical representation is deterministic and signed requests are bounded', () => {
+  const request: PartnerRequest = { method: 'POST', route: 'POST /events', timestamp: 1893456000000, nonce: 'nonce-123456', body: '{"id":"evt-1"}', identity: { partnerId: 'partner-123456', keyId: 'key-123456' }, signature: 'a'.repeat(64) };
+  const unsigned = { method: request.method, route: request.route, timestamp: request.timestamp, nonce: request.nonce, body: request.body, identity: request.identity };
+  assert.equal(canonicalRequest(unsigned), canonicalRequest(unsigned));
+  assert.doesNotThrow(() => validatePartnerRequest(request, request.timestamp));
+  assert.throws(() => validatePartnerRequest({ ...request, timestamp: request.timestamp - 6 * 60 * 1000 }, request.timestamp));
+});
+
+test('partner bulk contract is bounded', () => {
+  const event: PartnerEvent = { id: 'evt-1', accountId: 'account-1', event: 'Event', start: '2030-01-01T12:00:00.000Z', end: null, category: 'event', metadata: {} };
+  assert.doesNotThrow(() => validateBulkSize([event]));
+  assert.throws(() => validateBulkSize([]));
+  assert.throws(() => validateBulkSize(Array.from({ length: 101 }, (_, index) => ({ ...event, id: `evt-${index}` }))));
+});
