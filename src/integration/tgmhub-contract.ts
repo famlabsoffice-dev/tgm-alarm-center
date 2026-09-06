@@ -40,7 +40,11 @@ export interface TGMhubAlarmOutput {
 
 export function toTGMhubIntegrationOutput(intent: UtilityAlarmIntent, preferences: NotificationPreferences): TGMhubAlarmOutput {
   const eventTime = new Date(intent.eventAtUtc).getTime();
-  const schedule = intent.warnings.map((warningMinutes) => ({ kind: 'warning' as const, at: new Date(eventTime - warningMinutes * 60 * 1000).toISOString(), warningMinutes }));
+  const schedule: TGMhubAlarmOutput['schedule'] = intent.warnings.map((warningMinutes) => ({
+    kind: 'warning',
+    at: new Date(eventTime - warningMinutes * 60 * 1000).toISOString(),
+    warningMinutes,
+  }));
   schedule.push({ kind: 'main', at: intent.eventAtUtc });
   return {
     eventId: intent.sourceEventId,
