@@ -17,18 +17,23 @@ test('invalid utility events fail closed', () => {
   assert.throws(() => validateUtilityEvent({ id: 'x', category: 'event', title: 'x', accountId: 'account-1', startAtUtc: '2030-01-01T12:00:00.000Z', endAtUtc: '2029-01-01T12:00:00.000Z', metadata: {}, ...UTILITY_DEFAULTS.event }));
 });
 
-test('TGMhub adapter preserves event identity and produces alarm output', () => {
+test('TGMhub adapter preserves identity and produces schedule, notification and preference output', () => {
   const intent = fromTGMhubEvent({ event: 'GW', start: '2030-01-01T12:00:00.000Z', end: '2030-01-02T12:00:00.000Z', category: 'gw', metadata: { season: 4 } }, { eventId: 'hub-1', accountId: 'account-1' }, UTILITY_DEFAULTS.gw);
-  const output = toTGMhubIntegrationOutput(intent);
+  const preferences = { sound: 'siren' as const, warningSound: true, eventSound: true, vibration: true, criticalAlerts: true, preview: false };
+  const output = toTGMhubIntegrationOutput(intent, preferences);
   assert.equal(output.eventId, 'hub-1');
-  assert.deepEqual(output.warnings, [60, 30, 15]);
+  assert.deepEqual(output.schedule.map((item) => item.warningMinutes), [60, 30, 15, undefined]);
+  assert.equal(output.schedule.length, 4);
+  assert.equal(output.notifications.enabled, true);
+  assert.equal(output.notifications.critical, true);
   assert.equal(output.tone, 'siren');
-  assert.equal(output.preferencesRequired, true);
+  assert.deepEqual(output.userPreferences, preferences);
 });
 
 test('partner canonical representation is deterministic and signed requests are bounded', () => {
   const request: PartnerRequest = { method: 'POST', route: 'POST /events', timestamp: 1893456000000, nonce: 'nonce-123456', body: '{"id":"evt-1"}', identity: { partnerId: 'partner-123456', keyId: 'key-123456' }, signature: 'a'.repeat(64) };
-  assert.equal(canonicalRequest({ ...request, signature: undefined } as Omit<PartnerRequest, 'signature'>), canonicalRequest({ ...request, signature: undefined } as Omit<PartnerRequest, 'signature'>));
+  const unsigned = { method: request.method, route: request.route, timestamp: request.timestamp, nonce: request.nonce, body: request.body, identity: request.identity };
+  assert.equal(canonicalRequest(unsigned), canonicalRequest(unsigned));
   assert.doesNotThrow(() => validatePartnerRequest(request, request.timestamp));
   assert.throws(() => validatePartnerRequest({ ...request, timestamp: request.timestamp - 6 * 60 * 1000 }, request.timestamp));
 });
