@@ -42,6 +42,16 @@ import { AlarmCard } from './src/ui/screens/AlarmCard';
 import { AlarmEditorModal, defaultEditor, type EditorValues } from './src/ui/screens/AlarmEditorModal';
 import { CommandCenterScreen } from './src/ui/screens/CommandCenterScreen';
 import { SettingsScreen } from './src/ui/screens/SettingsScreen';
+import { EventInboxScreen } from './src/ui/screens/EventInboxScreen';
+import {
+  buildInboxAlarm,
+  canAddEventAlarm,
+  dismissInboxEvent,
+  markInboxEventAdded,
+  upsertInboxEvent,
+  type EventInboxItem,
+} from './src/platform/eventInbox';
+import { loadEventInbox, saveEventInbox } from './src/platform/eventInboxStore';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -81,9 +91,6 @@ const formatCountdown = (date: Date, now: number): string => {
 
 type TemplateKey = keyof typeof TEMPLATES;
 
-
-;
-
 function readinessText(readiness: NotificationReadiness): string {
   if (!readiness.supported) return 'Gerätetest erforderlich';
   if (!readiness.permission) return 'Berechtigung fehlt';
@@ -93,10 +100,9 @@ function readinessText(readiness: NotificationReadiness): string {
   return 'Bereit';
 }
 
-
-
 export default function App() {
   const [state, setState] = useState<AppState>(emptyState());
+  const [eventInbox, setEventInbox] = useState<EventInboxItem[]>([]);
   const [ready, setReady] = useState(false);
   const [readiness, setReadiness] = useState<NotificationReadiness>({ supported: false, permission: false, exactAlarm: false, channel: false });
   const [editorVisible, setEditorVisible] = useState(false);
@@ -110,11 +116,12 @@ export default function App() {
   useEffect(() => {
     let mounted = true;
     (async () => {
-      const loaded = await loadState();
+      const [loaded, loadedInbox] = await Promise.all([loadState(), loadEventInbox()]);
       await registerCategories();
       const notificationState = await initializeNotifications();
       if (mounted) {
         setState(loaded);
+        setEventInbox(loadedInbox);
         setReadiness(notificationState);
         setReady(true);
         initialized.current = true;
@@ -134,6 +141,11 @@ export default function App() {
     if (!ready || !initialized.current) return;
     saveState(state).then(() => setStorageError(null)).catch(() => setStorageError('Änderungen konnten nicht dauerhaft gespeichert werden.'));
   }, [state, ready]);
+
+  useEffect(() => {
+    if (!ready || !initialized.current) return;
+    saveEventInbox(eventInbox).catch(() => setStorageError('Event Inbox konnte nicht dauerhaft gespeichert werden.'));
+  }, [eventInbox, ready]);
 
   useEffect(() => {
     if (!ready || !readiness.supported || !readiness.permission) return;
@@ -361,6 +373,34 @@ export default function App() {
     ]);
   };
 
+  const receiveInboxEvent = (item: EventInboxItem): void => {
+    setEventInbox((current) => upsertInboxEvent(current, item.event, new Date(item.receivedAt)));
+  };
+
+  const addInboxEventToAlarm = (item: EventInboxItem): void => {
+    const accountId = activeAccount?.id ?? state.activeAccountId;
+    if (!accountId) {
+      Alert.alert('Account fehlt', 'Lege zuerst einen Account an.');
+      return;
+    }
+    const decision = canAddEventAlarm(effectiveAppTier, state.alarms, accountId, item.event);
+    if (!decision.allowed) {
+      Alert.alert('Limit erreicht', decision.reason ?? 'Der Event-Alarm kann nicht hinzugefügt werden.');
+      return;
+    }
+    const alarm = buildInboxAlarm(item, accountId, new Date());
+    if (state.alarms.some((candidate) => candidate.id === alarm.id)) {
+      setEventInbox((current) => markInboxEventAdded(current, item.event.id, alarm.id));
+      return;
+    }
+    setState((current) => ({ ...current, alarms: [...current.alarms, alarm] }));
+    setEventInbox((current) => markInboxEventAdded(current, item.event.id, alarm.id));
+  };
+
+  const dismissInbox = (eventId: string): void => {
+    setEventInbox((current) => dismissInboxEvent(current, eventId, new Date()));
+  };
+
   const updatePreference = <K extends keyof AppState['notificationPreferences']>(key: K, value: AppState['notificationPreferences'][K]): void => {
     setState((current) => ({ ...current, notificationPreferences: { ...current.notificationPreferences, [key]: value } }));
   };
@@ -402,8 +442,6 @@ export default function App() {
     }
   };
 
-;
-
   if (!ready) return <CommandCenterScreen><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></CommandCenterScreen>;
 
   return (
@@ -432,10 +470,19 @@ export default function App() {
             <View style={styles.templateGrid}>
               {(['bubble', 'gwBubble', 'custom', 'individual', 'rss'] as TemplateKey[]).map((key) => <Pressable key={key} accessibilityRole="button" accessibilityLabel={`${TEMPLATES[key].title} erstellen`} hitSlop={8} onPress={() => quickCreate(key)} style={({ pressed }) => [styles.templateCard, pressed && styles.pressed]}><Text style={styles.templateTitle}>{TEMPLATES[key].title}</Text><Text style={styles.muted}>{key === 'bubble' || key === 'gwBubble' ? 'Siren' : key === 'rss' ? 'Chime' : 'Pulse'}</Text></Pressable>)}
             </View>
+            <EventInboxScreen
+              items={eventInbox}
+              alarms={state.alarms}
+              tier={effectiveAppTier}
+              accountId={activeAccount?.id ?? state.activeAccountId}
+              onReceiveEvent={receiveInboxEvent}
+              onAddToAlarm={addInboxEventToAlarm}
+              onDismiss={dismissInbox}
+            />
             <View style={styles.sectionTitleRow}><Text style={styles.sectionTitle}>Deine Alarme</Text><Text style={styles.muted}>{visibleAlarms.length} gespeichert</Text></View>
           </View>
         }
-        ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart oder erstelle einen Event Alarm.</Text></View>}
+        ListEmptyComponent={<View style={styles.emptyCard}><Text style={styles.emptyTitle}>Noch kein Alarm angelegt</Text><Text style={styles.muted}>Nutze einen Schnellstart, übernimm ein Event aus der Inbox oder erstelle einen Event Alarm.</Text></View>}
         ListFooterComponent={
           <SettingsScreen
             storageError={storageError}
@@ -461,8 +508,6 @@ export default function App() {
     </CommandCenterScreen>
   );
 }
-
-
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: COLORS.background },
@@ -514,7 +559,6 @@ const styles = StyleSheet.create({
   iconButtonText: { color: '#FFB5AB', fontSize: 18, fontWeight: '700' },
   pressed: { opacity: 0.72, transform: [{ scale: 0.98 }] },
   emptyCard: { backgroundColor: COLORS.panel, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, padding: 25, alignItems: 'center', marginBottom: 10 },
-  emptyTitle: { color: COLORS.text, fontSize: 17, fontWeight: '900', marginBottom: 5 },
   settingsCard: { backgroundColor: COLORS.panel, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, paddingHorizontal: 15, marginBottom: 10 },
   settingRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: 54, borderBottomColor: COLORS.border, borderBottomWidth: StyleSheet.hairlineWidth },
   settingLabel: { color: COLORS.text, fontSize: 14, fontWeight: '700' },
