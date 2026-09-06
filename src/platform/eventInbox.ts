@@ -28,11 +28,16 @@ function normalizeScore(value: number): number {
 
 export function upsertInboxEvent(items: EventInboxItem[], event: AlarmableEvent, receivedAt = new Date()): EventInboxItem[] {
   const existingIndex = items.findIndex((item) => item.event.id === event.id);
-  const replacement: EventInboxItem = existingIndex >= 0
-    ? { ...items[existingIndex], event, status: items[existingIndex].status === 'dismissed' ? 'new' : items[existingIndex].status }
-    : { event, status: 'new', receivedAt: receivedAt.toISOString() };
-  if (existingIndex < 0) return [replacement, ...items];
-  return items.map((item, index) => index === existingIndex ? replacement : item);
+  if (existingIndex >= 0) {
+    const existing = items[existingIndex]!;
+    const replacement: EventInboxItem = {
+      ...existing,
+      event,
+      status: existing.status === 'dismissed' ? 'new' : existing.status,
+    };
+    return items.map((item, index) => index === existingIndex ? replacement : item);
+  }
+  return [{ event, status: 'new', receivedAt: receivedAt.toISOString() }, ...items];
 }
 
 export function dismissInboxEvent(items: EventInboxItem[], eventId: string, now = new Date()): EventInboxItem[] {
