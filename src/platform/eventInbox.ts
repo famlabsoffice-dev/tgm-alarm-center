@@ -83,14 +83,22 @@ export function recommendEvents(items: EventInboxItem[], alarms: Alarm[], now = 
     .sort((a, b) => b.score - a.score || new Date(a.event.startAtUtc).getTime() - new Date(b.event.startAtUtc).getTime());
 }
 
-export function canAddEventAlarm(tier: Tier, alarms: Alarm[], accountId: string): { allowed: boolean; reason?: string } {
+export function canAddEventAlarm(tier: Tier, alarms: Alarm[], accountId: string, event: AlarmableEvent): { allowed: boolean; reason?: string } {
   const limits = TIER_LIMITS[tier];
   const accountAlarms = alarms.filter((alarm) => alarm.accountId === accountId);
   if (Number.isFinite(limits.alarms) && alarms.length >= limits.alarms) return { allowed: false, reason: 'Alarm-Limit des Plans erreicht' };
-  const eventAlarms = accountAlarms.filter((alarm) => alarm.type === 'custom').length;
-  if (Number.isFinite(limits.perAccount.eventAlarms) && eventAlarms >= limits.perAccount.eventAlarms) {
-    return { allowed: false, reason: 'Event-Alarm-Limit des Accounts erreicht' };
-  }
+  const category = event.alarmType === 'bubble' || event.alarmType === 'gwBubble'
+    ? 'bubbleAlarms'
+    : event.alarmType === 'individual'
+      ? 'individualAlarms'
+      : event.alarmType === 'rss'
+        ? 'rssAlarms'
+        : 'eventAlarms';
+  const categoryCount = category === 'bubbleAlarms'
+    ? accountAlarms.filter((alarm) => alarm.type === 'bubble' || alarm.type === 'gwBubble').length
+    : accountAlarms.filter((alarm) => alarm.type === event.alarmType).length;
+  const categoryLimit = limits.perAccount[category];
+  if (Number.isFinite(categoryLimit) && categoryCount >= categoryLimit) return { allowed: false, reason: 'Alarm-Kategorie-Limit des Accounts erreicht' };
   return { allowed: true };
 }
 
