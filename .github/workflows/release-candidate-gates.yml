@@ -64,22 +64,26 @@ jobs:
           corepack prepare pnpm@10.15.1 --activate
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      - name: Verify Expo project binding
+      - name: Require EAS token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: test -n "$EXPO_TOKEN"
+      - name: Ensure EAS project is linked
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest init --non-interactive --force
+      - name: Verify EAS project binding
         run: |
           node - <<'NODE'
           const fs = require('node:fs');
           const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo ?? {};
           const id = app?.extra?.eas?.projectId;
           if (typeof id !== 'string' || !/^[0-9a-f-]{20,}$/i.test(id)) {
-            console.error('Missing valid expo.extra.eas.projectId');
+            console.error('EAS project initialization did not produce a valid projectId');
             process.exit(1);
           }
           console.log('EAS project binding verified');
           NODE
-      - name: Require EAS token
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-        run: test -n "$EXPO_TOKEN"
       - name: Build internal Android APK
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
