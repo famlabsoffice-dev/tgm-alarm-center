@@ -18,14 +18,7 @@ const profile = 'production';
 const cli = ['--yes', 'eas-cli@latest'];
 const env = { ...process.env };
 
-const initArgs = [
-  ...cli,
-  'init',
-  '--account',
-  process.env.EAS_ACCOUNT ?? 'famlabs',
-  '--non-interactive',
-  '--json',
-];
+const initArgs = [...cli, 'init', '--account', process.env.EAS_ACCOUNT ?? 'famlabs', '--non-interactive', '--json'];
 const initResult = spawnSync('npx', initArgs, { encoding: 'utf8', env });
 if (initResult.error) {
   console.error(`Could not start EAS project initialization: ${initResult.error.message}`);
@@ -45,20 +38,7 @@ if (buildResult.error) {
 if (buildResult.status !== 0) process.exit(buildResult.status ?? 1);
 
 const commit = process.env.GITHUB_SHA ?? process.env.EAS_BUILD_GIT_COMMIT_HASH ?? readGitHead();
-const listArgs = [
-  ...cli,
-  'build:list',
-  '--platform',
-  platform,
-  '--status',
-  'finished',
-  '--limit',
-  '10',
-  '--git-commit-hash',
-  commit,
-  '--json',
-  '--non-interactive',
-];
+const listArgs = [...cli, 'build:list', '--platform', platform, '--status', 'finished', '--limit', '10', '--git-commit-hash', commit, '--json', '--non-interactive'];
 const listResult = spawnSync('npx', listArgs, { encoding: 'utf8', env });
 if (listResult.error) {
   console.error(`Could not inspect finished EAS builds: ${listResult.error.message}`);
@@ -84,34 +64,80 @@ if (!buildId) {
   process.exit(8);
 }
 
-const downloadArgs = [...cli, 'build:download', '--build-id', buildId, '--non-interactive'];
-const downloadResult = spawnSync('npx', downloadArgs, { stdio: 'inherit', env });
-if (downloadResult.error) {
-  console.error(`Could not download signed ${platform} artifact: ${downloadResult.error.message}`);
+const viewArgs = [...cli, 'build:view', buildId, '--json'];
+const viewResult = spawnSync('npx', viewArgs, { encoding: 'utf8', env });
+if (viewResult.error) {
+  console.error(`Could not inspect EAS build ${buildId}: ${viewResult.error.message}`);
   process.exit(9);
 }
-if (downloadResult.status !== 0) process.exit(downloadResult.status ?? 1);
+if (viewResult.status !== 0) {
+  process.stderr.write(viewResult.stderr || '');
+  process.exit(viewResult.status ?? 1);
+}
+
+let buildView;
+try {
+  buildView = JSON.parse(viewResult.stdout);
+} catch (error) {
+  console.error(`Could not parse EAS build ${buildId} JSON: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(10);
+}
+
+const artifactUrl = findArtifactUrl(buildView, platform);
+if (!artifactUrl) {
+  console.error(`No ${platform} application artifact URL was returned for EAS build ${buildId}.`);
+  process.exit(11);
+}
 
 const extension = platform === 'android' ? '.aab' : '.ipa';
+const artifactPath = resolve(process.cwd(), `tgm-${platform}-production${extension}`);
+const response = await fetch(artifactUrl, { redirect: 'follow' });
+if (!response.ok) {
+  console.error(`EAS artifact download failed with HTTP ${response.status}.`);
+  process.exit(12);
+}
+const bytes = new Uint8Array(await response.arrayBuffer());
+if (bytes.byteLength === 0) {
+  console.error('EAS artifact download returned an empty file.');
+  process.exit(13);
+}
+writeFileSync(artifactPath, bytes);
+
 const candidates = readdirSync(process.cwd())
   .filter((name) => name.toLowerCase().endsWith(extension))
   .map((name) => resolve(process.cwd(), name))
   .filter((path) => statSync(path).isFile());
 
-if (candidates.length !== 1) {
+if (candidates.length !== 1 || candidates[0] !== artifactPath) {
   console.error(`Expected exactly one downloaded ${extension} artifact, found ${candidates.length}.`);
-  process.exit(10);
+  process.exit(14);
 }
 
-const artifactPath = candidates[0];
 writeFileSync(`${artifactPath}.eas-build-id`, `${buildId}\n`, 'utf8');
 console.log(`${platform.toUpperCase()} production build completed and signed artifact downloaded: ${artifactPath}`);
+
+function findArtifactUrl(value, targetPlatform) {
+  if (!value || typeof value !== 'object') return null;
+  const preferredKeys = targetPlatform === 'android'
+    ? ['buildUrl', 'applicationArchiveUrl']
+    : ['buildUrl', 'applicationArchiveUrl'];
+  for (const key of preferredKeys) {
+    if (typeof value[key] === 'string' && /^https?:\/\//.test(value[key])) return value[key];
+  }
+  for (const child of Object.values(value)) {
+    if (typeof child === 'object') {
+      const nested = findArtifactUrl(child, targetPlatform);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
 
 function readGitHead() {
   const result = spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' });
   if (result.status !== 0 || !result.stdout?.trim()) {
     console.error('Could not determine the source commit for EAS build verification.');
-    process.exit(11);
+    process.exit(15);
   }
   return result.stdout.trim();
 }
