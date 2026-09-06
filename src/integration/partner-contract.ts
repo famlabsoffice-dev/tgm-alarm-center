@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 export const PARTNER_API_VERSION = '1';
 export const MAX_BULK_EVENTS = 100;
 export const MAX_REQUEST_BYTES = 512 * 1024;
@@ -15,17 +13,13 @@ const HEX = /^[0-9a-f]{64}$/;
 const TOKEN = /^[A-Za-z0-9._~-]{8,128}$/;
 
 export function canonicalRequest(request: Omit<PartnerRequest, 'signature'>): string {
-  return [request.method, request.route, PARTNER_API_VERSION, request.identity.partnerId, request.identity.keyId, String(request.timestamp), request.nonce, sha256(request.body)].join('\n');
-}
-
-export function sha256(value: string): string {
-  return createHash('sha256').update(value, 'utf8').digest('hex');
+  return [request.method, request.route, PARTNER_API_VERSION, request.identity.partnerId, request.identity.keyId, String(request.timestamp), request.nonce, request.body].join('\n');
 }
 
 export function validatePartnerRequest(request: PartnerRequest, nowMs = Date.now()): void {
   if (!TOKEN.test(request.identity.partnerId) || !TOKEN.test(request.identity.keyId) || !TOKEN.test(request.nonce)) throw new Error('Ungültige Partner-Identität');
   if (!Number.isSafeInteger(request.timestamp) || Math.abs(nowMs - request.timestamp) > 5 * 60 * 1000) throw new Error('Partner-Request außerhalb des Zeitfensters');
-  if (Buffer.byteLength(request.body, 'utf8') > MAX_REQUEST_BYTES) throw new Error('Partner-Request ist zu groß');
+  if (new TextEncoder().encode(request.body).byteLength > MAX_REQUEST_BYTES) throw new Error('Partner-Request ist zu groß');
   if (!HEX.test(request.signature)) throw new Error('Ungültige Partner-Signatur');
 }
 
