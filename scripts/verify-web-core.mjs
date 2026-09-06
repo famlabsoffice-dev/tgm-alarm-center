@@ -74,10 +74,11 @@ for (const needle of [
   'AudioContext',
 ]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
 
-for (const familyName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
-  assert(!js.includes(familyName), `Founder account must not grant paid access in the web client: ${familyName}`);
+assert(js.includes('FOUNDER_ACCOUNT_NAMES'), 'Founder account allowlist is missing from the web client.');
+for (const founderName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
+  assert(js.includes(founderName), `Founder account is missing from the web client: ${founderName}`);
 }
-assert(!js.includes('FAMILY_ACCOUNT_NAMES') && !js.includes('FAMILY_ACCESS_TIER') && !js.includes('familyAccessForAccount'), 'Client-side founder access leaked into the web build.');
+assert(js.includes('activeFounderAccount') && js.includes("FREE_TRIAL_TIER : 'free'"), 'Founder accounts must resolve to unlimited Godfather access.');
 
 for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
   assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
@@ -92,7 +93,7 @@ for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
   assert(!new RegExp(marker, 'i').test(js + html + css + accessibilityCss), `Placeholder marker found: ${marker}`);
 }
 
-assert(sw.includes('./styles.css?v=6') && sw.includes('./app.js?v=18'), 'Offline shell does not cache the versioned application files.');
+assert(sw.includes('./styles.css?v=6') && sw.includes('./app.js?v=19'), 'Offline shell does not cache the versioned application files.');
 assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
 assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');

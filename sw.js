@@ -1,10 +1,10 @@
-const CACHE = 'tgm-alarm-center-v18';
+const CACHE = 'tgm-alarm-center-v19';
 const INDEX = './index.html';
 const ASSETS = [
   './',
   './index.html',
   './styles.css?v=6',
-  './app.js?v=18',
+  './app.js?v=19',
   './manifest.webmanifest',
   './icon.png',
   './assets/notifications/alarm-pulse.wav',
