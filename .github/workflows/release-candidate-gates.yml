@@ -1,0 +1,86 @@
+name: release-candidate-gates
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tgm-release-candidate-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  reliability-regression:
+    name: Reliability + account isolation + notification regression
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Lint
+        run: pnpm lint
+      - name: Full regression suite
+        run: pnpm verify:regression
+      - name: Android reliability contract
+        run: pnpm verify:android-reliability
+      - name: Native device matrix contract
+        run: pnpm verify:native-device-matrix
+      - name: Release gate
+        run: pnpm verify:full-release
+
+  android-team-build:
+    name: Android internal release-candidate APK
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'push' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    needs: reliability-regression
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.20.0
+      - name: Enable Corepack and pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.15.1 --activate
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify Expo project binding
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const app = JSON.parse(fs.readFileSync('app.json', 'utf8')).expo ?? {};
+          const id = app?.extra?.eas?.projectId;
+          if (typeof id !== 'string' || !/^[0-9a-f-]{20,}$/i.test(id)) {
+            console.error('Missing valid expo.extra.eas.projectId');
+            process.exit(1);
+          }
+          console.log('EAS project binding verified');
+          NODE
+      - name: Require EAS token
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: test -n "$EXPO_TOKEN"
+      - name: Build internal Android APK
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+        run: npx --yes eas-cli@latest build --platform android --profile preview --non-interactive --wait
