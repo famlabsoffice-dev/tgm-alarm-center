@@ -1,5 +1,6 @@
 name: release-candidate-gates
 
+# Release-candidate execution trigger: every main push runs the complete gate and, after it passes, the EAS Android RC build.
 on:
   pull_request:
     branches: [main]
