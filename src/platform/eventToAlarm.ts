@@ -1,4 +1,5 @@
 import type { Alarm, AlarmTemplate } from '../domain/alarm';
+import { localInputFromUtc } from '../domain/alarm';
 import type { AlarmableEvent } from './alarmableEvent';
 
 export interface EventAlarmMapping {
@@ -22,6 +23,7 @@ export function alarmTemplateFromEvent(event: AlarmableEvent): AlarmTemplate {
 export function alarmFromEvent(event: AlarmableEvent, mapping: EventAlarmMapping): Alarm {
   const start = new Date(event.startAtUtc);
   if (!Number.isFinite(start.getTime())) throw new Error('Event startAtUtc is invalid');
+  const local = localInputFromUtc(event.startAtUtc);
   const template = alarmTemplateFromEvent(event);
   const now = mapping.now ?? new Date();
   return {
@@ -29,8 +31,8 @@ export function alarmFromEvent(event: AlarmableEvent, mapping: EventAlarmMapping
     accountId: mapping.accountId,
     title: mapping.titlePrefix ? `${mapping.titlePrefix} · ${template.title}` : template.title,
     type: template.type,
-    date: `${start.getUTCFullYear()}-${String(start.getUTCMonth() + 1).padStart(2, '0')}-${String(start.getUTCDate()).padStart(2, '0')}`,
-    time: `${String(start.getUTCHours()).padStart(2, '0')}:${String(start.getUTCMinutes()).padStart(2, '0')}`,
+    date: local.date,
+    time: local.time,
     eventAtUtc: event.startAtUtc,
     warnings: [...template.warnings],
     repeat: template.repeat,
