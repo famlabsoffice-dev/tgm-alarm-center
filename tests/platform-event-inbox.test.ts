@@ -1,8 +1,9 @@
-import { describe, expect, test } from 'node:test';
+import { expect, test } from 'node:test';
 import { alarmFromEvent } from '../src/platform/eventToAlarm';
 import { canAddEventAlarm, dismissInboxEvent, markInboxEventAdded, recommendEvents, upsertInboxEvent, type EventInboxItem } from '../src/platform/eventInbox';
 import type { AlarmableEvent } from '../src/platform/alarmableEvent';
 import type { Alarm } from '../src/domain/alarm';
+import { localDateTimeToUtc } from '../src/domain/alarm';
 
 const baseEvent = (overrides: Partial<AlarmableEvent> = {}): AlarmableEvent => ({
   id: 'manual:device:1',
@@ -66,7 +67,7 @@ test('recommendEvents prioritizes critical upcoming events', () => {
   expect(recommendations[0].score).toBeGreaterThan(recommendations[1].score);
 });
 
-test('dismiss and add states are explicit and idempotent', () => {
+test('dismiss and add states are explicit', () => {
   const item: EventInboxItem = { event: baseEvent(), status: 'new', receivedAt: '2026-09-06T00:00:00.000Z' };
   const dismissed = dismissInboxEvent([item], item.event.id, new Date('2026-09-06T01:00:00.000Z'));
   expect(dismissed[0].status).toBe('dismissed');
@@ -87,5 +88,5 @@ test('alarmFromEvent keeps the same instant while presenting local device date a
   const alarm = alarmFromEvent(event, { accountId: 'account-1', now: new Date('2026-09-06T00:00:00.000Z') });
   expect(alarm.eventAtUtc).toBe('2026-09-07T12:00:00.000Z');
   expect(alarm.id).toBe('event:manual:device:1');
-  expect(alarm.date).toBe(new Date('2026-09-07T12:00:00.000Z').toLocaleDateString('sv-SE'));
+  expect(localDateTimeToUtc(alarm.date, alarm.time)).toBe(event.startAtUtc);
 });
