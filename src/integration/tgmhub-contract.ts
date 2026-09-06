@@ -1,3 +1,4 @@
+import type { NotificationPreferences } from '../domain/alarm';
 import type { UtilityEventInput, UtilityCategory, UtilityAlarmIntent } from './utility-events';
 import { toAlarmIntent, validateUtilityEvent } from './utility-events';
 
@@ -31,19 +32,24 @@ export interface TGMhubAlarmOutput {
   accountId: string;
   event: string;
   start: string;
-  warnings: number[];
-  tone: string;
-  preferencesRequired: true;
+  schedule: Array<{ kind: 'warning' | 'main'; at: string; warningMinutes?: number }>;
+  notifications: { enabled: boolean; critical: boolean };
+  tone: UtilityAlarmIntent['sound'];
+  userPreferences: NotificationPreferences;
 }
 
-export function toTGMhubIntegrationOutput(intent: UtilityAlarmIntent): TGMhubAlarmOutput {
+export function toTGMhubIntegrationOutput(intent: UtilityAlarmIntent, preferences: NotificationPreferences): TGMhubAlarmOutput {
+  const eventTime = new Date(intent.eventAtUtc).getTime();
+  const schedule = intent.warnings.map((warningMinutes) => ({ kind: 'warning' as const, at: new Date(eventTime - warningMinutes * 60 * 1000).toISOString(), warningMinutes }));
+  schedule.push({ kind: 'main', at: intent.eventAtUtc });
   return {
     eventId: intent.sourceEventId,
     accountId: intent.accountId,
     event: intent.title,
     start: intent.eventAtUtc,
-    warnings: [...intent.warnings],
+    schedule,
+    notifications: { enabled: preferences.warningSound || preferences.eventSound, critical: preferences.criticalAlerts },
     tone: intent.sound,
-    preferencesRequired: true,
+    userPreferences: { ...preferences },
   };
 }
