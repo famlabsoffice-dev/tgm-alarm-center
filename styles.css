@@ -392,3 +392,46 @@ button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-sys
 .reference-chevron { color: #7d8985; font-size: 26px; }
 .reference-empty { padding: 28px 16px; color: #8e9894; text-align: center; }
 @media (min-width: 700px) { .reference-dashboard { width: min(680px, 100%); margin: 0 auto; } }
+/* Unified reference styling for every non-dashboard view */
+.main > section:not(.reference-dashboard) { width: min(680px, 100%); margin: 0 auto; padding: 25px 0 18px; color: var(--tgm-cream); }
+.main > section:not(.reference-dashboard) > .section-head { margin: 0 2px 14px; align-items: flex-start; }
+.main > section:not(.reference-dashboard) > .section-head h2, .main > section:not(.reference-dashboard) h2 { color: var(--tgm-cream); letter-spacing: .01em; }
+.main > section:not(.reference-dashboard) > .section-head .eyebrow, .main > section:not(.reference-dashboard) .eyebrow { color: var(--tgm-muted-gold); }
+.main > section:not(.reference-dashboard) > .section-head p, .main > section:not(.reference-dashboard) .muted { color: var(--tgm-muted); }
+.main > section:not(.reference-dashboard) .card, .main > section:not(.reference-dashboard) .note, .main > section:not(.reference-dashboard) .plan, .main > section:not(.reference-dashboard) .alarm-card, .main > section:not(.reference-dashboard) .account-row { background: linear-gradient(145deg, rgba(30,39,42,.72), rgba(8,12,15,.94)); border-color: #3a4247; border-radius: 15px; box-shadow: 0 10px 26px rgba(0,0,0,.22); }
+.main > section:not(.reference-dashboard) .card.pad { padding: 17px; }
+.main > section:not(.reference-dashboard) .section-head h2 { font-size: 18px; }
+.main > section:not(.reference-dashboard) .btn { border-radius: 10px; font-size: 11px; letter-spacing: .05em; }
+.main > section:not(.reference-dashboard) .btn.primary { color: #171108; background: var(--tgm-gold); border-color: var(--tgm-gold); }
+.main > section:not(.reference-dashboard) .btn.secondary, .main > section:not(.reference-dashboard) .btn.ghost { color: var(--tgm-cream); background: #151b1f; border-color: #3d474d; }
+.main > section:not(.reference-dashboard) .btn.ghost { color: var(--tgm-gold); border-color: #59431f; }
+.main > section:not(.reference-dashboard) .alarm-list, .main > section:not(.reference-dashboard) .account-list, .main > section:not(.reference-dashboard) .settings-list, .main > section:not(.reference-dashboard) .plan-grid { gap: 10px; }
+.main > section:not(.reference-dashboard) .alarm-card { border-left: 4px solid var(--tgm-crimson); }
+.main > section:not(.reference-dashboard) .alarm-card:not(.active-card) { border-left-color: var(--tgm-gold); }
+.main > section:not(.reference-dashboard) .alarm-title strong, .main > section:not(.reference-dashboard) .account-main strong, .main > section:not(.reference-dashboard) .plan h3 { color: var(--tgm-cream); }
+.main > section:not(.reference-dashboard) .alarm-title span, .main > section:not(.reference-dashboard) .account-main small, .main > section:not(.reference-dashboard) .field-help, .main > section:not(.reference-dashboard) .plan-note { color: var(--tgm-muted); }
+.main > section:not(.reference-dashboard) .alarm-time, .main > section:not(.reference-dashboard) .plan-limit, .main > section:not(.reference-dashboard) .plan-price-row { background: #11161a; border-color: #293137; }
+.main > section:not(.reference-dashboard) .alarm-time strong, .main > section:not(.reference-dashboard) .plan-limit strong { color: var(--tgm-cream); }
+.main > section:not(.reference-dashboard) .alarm-time .time-left, .main > section:not(.reference-dashboard) .plan .plan-price, .main > section:not(.reference-dashboard) .plan-price-row.featured strong { color: var(--tgm-gold); }
+.main > section:not(.reference-dashboard) .alarm-action { color: var(--tgm-muted-gold); background: transparent; border-color: #433822; }
+.main > section:not(.reference-dashboard) .alarm-action.complete { color: #132215; background: var(--tgm-green); border-color: var(--tgm-green); }
+.main > section:not(.reference-dashboard) .alarm-action.delete { color: #ffb8b0; background: #281416; border-color: #693039; }
+.main > section:not(.reference-dashboard) .status.active { color: #ffd3c8; background: var(--tgm-crimson); border-color: var(--tgm-crimson); }
+.main > section:not(.reference-dashboard) .status.paused { color: var(--tgm-gold); background: transparent; border-color: var(--tgm-gold); }
+.main > section:not(.reference-dashboard) .account-row.selected, .main > section:not(.reference-dashboard) .plan.current { border-color: var(--tgm-gold); box-shadow: 0 0 0 1px rgba(232,181,74,.18) inset; }
+.main > section:not(.reference-dashboard) .account-color { box-shadow: 0 0 0 2px #18251e; }
+.main > section:not(.reference-dashboard) .badge.gold { color: var(--tgm-gold); background: #1b160c; border-color: #55431f; }
+.main > section:not(.reference-dashboard) .badge.blue { color: #8fd8ee; background: #102229; border-color: #315c74; }
+.main > section:not(.reference-dashboard) .badge.mint { color: #8bd99b; background: #102419; border-color: #2b6437; }
+.main > section:not(.reference-dashboard) .note strong, .main > section:not(.reference-dashboard) .plan-badge { color: var(--tgm-gold); }
+.main > section:not(.reference-dashboard) .field input, .main > section:not(.reference-dashboard) .field select { color: var(--tgm-cream); background: #11161a; border-color: #3d474d; border-radius: 9px; }
+.main > section:not(.reference-dashboard) .switch-row { border-color: #293136; }
+.main > section:not(.reference-dashboard) .switch-row label, .main > section:not(.reference-dashboard) .choice { color: #c5c9c2; }
+.main > section:not(.reference-dashboard) .choice { background: #11161a; border-color: #3a4247; }
+.main > section:not(.reference-dashboard) .choice:has(input:checked) { color: var(--tgm-gold); background: #1b160c; border-color: #80652f; }
+.modal-wrap { background: rgba(0,0,0,.84); }
+.modal { color: var(--tgm-cream); background: linear-gradient(145deg, #1e272a, #080c0f 80%); border-color: #59431f; border-radius: 17px; }
+.modal-head h2 { color: var(--tgm-cream); }
+.close { color: var(--tgm-muted-gold); background: #151b1f; }
+.toast { color: var(--tgm-cream); background: #151b1f; border-color: #59431f; }
+@media (max-width: 500px) { .main > section:not(.reference-dashboard) { padding-top: 18px; } .main > section:not(.reference-dashboard) > .section-head { flex-wrap: wrap; } }
