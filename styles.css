@@ -261,10 +261,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 
 /* TGM mobile alarm-center shell */
 :root { --tgm-bg: #020406; --tgm-card: #0A0E11; --tgm-card-soft: #11161A; --tgm-gold: #E8B54A; --tgm-green: #3CA659; --tgm-crimson: #A8212E; --tgm-cream: #F1E5C9; --tgm-muted-gold: #9F8760; --tgm-muted: #687079; --tgm-nav: #080C10; }
-html, body { background: var(--tgm-bg); }
+html, body { min-height: 100%; background: var(--tgm-bg); }
 body { color: var(--tgm-cream); background: radial-gradient(circle at 50% -20%, rgba(232,181,74,.08), transparent 34%), var(--tgm-bg); font-size: 14px; }
 button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-.app-shell { width: min(100%, 430px); min-height: 100vh; margin: 0 auto; padding: 0 14px 88px; }
+.app-shell { width: 100%; min-height: 100dvh; margin: 0; padding: 0 14px calc(88px + env(safe-area-inset-bottom)); }
 .topbar { position: sticky; top: 0; z-index: 20; padding: 12px 0 10px; background: linear-gradient(var(--tgm-bg) 78%, transparent); backdrop-filter: blur(18px); }
 .toprow { min-height: 48px; gap: 8px; }
 .crest-button, .live-button { display: inline-flex; align-items: center; justify-content: center; border: 0; background: transparent; }
@@ -336,7 +336,7 @@ button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-sys
 .alarm-action.delete { color: #FFB8B0; background: #281416; border-color: #693039; }
 .empty { padding: 30px 18px; }
 .footer { display: none; }
-.mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); width: min(100%, 430px); height: 67px; margin: 0 auto; padding: 5px 8px 8px; background: rgba(8,12,16,.98); border-top: 1px solid #1D252A; backdrop-filter: blur(18px); }
+.mobile-bottom-nav { position: fixed; right: 0; bottom: 0; left: 0; z-index: 30; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); width: 100%; height: calc(67px + env(safe-area-inset-bottom)); margin: 0; padding: 5px 8px calc(8px + env(safe-area-inset-bottom)); background: rgba(8,12,16,.98); border-top: 1px solid #1D252A; backdrop-filter: blur(18px); }
 .mobile-bottom-nav button { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border: 0; color: var(--tgm-muted); background: transparent; font-size: 7px; font-weight: 950; letter-spacing: .06em; }
 .mobile-bottom-nav button.active, .mobile-bottom-nav button.active-soft { color: var(--tgm-gold); }
 .bottom-icon { font-size: 19px; line-height: 19px; }
@@ -344,5 +344,5 @@ button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-sys
 .field input, .field select { min-height: 41px; color: var(--tgm-cream); background: #11161A; border-color: #3D474D; border-radius: 9px; }
 .modal-wrap { padding: 14px; align-items: flex-end; }
 .modal { width: min(100%, 402px); max-height: 92vh; overflow-y: auto; border-color: #59431F; }
-@media (min-width: 700px) { .app-shell { margin-top: 18px; border: 1px solid #10161A; border-radius: 26px 26px 0 0; box-shadow: 0 0 80px rgba(0,0,0,.4); } .mobile-bottom-nav { bottom: 0; } }
+@media (min-width: 700px) { .app-shell { margin-top: 0; border: 0; border-radius: 0; box-shadow: none; } .mobile-bottom-nav { bottom: 0; } }
 @media (max-width: 370px) { .header-title { font-size: 10px; letter-spacing: .08em; } .nav { gap: 12px; } .nav button { font-size: 8px; } }
