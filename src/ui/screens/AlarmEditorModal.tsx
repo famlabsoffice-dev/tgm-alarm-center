@@ -46,7 +46,7 @@ export function AlarmEditorModal({ visible, editingId, editor, onChange, onClose
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.modalWrap}>
         <View style={styles.modalCard}>
           <View style={styles.modalHeader}>
-            <Pressable accessibilityRole="button" accessibilityLabel="Editor schließen" onPress={onClose} style={styles.backButton}><Text style={styles.backText}>←</Text></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Editor schließen" onPress={onClose} style={styles.closeButton}><Text style={styles.backText}>←</Text></Pressable>
             <Text style={styles.modalTitle}>{editingId ? 'ALARM BEARBEITEN' : 'NEUER ALARM'}</Text>
             <View style={styles.headerSpacer} />
           </View>
@@ -113,9 +113,9 @@ const styles = {
   modalWrap: { flex: 1, justifyContent: 'flex-end' as const, backgroundColor: 'rgba(0,0,0,0.88)' },
   modalCard: { backgroundColor: '#0B1011', borderColor: '#202B2D', borderWidth: 1.5, borderTopLeftRadius: 32, borderTopRightRadius: 32, padding: 18, paddingBottom: 30, maxHeight: '92%' as const, shadowColor: '#000', shadowOpacity: 0.7, shadowRadius: 30, elevation: 20 },
   modalHeader: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, marginBottom: 14 },
-  backButton: { width: 42, height: 42, alignItems: 'center' as const, justifyContent: 'center' as const },
+  closeButton: { width: 44, height: 44, alignItems: 'center' as const, justifyContent: 'center' as const },
   backText: { color: '#E8B946', fontSize: 36, lineHeight: 36 },
-  headerSpacer: { width: 42 },
+  headerSpacer: { width: 44 },
   modalTitle: { flex: 1, color: '#E7B84C', fontSize: 19, fontWeight: '900' as const, textAlign: 'center' as const, letterSpacing: 1.2 },
   typeField: { flexDirection: 'row' as const, alignItems: 'center' as const, minHeight: 58, paddingHorizontal: 13, borderColor: '#394548', borderWidth: 1, borderRadius: 13, backgroundColor: '#151B1D' },
   fieldIcon: { width: 38, color: '#E7B84C', fontSize: 25, textAlign: 'center' as const },
@@ -132,7 +132,7 @@ const styles = {
   flex: { flex: 1 },
   fieldValue: { color: '#F2F2ED', fontSize: 16, fontWeight: '700' as const, marginBottom: 9 },
   choiceRow: { flexDirection: 'row' as const, flexWrap: 'wrap' as const, gap: 6 },
-  choice: { paddingHorizontal: 9, paddingVertical: 7, borderRadius: 9, borderColor: '#3A4649', borderWidth: 1, backgroundColor: '#151B1D' },
+  choice: { minHeight: 44, paddingHorizontal: 9, paddingVertical: 7, borderRadius: 9, borderColor: '#3A4649', borderWidth: 1, backgroundColor: '#151B1D' },
   choiceActive: { borderColor: '#E7B84C', backgroundColor: '#251E10' },
   choiceText: { color: '#D2D7D2', fontSize: 10, fontWeight: '800' as const },
   detailsCard: { borderColor: '#344043', borderWidth: 1, borderRadius: 13, padding: 12, backgroundColor: '#101617' },
@@ -142,7 +142,7 @@ const styles = {
   column: { flex: 1 },
   switchLine: { flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'space-between' as const, minHeight: 51, marginTop: 10, borderTopColor: '#293335', borderTopWidth: 1 },
   switchLabel: { color: '#EAEDE8', fontSize: 14, fontWeight: '700' as const },
-  primaryButton: { alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 62, marginTop: 20, borderColor: '#E6B943', borderWidth: 1, borderRadius: 13, backgroundColor: '#B98217', shadowColor: '#E6B943', shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 },
+  primaryButton: { alignItems: 'center' as const, justifyContent: 'center' as const, minHeight: 48, marginTop: 20, borderColor: '#E6B943', borderWidth: 1, borderRadius: 13, backgroundColor: '#B98217', shadowColor: '#E6B943', shadowOpacity: 0.2, shadowRadius: 12, elevation: 6 },
   primaryButtonText: { color: '#130F06', fontSize: 19, fontWeight: '900' as const },
   primaryIcon: { marginRight: 10, fontSize: 24 },
   pressed: { opacity: 0.74, transform: [{ scale: 0.985 }] },
