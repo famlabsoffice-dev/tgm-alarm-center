@@ -13,6 +13,7 @@ const sourceFiles = [
   'reference-theme-global.css',
   'account-delete.js',
   'ui-cleanup.js',
+  'founder-access.js',
   'sw.js',
   'manifest.webmanifest',
   'icon.png',
