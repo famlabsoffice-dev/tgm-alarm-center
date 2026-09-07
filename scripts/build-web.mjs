@@ -15,6 +15,7 @@ const sourceFiles = [
   'ui-cleanup.js',
   'founder-access.js',
   'sw.js',
+  'sw-v27.js',
   'manifest.webmanifest',
   'icon.png',
 ];
