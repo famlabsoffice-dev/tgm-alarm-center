@@ -1,0 +1,149 @@
+/* TGM ALARM CENTER — FINAL REFERENCE SYSTEM. Loaded last so every browser screen shares one visual language. */
+:root {
+  --ref-bg: #050708;
+  --ref-bg-2: #08100c;
+  --ref-surface: #0d1511;
+  --ref-surface-2: #111b16;
+  --ref-surface-3: #16231b;
+  --ref-border: #253b30;
+  --ref-border-strong: #315743;
+  --ref-text: #eef5ef;
+  --ref-muted: #8e9f95;
+  --ref-green: #48d383;
+  --ref-green-bright: #6be6a0;
+  --ref-green-deep: #176c49;
+  --ref-green-soft: rgba(72,211,131,.12);
+  --ref-danger: #df7065;
+  --ref-danger-bg: #291617;
+  --ref-radius-sm: 10px;
+  --ref-radius-md: 14px;
+  --ref-radius-lg: 18px;
+  --ref-shadow: 0 16px 44px rgba(0,0,0,.36);
+}
+
+html, body, #app, .app-shell { background: var(--ref-bg) !important; color: var(--ref-text) !important; }
+body { background: radial-gradient(circle at 50% -18%, rgba(72,211,131,.10), transparent 34%), var(--ref-bg) !important; }
+
+/* Global typography hierarchy */
+.brand-copy strong, .header-title, .section-head h2, .section-head h2 *, .hero h1, .hero h2, .hero h3,
+.card h2, .card h3, .card strong, .alarm-title strong, .account-main strong, .plan h3, .stat-value,
+.reference-heading h1, .reference-heading strong, .reference-cycle-copy h3, .reference-editor-heading h2,
+.reference-upcoming-copy strong { color: var(--ref-text) !important; }
+.eyebrow, .muted, .section-head p, .field-help, .plan-note, .stat-label, .account-main small,
+.alarm-title span, .timeline-item small, .brand-copy span, .footer { color: var(--ref-muted) !important; }
+
+/* Header / navigation */
+.topbar { background: linear-gradient(var(--ref-bg) 72%, transparent) !important; }
+.brand-mark, .crest-button .brand-mark {
+  color: #06150d !important;
+  background: linear-gradient(145deg, var(--ref-green-bright), #2eac68) !important;
+  border: 1px solid var(--ref-green) !important;
+  box-shadow: 0 10px 28px rgba(72,211,131,.18) !important;
+}
+.header-title, .brand-copy strong, .language-toggle { color: var(--ref-green) !important; }
+.account-pill, .account-strip, .audio-state, .language-toggle, .live-button {
+  color: var(--ref-text) !important;
+  background: var(--ref-surface-2) !important;
+  border-color: var(--ref-border) !important;
+}
+.account-dot, .live-dot { background: var(--ref-green) !important; box-shadow: 0 0 0 4px rgba(72,211,131,.10) !important; }
+.nav button { color: #74857b !important; background: transparent !important; border-color: transparent !important; }
+.nav button:hover { color: var(--ref-text) !important; background: var(--ref-surface-2) !important; }
+.nav button.active { color: var(--ref-green) !important; background: var(--ref-surface-2) !important; border-color: var(--ref-border) !important; box-shadow: inset 0 -2px 0 var(--ref-green) !important; }
+.mobile-bottom-nav { background: rgba(5,8,7,.98) !important; border-top-color: var(--ref-border) !important; }
+.mobile-bottom-nav button { color: #718279 !important; }
+.mobile-bottom-nav button.active { color: var(--ref-green) !important; }
+
+/* Shared surfaces — same hierarchy on every screen */
+.card, .hero, .next-panel, .stat, .alarm-card, .account-row, .plan, .trial-panel,
+.template, .note, .settings-list > *, .account-list > *, .timeline-item, .plan-limit, .plan-price-row, .alarm-time {
+  color: var(--ref-text) !important;
+  background: linear-gradient(155deg, rgba(17,27,22,.98), rgba(8,13,10,.99)) !important;
+  border: 1px solid var(--ref-border) !important;
+  box-shadow: var(--ref-shadow) !important;
+}
+.card, .hero, .next-panel, .alarm-card, .account-row, .plan, .trial-panel { border-radius: var(--ref-radius-md) !important; }
+.card.pad { padding: 18px !important; }
+.hero, .next-panel { border-color: var(--ref-border-strong) !important; background: radial-gradient(circle at 88% 14%, rgba(72,211,131,.12), transparent 28%), linear-gradient(145deg, rgba(18,34,25,.98), rgba(7,12,9,.99)) !important; }
+
+/* Green replaces the previous gold/blue accent everywhere */
+.btn.primary, .primaryButton, .reference-save {
+  color: #06150d !important;
+  background: linear-gradient(180deg, var(--ref-green-bright), #2eac68) !important;
+  border-color: var(--ref-green) !important;
+  box-shadow: 0 7px 24px rgba(72,211,131,.20) !important;
+}
+.btn.secondary, .btn.ghost, .alarm-action, .template { color: var(--ref-text) !important; background: var(--ref-surface-2) !important; border-color: var(--ref-border-strong) !important; }
+.btn.ghost, .plan .plan-price, .plan-price-row.featured strong, .alarm-time .time-left, .timeline-item .when,
+.next-panel .next-at, .hero-next strong, .note strong, .plan-badge, .stat-icon, .goldText { color: var(--ref-green) !important; }
+.btn.ghost { border-color: #326f50 !important; }
+.btn.danger, .alarm-action.delete, .iconButton { color: #ffbdb6 !important; background: var(--ref-danger-bg) !important; border-color: #6c3436 !important; }
+.alarm-action.complete, .doneButton { color: #06150d !important; background: var(--ref-green) !important; border-color: var(--ref-green) !important; }
+.template:hover, .btn.secondary:hover, .alarm-action:hover { background: var(--ref-surface-3) !important; border-color: #3e6c52 !important; }
+
+/* Forms */
+.field input, .field select, .field textarea, .choice, input[type="color"] {
+  color: var(--ref-text) !important;
+  background: #08100c !important;
+  border-color: var(--ref-border-strong) !important;
+  border-radius: var(--ref-radius-sm) !important;
+}
+.field input:focus, .field select:focus, .field textarea:focus, .choice:has(input:checked) {
+  border-color: var(--ref-green) !important;
+  box-shadow: 0 0 0 3px rgba(72,211,131,.14) !important;
+}
+.choice:has(input:checked) { color: var(--ref-green-bright) !important; background: #0d2419 !important; }
+.switch-row { border-color: var(--ref-border) !important; }
+.switch-row label, .field label, .choice-label { color: #d8e6dc !important; }
+
+/* Status / badges */
+.status.active, .badge.mint { color: #91efae !important; background: #0e271a !important; border-color: #2d6943 !important; }
+.status.paused { color: #a7b6ad !important; background: #17211c !important; border-color: #35473c !important; }
+.badge.gold, .badge.blue, .badge.red { color: #91efae !important; background: #0e271a !important; border-color: #2d6943 !important; }
+.account-row.selected, .plan.current, .alarm-card.active-card { border-color: var(--ref-green) !important; box-shadow: 0 0 0 1px rgba(72,211,131,.18) inset, var(--ref-shadow) !important; }
+
+/* Reference dashboard — exact structural classes retained, visual language unified */
+.reference-dashboard { width: min(680px, 100%) !important; margin: 0 auto !important; padding: 8px 0 96px !important; }
+.reference-heading { border-bottom: 1px solid var(--ref-border) !important; padding-bottom: 16px !important; }
+.reference-heading h1 { color: var(--ref-text) !important; }
+.reference-heading strong { color: var(--ref-green) !important; }
+.reference-brand img { filter: drop-shadow(0 0 26px rgba(72,211,131,.25)) !important; }
+.reference-brand div b, .reference-brand div span { color: var(--ref-green) !important; }
+.reference-system-card, .reference-cycle-card, .reference-upcoming-row, .reference-cycle-day {
+  background: linear-gradient(155deg, #0e1712, #08100c) !important;
+  border-color: var(--ref-border) !important;
+  color: var(--ref-text) !important;
+}
+.reference-system-card { box-shadow: var(--ref-shadow) !important; }
+.reference-system-icon, .reference-system-state, .reference-system-copy strong,
+.reference-info-row strong, .reference-cycle-copy p.ok, .reference-upcoming-right strong,
+.reference-row-bell { color: var(--ref-green) !important; }
+.reference-system-state i { background: var(--ref-green) !important; box-shadow: 0 0 0 5px rgba(72,211,131,.10) !important; }
+.reference-cycle-section h2, .reference-cycle-overview h2, .reference-upcoming-head h2,
+.reference-editor-section h3 { color: var(--ref-green) !important; }
+.reference-ring { border-color: #2bc57a !important; border-left-color: var(--ref-green-deep) !important; box-shadow: inset 0 0 0 2px rgba(72,211,131,.16), 0 0 24px rgba(72,211,131,.12) !important; }
+.reference-ring strong { color: var(--ref-text) !important; }
+.reference-cycle-day.active::before { border-color: var(--ref-green) !important; box-shadow: 0 0 18px rgba(72,211,131,.24), inset 0 0 16px rgba(72,211,131,.08) !important; }
+.reference-cycle-day.active strong, .reference-cycle-day.active small { color: var(--ref-green) !important; }
+.reference-cycle-track > i { background: #315243 !important; }
+.reference-row-bell { border-color: #319c62 !important; background: #0d2419 !important; }
+.reference-upcoming-right b, .reference-upcoming-copy em { color: var(--ref-green) !important; }
+
+/* Reference editor */
+.modal-wrap, .reference-editor-wrap { background: rgba(0,0,0,.88) !important; backdrop-filter: blur(10px) !important; }
+.modal, .reference-editor-modal { color: var(--ref-text) !important; background: linear-gradient(160deg, #121b16, #070c09) !important; border-color: var(--ref-border-strong) !important; }
+.reference-editor-heading h2, .reference-back, .reference-warning-row b, .reference-field-icon,
+.reference-select-chevron, .reference-editor-section h3 { color: var(--ref-green) !important; }
+.reference-editor-field { background: #0a120e !important; border-color: var(--ref-border-strong) !important; }
+.reference-radio, .reference-radio.checked { border-color: #2bc57a !important; }
+.reference-radio.checked i { background: var(--ref-green) !important; }
+.reference-save { color: #06150d !important; }
+
+/* Remove all marketing/tagline presentation */
+.marketing-copy, .tagline, .slogan, [aria-label="marketing"] { display: none !important; }
+
+@media (max-width: 700px) {
+  .app-shell { padding-left: 12px !important; padding-right: 12px !important; }
+  .reference-dashboard { padding-left: 2px !important; padding-right: 2px !important; }
+  .reference-system-card, .reference-cycle-card, .reference-upcoming-row { border-radius: 14px !important; }
+}
