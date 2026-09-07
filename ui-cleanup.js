@@ -1,7 +1,7 @@
 (() => {
   'use strict';
 
-  const THEME_HREF = './reference-theme.css?v=3';
+  const THEME_HREF = './reference-theme.css?v=4';
   if (!document.querySelector(`link[href="${THEME_HREF}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
