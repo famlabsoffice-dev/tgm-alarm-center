@@ -494,21 +494,21 @@
     const repeat = existing?.repeat || template.repeat;
     const sound = existing?.sound || soundForAlarmType(type);
     const warnings = existing?.warnings || template.warnings;
-    const warningOption = (minutes) => \`<label class="reference-warning-row"><span class="reference-radio \${warnings.includes(minutes) ? 'checked' : ''}"><i></i></span><span>\${minutes} Min.</span><input type="checkbox" name="warning" value="\${minutes}" \${warnings.includes(minutes) ? 'checked' : ''} aria-label="\${minutes} Minuten Vorwarnung"><b>♩</b></label>\`;
-    return \`<div class="modal-wrap reference-editor-wrap">
+    const warningOption = (minutes) => `<label class="reference-warning-row"><span class="reference-radio ${warnings.includes(minutes) ? 'checked' : ''}"><i></i></span><span>${minutes} Min.</span><input type="checkbox" name="warning" value="${minutes}" ${warnings.includes(minutes) ? 'checked' : ''} aria-label="${minutes} Minuten Vorwarnung"><b>♩</b></label>`;
+    return `<div class="modal-wrap reference-editor-wrap">
       <section class="modal reference-editor-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="reference-editor-heading"><button class="reference-back" type="button" data-action="close-modal" aria-label="Zurück">←</button><h2 id="modalTitle">\${existing ? 'ALARM BEARBEITEN' : 'NEUER ALARM'}</h2></div>
-        <div class="reference-editor-field reference-type-field"><span class="reference-field-icon">♟</span><select id="eType" aria-label="Alarmtyp"><option value="bubble" \${type === 'bubble' ? 'selected' : ''}>Bubble Alarm</option><option value="gw" \${type === 'gw' ? 'selected' : ''}>Massacre Alarm</option><option value="custom" \${type === 'custom' ? 'selected' : ''}>Event Alarm</option><option value="individual" \${type === 'individual' ? 'selected' : ''}>Individual Timer</option><option value="rss" \${type === 'rss' ? 'selected' : ''}>RSS Timer</option></select></div>
-        <div class="reference-editor-section"><h3>VORWARNUNGEN</h3><div class="reference-warning-list">\${warningOption(60)}\${warningOption(30)}\${warningOption(15)}</div></div>
-        <div class="reference-editor-section"><h3>ALARMTYP</h3><div class="reference-editor-field"><span class="reference-field-icon">♟</span><select id="eTypeVisible" aria-label="Alarmtyp auswählen"><option value="bubble" \${type === 'bubble' ? 'selected' : ''}>Alarm</option><option value="gw" \${type === 'gw' ? 'selected' : ''}>Massacre Alarm</option><option value="custom" \${type === 'custom' ? 'selected' : ''}>Event Alarm</option><option value="individual" \${type === 'individual' ? 'selected' : ''}>Individual Timer</option><option value="rss" \${type === 'rss' ? 'selected' : ''}>RSS Timer</option></select><span class="reference-select-chevron">⌄</span></div></div>
-        <div class="reference-editor-section"><h3>TON</h3><div class="reference-editor-field"><span class="reference-field-icon">◖</span><select id="eSound">\${Object.entries(SOUNDS).map(([key, value]) => \`<option value="\${key}" \${sound === key ? 'selected' : ''}>\${esc(key === 'siren' ? 'Standard' : value.label)}</option>\`).join('')}</select><span class="reference-select-chevron">⌄</span></div></div>
+        <div class="reference-editor-heading"><button class="reference-back" type="button" data-action="close-modal" aria-label="Zurück">←</button><h2 id="modalTitle">${existing ? 'ALARM BEARBEITEN' : 'NEUER ALARM'}</h2></div>
+        <div class="reference-editor-field reference-type-field"><span class="reference-field-icon">♟</span><select id="eType" aria-label="Alarmtyp"><option value="bubble" ${type === 'bubble' ? 'selected' : ''}>Bubble Alarm</option><option value="gw" ${type === 'gw' ? 'selected' : ''}>Massacre Alarm</option><option value="custom" ${type === 'custom' ? 'selected' : ''}>Event Alarm</option><option value="individual" ${type === 'individual' ? 'selected' : ''}>Individual Timer</option><option value="rss" ${type === 'rss' ? 'selected' : ''}>RSS Timer</option></select></div>
+        <div class="reference-editor-section"><h3>VORWARNUNGEN</h3><div class="reference-warning-list">${warningOption(60)}${warningOption(30)}${warningOption(15)}</div></div>
+        <div class="reference-editor-section"><h3>ALARMTYP</h3><div class="reference-editor-field"><span class="reference-field-icon">♟</span><select id="eTypeVisible" aria-label="Alarmtyp auswählen"><option value="bubble" ${type === 'bubble' ? 'selected' : ''}>Alarm</option><option value="gw" ${type === 'gw' ? 'selected' : ''}>Massacre Alarm</option><option value="custom" ${type === 'custom' ? 'selected' : ''}>Event Alarm</option><option value="individual" ${type === 'individual' ? 'selected' : ''}>Individual Timer</option><option value="rss" ${type === 'rss' ? 'selected' : ''}>RSS Timer</option></select><span class="reference-select-chevron">⌄</span></div></div>
+        <div class="reference-editor-section"><h3>TON</h3><div class="reference-editor-field"><span class="reference-field-icon">◖</span><select id="eSound">${Object.entries(SOUNDS).map(([key, value]) => `<option value="${key}" ${sound === key ? 'selected' : ''}>${esc(key === 'siren' ? 'Standard' : value.label)}</option>`).join('')}</select><span class="reference-select-chevron">⌄</span></div></div>
         <div class="reference-editor-hidden-fields">
-          <div class="two-col"><div class="field"><label for="eTitle">Bezeichnung</label><input id="eTitle" maxlength="80" value="\${esc(existing?.title || template.title)}"></div><div class="field"><label for="eDate">Datum</label><input id="eDate" type="date" value="\${formatDateInput(eventAt)}"></div><div class="field"><label for="eTime">Uhrzeit</label><input id="eTime" type="time" value="\${formatTimeInput(eventAt)}"></div><div class="field"><label for="eRepeat">Wiederholung</label><select id="eRepeat"><option value="once" \${repeat === 'once' ? 'selected' : ''}>Einmalig</option><option value="daily" \${repeat === 'daily' ? 'selected' : ''}>Täglich</option><option value="gw5d" \${repeat === 'gw5d' ? 'selected' : ''}>Massacre Alarm · alle 5 Tage · 24 Stunden Schutz</option></select></div></div>
-          <div class="switch-row"><label for="eProtected">Als geschützt markieren</label><input id="eProtected" type="checkbox" \${existing?.protected ?? template.protected ? 'checked' : ''}></div><div class="switch-row"><label for="eActive">Alarm aktiv</label><input id="eActive" type="checkbox" \${existing?.active !== false ? 'checked' : ''}></div>
+          <div class="two-col"><div class="field"><label for="eTitle">Bezeichnung</label><input id="eTitle" maxlength="80" value="${esc(existing?.title || template.title)}"></div><div class="field"><label for="eDate">Datum</label><input id="eDate" type="date" value="${formatDateInput(eventAt)}"></div><div class="field"><label for="eTime">Uhrzeit</label><input id="eTime" type="time" value="${formatTimeInput(eventAt)}"></div><div class="field"><label for="eRepeat">Wiederholung</label><select id="eRepeat"><option value="once" ${repeat === 'once' ? 'selected' : ''}>Einmalig</option><option value="daily" ${repeat === 'daily' ? 'selected' : ''}>Täglich</option><option value="gw5d" ${repeat === 'gw5d' ? 'selected' : ''}>Massacre Alarm · alle 5 Tage · 24 Stunden Schutz</option></select></div></div>
+          <div class="switch-row"><label for="eProtected">Als geschützt markieren</label><input id="eProtected" type="checkbox" ${existing?.protected ?? template.protected ? 'checked' : ''}></div><div class="switch-row"><label for="eActive">Alarm aktiv</label><input id="eActive" type="checkbox" ${existing?.active !== false ? 'checked' : ''}></div>
         </div>
-        <div class="reference-editor-footer"><button class="reference-save" type="button" data-action="save-alarm" data-id="\${esc(id || '')}"><span>▣</span>\${existing ? 'Änderungen speichern' : 'Alarm speichern'}</button></div>
+        <div class="reference-editor-footer"><button class="reference-save" type="button" data-action="save-alarm" data-id="${esc(id || '')}"><span>▣</span>${existing ? 'Änderungen speichern' : 'Alarm speichern'}</button></div>
       </section>
-    </div>\`;
+    </div>`;
   }
   function renderBottomNav() {
     return `<nav class="mobile-bottom-nav" aria-label="App-Navigation"><button type="button" class="${view === 'today' ? 'active' : ''}" data-action="view" data-view="today"><span class="bottom-icon">◉</span><span>DASHBOARD</span></button><button type="button" class="${view === 'alarms' ? 'active' : ''}" data-action="view" data-view="alarms"><span class="bottom-icon">▣</span><span>ZYKLEN</span></button><button type="button" class="${view === 'sounds' ? 'active' : ''}" data-action="view" data-view="sounds"><span class="bottom-icon">◷</span><span>VERLAUF</span></button><button type="button" class="${view === 'settings' ? 'active' : ''}" data-action="view" data-view="settings"><span class="bottom-icon">⚙</span><span>EINSTELLUNGEN</span></button></nav>`;
@@ -551,42 +551,42 @@
     const systemActive = accountAlarmsList.some((alarm) => alarm.active);
     const cycleActive = gwAlarms.length > 0;
 
-    return \`<section class="reference-dashboard">
+    return `<section class="reference-dashboard">
       <div class="reference-heading"><h1>GW-5-Tage-Zyklus</h1><strong>automatisch planen.</strong></div>
       <div class="reference-brand"><img src="assets/tgm-alarm-center-icon.png" alt="TGM Alarm Center" loading="eager"><div><b>TGM</b><span>ALARM CENTER</span></div></div>
       <section class="reference-system-card">
         <div class="reference-system-icon">✓</div>
-        <div class="reference-system-copy"><small>SYSTEMSTATUS</small><strong>\${systemActive ? 'AKTIV' : 'BEREIT'}</strong><span>\${systemActive ? 'Alle aktiven Alarme überwacht' : 'Noch keine aktiven Alarme'}</span></div>
-        <span class="reference-system-state"><i></i>\${systemActive ? 'AKTIV' : 'BEREIT'}</span>
+        <div class="reference-system-copy"><small>SYSTEMSTATUS</small><strong>${systemActive ? 'AKTIV' : 'BEREIT'}</strong><span>${systemActive ? 'Alle aktiven Alarme überwacht' : 'Noch keine aktiven Alarme'}</span></div>
+        <span class="reference-system-state"><i></i>${systemActive ? 'AKTIV' : 'BEREIT'}</span>
       </section>
       <section class="reference-cycle-section">
         <h2>AKTIVER ZYKLUS</h2>
         <div class="reference-cycle-card">
-          <div class="reference-ring" aria-label="Countdown zum nächsten Massacre Alarm"><span>NÄCHSTER<br>ALARM IN</span><strong>\${esc(nextGwCountdown)}</strong><small>TAGE</small></div>
+          <div class="reference-ring" aria-label="Countdown zum nächsten Massacre Alarm"><span>NÄCHSTER<br>ALARM IN</span><strong>${esc(nextGwCountdown)}</strong><small>TAGE</small></div>
           <div class="reference-cycle-copy">
-            <h3>\${esc(nextGw?.alarm.title || 'Massacre Alarm')}</h3><small>WIEDERHOLUNG</small>
-            <div class="reference-info-row"><span>↻</span><strong>\${cycleActive ? 'Alle 5 Tage' : 'Noch nicht aktiviert'}</strong></div>
+            <h3>${esc(nextGw?.alarm.title || 'Massacre Alarm')}</h3><small>WIEDERHOLUNG</small>
+            <div class="reference-info-row"><span>↻</span><strong>${cycleActive ? 'Alle 5 Tage' : 'Noch nicht aktiviert'}</strong></div>
             <small>24-STUNDEN-SCHUTZFENSTER</small>
-            <div class="reference-info-row"><span>◷</span><strong>\${cycleActive ? 'Aktiv von 00:00 – 24:00 Uhr' : 'Wird mit dem Massacre Alarm geplant'}</strong></div>
-            <p class="\${cycleActive ? 'ok' : ''}">✓ \${cycleActive ? 'Zyklus aktiv und automatisch geplant' : 'Lege einen Massacre Alarm mit 5-Tage-Wiederholung an'}</p>
+            <div class="reference-info-row"><span>◷</span><strong>${cycleActive ? 'Aktiv von 00:00 – 24:00 Uhr' : 'Wird mit dem Massacre Alarm geplant'}</strong></div>
+            <p class="${cycleActive ? 'ok' : ''}">✓ ${cycleActive ? 'Zyklus aktiv und automatisch geplant' : 'Lege einen Massacre Alarm mit 5-Tage-Wiederholung an'}</p>
           </div>
         </div>
       </section>
       <section class="reference-cycle-overview">
         <h2>ZYKLUS-ÜBERSICHT</h2>
-        <div class="reference-cycle-track">\${cycleDays.map(({ day, active }) => \`<div class="reference-cycle-day \${active ? 'active' : ''}"><span>TAG</span><strong>\${day}</strong><small>\${active ? 'ALARM AKTIV' : 'WARTE'}</small></div>\`).join('<i></i>')}</div>
+        <div class="reference-cycle-track">${cycleDays.map(({ day, active }) => `<div class="reference-cycle-day ${active ? 'active' : ''}"><span>TAG</span><strong>${day}</strong><small>${active ? 'ALARM AKTIV' : 'WARTE'}</small></div>`).join('<i></i>')}</div>
       </section>
       <section class="reference-upcoming">
-        <div class="reference-upcoming-head"><h2>NÄCHSTE ALARME</h2><span>\${esc(account?.name || 'Kein Account')}</span></div>
+        <div class="reference-upcoming-head"><h2>NÄCHSTE ALARME</h2><span>${esc(account?.name || 'Kein Account')}</span></div>
         <div class="reference-upcoming-list">
-          \${upcoming.length ? upcoming.map(({ alarm, at }) => \`<button class="reference-upcoming-row" type="button" data-action="edit-alarm" data-id="\${esc(alarm.id)}">
+          ${upcoming.length ? upcoming.map(({ alarm, at }) => `<button class="reference-upcoming-row" type="button" data-action="edit-alarm" data-id="${esc(alarm.id)}">
             <span class="reference-row-bell">♟</span>
-            <span class="reference-upcoming-copy"><strong>\${esc(alarm.title)}</strong><small>\${esc(alarm.repeat === 'gw5d' ? 'Zyklus: Alle 5 Tage' : typeLabel(alarm.type))}</small><em>\${esc(new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(at)))}</em></span>
-            <span class="reference-upcoming-right"><strong>In \${esc(countdown(at))}</strong><b>›</b></span>
-          </button>\`).join('') : '<div class="reference-empty">Noch keine kommenden Alarme.</div>'}
+            <span class="reference-upcoming-copy"><strong>${esc(alarm.title)}</strong><small>${esc(alarm.repeat === 'gw5d' ? 'Zyklus: Alle 5 Tage' : typeLabel(alarm.type))}</small><em>${esc(new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(at)))}</em></span>
+            <span class="reference-upcoming-right"><strong>In ${esc(countdown(at))}</strong><b>›</b></span>
+          </button>`).join('') : '<div class="reference-empty">Noch keine kommenden Alarme.</div>'}
         </div>
       </section>
-    </section>\`;
+    </section>`;
   }
   function nextMomentAlarm(moment) { return state.alarms.find((alarm) => alarm.id === moment?.alarmId) || null; }
 
