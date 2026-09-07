@@ -547,7 +547,7 @@
     const cycleActive = gwAlarms.length > 0;
 
     return `<section class="reference-dashboard">
-      <div class="reference-heading"><h1>GW-5-Tage-Zyklus</h1><strong>automatisch planen.</strong></div>
+      <div class="reference-heading"><strong>automatisch planen.</strong></div>
       <div class="reference-brand"><img src="assets/tgm-alarm-center-icon.png" alt="TGM Alarm Center" loading="eager"><div><b>TGM</b><span>ALARM CENTER</span></div></div>
       <section class="reference-system-card">
         <div class="reference-system-icon">✓</div>
