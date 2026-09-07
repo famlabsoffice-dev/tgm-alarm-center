@@ -1,0 +1,98 @@
+/* TGM ALARM CENTER — global visual system for every screen, modal and navigation state. */
+:root {
+  --tgm-bg: #050708;
+  --tgm-surface: #101617;
+  --tgm-surface-2: #151b1d;
+  --tgm-surface-3: #1b2224;
+  --tgm-border: #344043;
+  --tgm-border-strong: #3f4b4e;
+  --tgm-cream: #f1f0ea;
+  --tgm-muted: #929a97;
+  --tgm-gold: #e7b84c;
+  --tgm-gold-bright: #ffd76a;
+  --tgm-green: #39cf83;
+  --tgm-danger: #d65a50;
+  --tgm-danger-bg: #291416;
+  --tgm-radius: 14px;
+  --tgm-radius-lg: 18px;
+  --tgm-shadow: 0 14px 36px rgba(0,0,0,.34);
+}
+
+html, body, #app, .app-shell { background: var(--tgm-bg); color: var(--tgm-cream); }
+
+/* Keep the supplied dashboard layout intact while applying the same visual language. */
+.card, .hero, .next-panel, .stat, .alarm-card, .account-row, .plan, .trial-panel, .template,
+.note, .settings-list > *, .account-list > * {
+  color: var(--tgm-cream);
+  border-color: var(--tgm-border);
+  background-color: var(--tgm-surface);
+}
+.card, .hero, .next-panel, .alarm-card, .account-row, .plan, .trial-panel {
+  border-radius: var(--tgm-radius);
+  box-shadow: var(--tgm-shadow);
+}
+
+.hero, .next-panel {
+  background: linear-gradient(145deg, rgba(22,29,31,.96), rgba(8,11,12,.98));
+  border-color: #8e6b29;
+}
+
+.section-head h2, .hero h1, .card h2, .card h3, .card strong,
+.alarm-title strong, .account-main strong, .plan h3, .stat-value { color: var(--tgm-cream); }
+.eyebrow, .section-head p, .muted, .field-help, .plan-note, .stat-label,
+.account-main small, .alarm-title span, .timeline-item small { color: var(--tgm-muted); }
+
+.btn, .alarm-action, .template, .choice, .close {
+  border-radius: 10px;
+  border-color: var(--tgm-border-strong);
+}
+.btn.primary {
+  color: #130f06;
+  background: linear-gradient(180deg, var(--tgm-gold-bright), #c28a19);
+  border-color: var(--tgm-gold);
+  box-shadow: 0 7px 22px rgba(231,184,76,.17);
+}
+.btn.secondary, .btn.ghost, .alarm-action {
+  color: var(--tgm-cream);
+  background: var(--tgm-surface-2);
+}
+.btn.ghost { color: var(--tgm-gold); border-color: #624d28; }
+.btn.danger, .alarm-action.delete { color: #ffb8b0; background: var(--tgm-danger-bg); border-color: #693039; }
+.alarm-action.complete { color: #132215; background: var(--tgm-green); border-color: var(--tgm-green); }
+.template:hover, .btn.secondary:hover, .alarm-action:hover { background: var(--tgm-surface-3); }
+
+.field input, .field select, .choice, .timeline-item, .plan-limit, .plan-price-row, .alarm-time {
+  color: var(--tgm-cream);
+  background: #0b1011;
+  border-color: var(--tgm-border-strong);
+  border-radius: 10px;
+}
+.field label, .choice-label, .switch-row label { color: #dbe0dc; }
+.choice:has(input:checked) { color: var(--tgm-gold-bright); background: #241e10; border-color: #8b6828; }
+
+.nav button { color: #7f8885; background: transparent; border-color: transparent; }
+.nav button:hover { color: var(--tgm-cream); background: var(--tgm-surface-2); }
+.nav button.active { color: var(--tgm-gold); background: var(--tgm-surface-2); border-color: #3e4547; }
+.account-pill, .audio-state, .language-toggle { color: var(--tgm-cream); background: var(--tgm-surface-2); border-color: var(--tgm-border); }
+.mobile-bottom-nav { background: rgba(5,8,9,.98); border-top-color: #202a2c; }
+.mobile-bottom-nav button { color: #737d7a; }
+.mobile-bottom-nav button.active { color: var(--tgm-gold); }
+
+.plan .plan-price, .plan-price-row.featured strong, .alarm-time .time-left,
+.timeline-item .when, .next-panel .next-at, .hero-next strong { color: var(--tgm-gold) !important; }
+.badge.gold { color: var(--tgm-gold-bright); background: #21190a; border-color: #674f21; }
+.badge.mint, .status.active { color: #8ce0a5; background: #0f2418; border-color: #2c633b; }
+
+.modal-wrap { background: rgba(0,0,0,.86); backdrop-filter: blur(9px); }
+.modal { color: var(--tgm-cream); background: linear-gradient(160deg, #171c1e 0%, #080b0c 82%); border-color: #374245; border-radius: var(--tgm-radius-lg); box-shadow: 0 26px 100px rgba(0,0,0,.68); }
+.modal-head h2 { color: var(--tgm-gold) !important; }
+.modal .note { background: #0f1617; border-color: var(--tgm-border); color: #c1c7c3; }
+.close { color: var(--tgm-gold); background: var(--tgm-surface-2); border: 1px solid var(--tgm-border); }
+.alarm-alert { background: linear-gradient(145deg, #211b0e, #0d1213 68%); border-color: #8e6a27; border-radius: var(--tgm-radius-lg); }
+.alarm-alert .alert-icon { color: #160f04; background: linear-gradient(180deg, var(--tgm-gold-bright), #bf8617); }
+.alarm-alert h2 { color: var(--tgm-cream); }
+.alarm-alert p { color: #b8bfba; }
+.toast { color: var(--tgm-cream); background: #121919; border-color: #4c5557; }
+
+/* Functional UI only: marketing slogans are never allowed to render. */
+[aria-label="marketing"], .marketing-copy, .tagline, .slogan { display: none !important; }
