@@ -8,5 +8,5 @@
   "background_color":"#090C12",
   "theme_color":"#090C12",
   "lang":"de",
-  "icons":[{"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+  "icons":[{"src":"./icon.png","sizes":"any","type":"image/png","purpose":"any maskable"}]
 }
