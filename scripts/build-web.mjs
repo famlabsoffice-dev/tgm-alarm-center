@@ -12,6 +12,7 @@ const sourceFiles = [
 ];
 const binaryFiles = [
   ['assets/tgm-alarm-center-icon.png', 'icon.png'],
+  ['assets/tgm-alarm-center-icon.png', 'assets/tgm-alarm-center-icon.png'],
   ['assets/notifications/alarm-pulse.wav', 'assets/notifications/alarm-pulse.wav'],
   ['assets/notifications/alarm-siren.wav', 'assets/notifications/alarm-siren.wav'],
   ['assets/notifications/alarm-chime.wav', 'assets/notifications/alarm-chime.wav'],
