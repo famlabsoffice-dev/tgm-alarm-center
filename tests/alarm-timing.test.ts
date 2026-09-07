@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest';
 import { TEMPLATES, buildAlarm, localDateTimeToUtc, validateAlarmTiming } from '../src/domain/alarm';
 
 describe('individual alarm timing', () => {
