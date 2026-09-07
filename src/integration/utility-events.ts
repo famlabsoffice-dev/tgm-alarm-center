@@ -8,6 +8,13 @@ export type UtilityCategory =
   | 'resource'
   | 'training'
   | 'upgrade'
+  | 'faction'
+  | 'insignia-goal'
+  | 'family-currency-goal'
+  | 'helicopter-training'
+  | 'resource-goal'
+  | 'gw-reward'
+  | 'gw-prep'
   | 'custom-operation';
 
 export interface UtilityEventInput {
@@ -38,7 +45,11 @@ export interface UtilityAlarmIntent {
   metadata: Record<string, string | number | boolean | null>;
 }
 
-const CATEGORIES: readonly UtilityCategory[] = ['gw', 'bubble', 'event', 'protection', 'resource', 'training', 'upgrade', 'custom-operation'];
+const CATEGORIES: readonly UtilityCategory[] = [
+  'gw', 'bubble', 'event', 'protection', 'resource', 'training', 'upgrade',
+  'faction', 'insignia-goal', 'family-currency-goal', 'helicopter-training',
+  'resource-goal', 'gw-reward', 'gw-prep', 'custom-operation',
+];
 const ALARM_TYPES: readonly AlarmType[] = ['bubble', 'gwBubble', 'custom', 'individual', 'rss'];
 const REPEATS: readonly RepeatMode[] = ['once', 'daily', 'gw5d'];
 const SOUNDS: readonly SoundProfile[] = ['pulse', 'siren', 'chime'];
@@ -81,5 +92,12 @@ export const UTILITY_DEFAULTS: Readonly<Record<UtilityCategory, Pick<UtilityEven
   resource: { alarmType: 'individual', repeat: 'once', sound: 'pulse', warnings: [15], protected: false },
   training: { alarmType: 'individual', repeat: 'once', sound: 'chime', warnings: [15], protected: false },
   upgrade: { alarmType: 'individual', repeat: 'once', sound: 'chime', warnings: [15], protected: false },
+  faction: { alarmType: 'custom', repeat: 'daily', sound: 'pulse', warnings: [30, 15], protected: false },
+  'insignia-goal': { alarmType: 'individual', repeat: 'daily', sound: 'chime', warnings: [60, 15], protected: false },
+  'family-currency-goal': { alarmType: 'individual', repeat: 'daily', sound: 'chime', warnings: [60, 15], protected: false },
+  'helicopter-training': { alarmType: 'individual', repeat: 'once', sound: 'chime', warnings: [60, 15], protected: false },
+  'resource-goal': { alarmType: 'individual', repeat: 'daily', sound: 'pulse', warnings: [60, 15], protected: false },
+  'gw-reward': { alarmType: 'custom', repeat: 'once', sound: 'chime', warnings: [360, 60, 15], protected: true },
+  'gw-prep': { alarmType: 'gwBubble', repeat: 'gw5d', sound: 'siren', warnings: [1440, 360, 60, 15], protected: true },
   'custom-operation': { alarmType: 'custom', repeat: 'once', sound: 'chime', warnings: [15], protected: false },
 };
