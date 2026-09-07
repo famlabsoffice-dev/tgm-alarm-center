@@ -112,7 +112,7 @@ try {
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.locator('#app').waitFor({ state: 'visible' });
-  await page.getByText(/Schnellstart/i, { exact: true }).waitFor({ state: 'visible' });
+  await page.locator('section').first().locator('button[data-action="new-alarm"][data-template="bubble"]').first().waitFor({ state: 'visible' });
   if (await page.title() !== 'TGM ALARM CENTER') throw new Error('Dashboard document title mismatch.');
   console.log('Browser smoke: dashboard started and rendered.');
 
