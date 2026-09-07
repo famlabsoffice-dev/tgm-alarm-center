@@ -60,8 +60,10 @@ test('browser bootstrap patches the effective tier and persistence path', () => 
   for (const name of founderNames.map((value) => value.toLowerCase())) assert.match(runtimeSource, new RegExp(name));
   assert.match(runtimeSource, /hasFounderAccess\(\) \? 'godfather'/);
   assert.match(runtimeSource, /state\.tier = 'godfather'/);
+  assert.match(runtimeSource, /SOURCE_URL = ['"]\.\/app\.js\?v=26['"]/);
+  assert.match(indexSource, /founder-access\.js\?v=4/);
   assert.match(indexSource, /founder-runtime\.js\?v=1/);
-  assert.match(indexSource, /app\.js\?v=26/);
+  assert.doesNotMatch(indexSource, /app\.js\?v=26/);
 });
 
 test('final browser reference surface uses green as the primary accent', () => {
