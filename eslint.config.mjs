@@ -50,6 +50,10 @@ export default defineConfig([
         fetch: 'readonly',
         process: 'readonly',
         self: 'readonly',
+        Element: 'readonly',
+        Event: 'readonly',
+        MutationObserver: 'readonly',
+        FileReader: 'readonly',
       },
     },
     rules: {
