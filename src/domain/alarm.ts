@@ -5,10 +5,10 @@ export type Tier = 'free' | 'streetBoss' | 'caporegime' | 'underboss' | 'boss' |
 export type OccurrenceKind = 'warning' | 'main' | 'end-warning' | 'end';
 
 export interface Account { id: string; name: string; color: string; createdAt: string; }
-export interface Alarm { id: string; accountId: string; title: string; type: AlarmType; date: string; time: string; eventAtUtc: string; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; active: boolean; protected: boolean; completedOccurrences: Record<string, true>; createdAt: string; updatedAt: string; }
+export interface Alarm { id: string; accountId: string; title: string; type: AlarmType; date: string; time: string; eventAtUtc: string; startAtUtc?: string | null; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; active: boolean; protected: boolean; completedOccurrences: Record<string, true>; createdAt: string; updatedAt: string; }
 export interface NotificationPreferences { sound: SoundProfile; warningSound: boolean; eventSound: boolean; vibration: boolean; criticalAlerts: boolean; preview: boolean; }
 export interface AppState { schemaVersion: 1; accounts: Account[]; alarms: Alarm[]; activeAccountId: string | null; tier: Tier; notificationPreferences: NotificationPreferences; testConfirmedAt: string | null; }
-export interface AlarmTemplate { title: string; type: AlarmType; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; protected: boolean; }
+export interface AlarmTemplate { title: string; type: AlarmType; warnings: number[]; repeat: RepeatMode; sound: SoundProfile; protected: boolean; startAtUtc?: string | null; }
 export interface NotificationMoment { alarmId: string; eventTime: Date; at: Date; kind: OccurrenceKind; warningMinutes?: number; endAt?: Date; }
 
 export const TIER_LIMITS: Record<Tier, { accounts: number; alarms: number; events: number; perAccount: { bubbleAlarms: number; eventAlarms: number; individualAlarms: number; rssAlarms: number } }> = {
@@ -48,6 +48,11 @@ export function localInputFromUtc(utc: string): { date: string; time: string } {
   const instant = new Date(utc); if (!Number.isFinite(instant.getTime())) throw new Error('Ungültiger UTC-Zeitpunkt');
   return { date: `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`, time: `${String(instant.getHours()).padStart(2, '0')}:${String(instant.getMinutes()).padStart(2, '0')}` };
 }
+export function validateAlarmTiming(startAtUtc: string | null | undefined, alarmAtUtc: string): boolean {
+  const alarmAt = new Date(alarmAtUtc).getTime(); if (!Number.isFinite(alarmAt)) return false;
+  if (startAtUtc == null || startAtUtc === '') return true;
+  const startAt = new Date(startAtUtc).getTime(); return Number.isFinite(startAt) && startAt <= alarmAt;
+}
 function baseLocalDateTime(alarm: Alarm): Date | null {
   const utc = new Date(alarm.eventAtUtc); if (!Number.isFinite(utc.getTime())) return null;
   if (!validateDateTime(alarm.date, alarm.time)) return utc;
@@ -86,7 +91,8 @@ export function upcomingMoments(alarm: Alarm, now = new Date()): NotificationMom
 }
 export function buildAlarm(template: AlarmTemplate, accountId: string, date: string, time: string, now = new Date()): Alarm {
   const eventAtUtc = localDateTimeToUtc(date, time); if (!eventAtUtc) throw new Error('Datum oder Uhrzeit ist ungültig');
-  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, accountId, title: template.title, type: template.type, date, time, eventAtUtc, warnings: [...template.warnings], repeat: template.repeat, sound: template.sound, active: true, protected: template.protected, completedOccurrences: {}, createdAt: now.toISOString(), updatedAt: now.toISOString() };
+  if (!validateAlarmTiming(template.startAtUtc, eventAtUtc)) throw new Error('Startzeit darf nicht nach dem Alarmzeitpunkt liegen');
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, accountId, title: template.title, type: template.type, date, time, eventAtUtc, startAtUtc: template.startAtUtc ?? null, warnings: [...template.warnings], repeat: template.repeat, sound: template.sound, active: true, protected: template.protected, completedOccurrences: {}, createdAt: now.toISOString(), updatedAt: now.toISOString() };
 }
 export function soundForAlarmType(type: AlarmType): SoundProfile { if (type === 'bubble' || type === 'gwBubble') return type === 'gwBubble' ? 'siren' : 'pulse'; if (type === 'custom') return 'chime'; if (type === 'individual') return 'pulse'; return 'chime'; }
 export function alarmTypeLabel(type: AlarmType): string { if (type === 'bubble') return 'Bubble Alarm'; if (type === 'gwBubble') return 'Massacre Alarm'; if (type === 'individual') return 'Individual Timer'; if (type === 'rss') return 'RSS Timer'; return 'Event Alarm'; }
