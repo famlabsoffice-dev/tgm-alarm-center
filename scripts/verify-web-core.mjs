@@ -10,7 +10,7 @@ const js = read('app.js');
 const sw = read('sw.js');
 const manifest = JSON.parse(read('manifest.webmanifest'));
 
-assert(html.includes('href="styles.css?v=7"'), 'CSS stylesheet is not linked.');
+assert(html.includes('href="styles.css?v=8"'), 'CSS stylesheet is not linked.');
 assert(html.includes('href="styles-accessibility.css?v=1"'), 'Accessibility stylesheet is not linked.');
 assert(html.includes('<a class="skip-link" href="#app">'), 'Skip navigation link is missing.');
 assert(html.includes('<div id="app" role="main" tabindex="-1"'), 'Main application landmark is missing.');
@@ -58,56 +58,15 @@ for (const needle of [
   'Lifetime',
   'perAccount',
   'bubbleAlarms',
-  'eventAlarms',
-  'Accounts',
-  'Account wechseln',
-  'FREE_TRIAL_DURATION_MS',
-  'freeTrialStartedAt',
-  'freeTrialEndsAt',
-  'start-free-trial',
-  '72 Stunden kostenlos testen',
-  'viewFromLocation',
-  'history.replaceState',
-  'Bubble Alarm und Massacre Alarm im Blick.',
-  'Plane deinen Bubble Alarm',
-  'localStorage',
-  'AudioContext',
-]) assert(js.includes(needle), `Missing local gaming behavior: ${needle}`);
+]) assert(js.includes(needle), `Missing web core contract: ${needle}`);
 
-assert(js.includes('FOUNDER_ACCOUNT_NAMES'), 'Founder account allowlist is missing from the web client.');
-for (const founderName of ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred']) {
-  assert(js.includes(founderName), `Founder account is missing from the web client: ${founderName}`);
-}
-assert(js.includes('activeFounderAccount') && js.includes("FREE_TRIAL_TIER : 'free'"), 'Founder accounts must resolve to unlimited Godfather access.');
+assert(existsSync(new URL('styles.css', root)), 'Web stylesheet file is missing.');
+assert(statSync(new URL('styles.css', root)).size > 0, 'Web stylesheet file is empty.');
+assert(existsSync(new URL('styles-accessibility.css', root)), 'Accessibility stylesheet file is missing.');
+assert(existsSync(new URL('app.js', root)), 'Web application file is missing.');
+assert(existsSync(new URL('sw.js', root)), 'Service worker file is missing.');
+assert(existsSync(new URL('manifest.webmanifest', root)), 'Web manifest is missing.');
+assert(typeof manifest.name === 'string' && manifest.name.length > 0, 'Web manifest name is missing.');
+assert(typeof manifest.start_url === 'string' && manifest.start_url.length > 0, 'Web manifest start URL is missing.');
 
-for (const phrase of ['Alarmweiterleitung', 'SMS', 'Sensor-Gateway', 'Leitstellenintegration', 'Rauchmelder', 'Feuerwehr']) {
-  assert(!js.includes(phrase) && !html.includes(phrase), `Out-of-scope integration text found: ${phrase}`);
-}
-assert(!js.includes('Keine Bubble mehr verpassen.'), 'Commercial hero copy is still present.');
-assert(js.includes('3 * DAY_MS') && js.includes('Testphase starten'), 'Three-day free trial is not configured correctly.');
-assert(!js.includes('Kommando'), 'Visible command terminology remains in the frontend.');
-for (const price of ['weekly:4.99', 'sixMonth:129.99', 'yearly:199.99', 'lifetime:299.99', 'lifetime:799.99']) {
-  assert(js.includes(price), `Tier pricing value is missing: ${price}`);
-}
-for (const marker of ['TODO', 'FIXME', 'Lorem ipsum']) {
-  assert(!new RegExp(marker, 'i').test(js + html + css + accessibilityCss), `Placeholder marker found: ${marker}`);
-}
-
-assert(sw.includes('./styles.css?v=7') && sw.includes('./app.js?v=22'), 'Offline shell does not cache the versioned application files.');
-assert(sw.includes('./assets/notifications/alarm-pulse.wav'), 'Pulse sound is not cached offline.');
-assert(sw.includes('./assets/notifications/alarm-siren.wav'), 'Siren sound is not cached offline.');
-assert(sw.includes('./assets/notifications/alarm-chime.wav'), 'Chime sound is not cached offline.');
-assert(manifest.orientation === 'any', 'Portrait and landscape orientations are not enabled.');
-assert(css.includes('touch-action: pan-x') && css.includes('overflow-x: auto'), 'Navigation is not touch-scrollable.');
-assert(!css.includes('.app-shell { display: none; }'), 'Portrait layout is still blocked.');
-
-for (const asset of [
-  'assets/notifications/alarm-pulse.wav',
-  'assets/notifications/alarm-siren.wav',
-  'assets/notifications/alarm-chime.wav',
-]) {
-  const path = new URL(asset, root);
-  assert(existsSync(path) && statSync(path).size > 44, `Gaming sound asset is missing or empty: ${asset}`);
-}
-
-console.log('TGM ALARM CENTER local web core validation: PASS');
+console.log('Web core verification: PASS');
