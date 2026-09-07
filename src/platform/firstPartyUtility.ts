@@ -9,6 +9,13 @@ export type FirstPartyUtilityCategory =
   | 'resource'
   | 'training'
   | 'upgrade'
+  | 'faction'
+  | 'insignia-goal'
+  | 'family-currency-goal'
+  | 'helicopter-training'
+  | 'resource-goal'
+  | 'gw-reward'
+  | 'gw-prep'
   | 'custom-operation';
 
 export interface FirstPartyUtilityEventInput {
@@ -38,7 +45,7 @@ export function firstPartyUtilityEvent(input: FirstPartyUtilityEventInput): Alar
     endAtUtc: input.endAtUtc,
     timezone: input.timezone,
     priority: input.priority,
-    alarmType: input.utility === 'bubble' ? 'bubble' : input.utility === 'gw' ? 'gwBubble' : 'custom',
+    alarmType: input.utility === 'bubble' ? 'bubble' : input.utility === 'gw' || input.utility === 'gw-prep' ? 'gwBubble' : 'custom',
     warningMinutes: input.warningMinutes,
     metadata: {
       ...input.metadata,
