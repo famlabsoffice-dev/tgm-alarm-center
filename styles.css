@@ -707,9 +707,11 @@ button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-sys
   background: url("assets/tgm-alarm-center-icon.png") center / contain no-repeat;
   filter: drop-shadow(0 0 26px rgba(41,190,120,.2));
   opacity: .98;
+  pointer-events: none;
 }
 .reference-editor-modal {
   position: relative;
+  z-index: 1;
   width: min(100%, 650px);
   max-height: min(86vh, 940px);
   margin: 0 auto;
@@ -795,9 +797,30 @@ button, input, select { font-family: Inter, ui-sans-serif, system-ui, -apple-sys
   border-bottom: 1px solid #30393c;
   color: #efefeb;
   font-size: 18px;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
 }
 .reference-warning-row:last-child { border-bottom: 0; }
-.reference-warning-row input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.reference-warning-row input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+  accent-color: #31dc99;
+}
+.reference-warning-row:has(input:checked) .reference-radio {
+  border-color: #31dc99;
+  box-shadow: 0 0 9px rgba(49,220,153,.18);
+}
+.reference-warning-row:has(input:checked) .reference-radio i { opacity: 1; }
+.reference-warning-row:has(input:focus-visible) {
+  outline: 3px solid rgba(100, 196, 241, .46);
+  outline-offset: -3px;
+}
 .reference-radio {
   display: grid;
   place-items: center;
