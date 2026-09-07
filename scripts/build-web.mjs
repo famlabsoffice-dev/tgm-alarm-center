@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const root = process.cwd();
 const outputRoot = new URL('../dist/web/', import.meta.url);
 
 const sourceFiles = [
@@ -11,12 +10,15 @@ const sourceFiles = [
   'styles-accessibility.css',
   'reference-theme.css',
   'reference-theme-global.css',
+  'reference-theme-final.css',
+  'founder-access.js',
+  'founder-runtime.js',
   'account-delete.js',
   'ui-cleanup.js',
-  'founder-access.js',
   'sw.js',
   'sw-v27.js',
   'sw-v28.js',
+  'sw-v30.js',
   'manifest.webmanifest',
   'icon.png',
 ];
@@ -43,6 +45,14 @@ await fs.cp(new URL('../assets/', import.meta.url), new URL('assets/', outputRoo
 
 const manifest = JSON.parse(readFileSync(new URL('manifest.webmanifest', outputRoot), 'utf8'));
 if (manifest.orientation !== 'any') throw new Error('Web manifest must allow portrait and landscape orientation.');
+
+const index = readFileSync(new URL('index.html', outputRoot), 'utf8');
+for (const requiredScript of ['founder-access.js?v=4', 'founder-runtime.js?v=1', 'sw-v30.js']) {
+  if (!index.includes(requiredScript)) throw new Error(`Web shell is missing the current runtime asset: ${requiredScript}`);
+}
+if (!readFileSync(new URL('founder-runtime.js', outputRoot), 'utf8').includes('./app.js?v=26')) {
+  throw new Error('Founder runtime must bootstrap the pinned web application asset.');
+}
 
 const commit = process.env.GITHUB_SHA || (() => {
   try { return execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(); }
