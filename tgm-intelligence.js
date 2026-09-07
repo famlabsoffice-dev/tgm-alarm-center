@@ -5,6 +5,7 @@
   const INT_STORE = 'tgm-alarm-center-intelligence-v1';
   const MAX = 2000;
   const DAY = 86400000;
+  const BROWSER_CRYPTO = globalThis.crypto;
   const TYPE_MAP = {
     gw: { type: 'gw', repeat: 'gw5d', sound: 'siren', warnings: [1440, 360, 60, 15], protected: true },
     bubble: { type: 'bubble', repeat: 'once', sound: 'siren', warnings: [60, 15], protected: true },
@@ -29,13 +30,13 @@
   };
   const CATEGORY_OPTIONS = Object.keys(TYPE_MAP);
   const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const uid = () => (crypto?.randomUUID ? crypto.randomUUID() : `int-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const uid = () => (BROWSER_CRYPTO && typeof BROWSER_CRYPTO.randomUUID === 'function' ? BROWSER_CRYPTO.randomUUID() : `int-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const fmt = (ms) => Number.isFinite(ms) ? new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(ms)) : '—';
   const short = (ms) => Number.isFinite(ms) ? new Intl.DateTimeFormat('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }).format(new Date(ms)) : '—';
   const iso = (ms) => new Date(ms).toISOString();
   const parseLocal = (date, time) => {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return NaN;
-    const [y,m,d] = date.split('-').map(Number); const [h,min] = time.split(':').map(Number);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date)) || !/^\d{2}:\d{2}$/.test(String(time))) return NaN;
+    const [y,m,d] = String(date).split('-').map(Number); const [h,min] = String(time).split(':').map(Number);
     const candidate = new Date(y, m - 1, d, h, min, 0, 0);
     return candidate.getFullYear() === y && candidate.getMonth() === m - 1 && candidate.getDate() === d && candidate.getHours() === h && candidate.getMinutes() === min ? candidate.getTime() : NaN;
   };
@@ -44,7 +45,6 @@
 
   let model = null;
   let tab = 'overview';
-  let observer = null;
   let lastMounted = 0;
 
   const empty = () => ({ version: 1, records: [], updatedAt: iso(Date.now()) });
@@ -58,30 +58,30 @@
     caporegime: { accounts: 3, bubble: 1, custom: 1, individual: 1, rss: 0 }, underboss: { accounts: 5, bubble: 1, custom: 1, individual: 1, rss: 1 },
     boss: { accounts: 10, bubble: 1, custom: 2, individual: 2, rss: 2 }, godfather: { accounts: Infinity, bubble: Infinity, custom: Infinity, individual: Infinity, rss: Infinity },
   };
-  const countType = (s, aid, type) => (s?.alarms || []).filter((a) => a.accountId === aid && (type === 'bubble' && a.type === 'gw' ? true : a.type === type)).length;
+  const countType = (s, aid, type) => (s?.alarms || []).filter((a) => a.accountId === aid && a.type === type).length;
   const canCreate = (type) => {
     const s = appState(); const a = account(); if (!s || !a) return false;
     const lim = limits[tier()] || limits.free; const key = type === 'gw' ? 'bubble' : type;
-    return countType(s, a.id, key) < lim[key];
+    return Number.isFinite(lim[key]) ? countType(s, a.id, type) < lim[key] : true;
   };
   const toast = (message) => { const root = document.getElementById('toast'); if (!root) return; root.textContent = message; root.classList.add('show'); setTimeout(() => root.classList.remove('show'), 2800); };
 
   function createAlarms(definitions) {
     const s = appState(); const a = account(); if (!s || !a) { toast('Lege zuerst einen Account an.'); return []; }
-    let created = 0; const alarmIds = [];
+    const existing = Array.isArray(s.alarms) ? s.alarms : [];
+    const additions = [];
     for (const def of definitions) {
+      if (!Number.isFinite(def.eventAt)) { toast('Ungültiger Alarmzeitpunkt.'); continue; }
       if (def.eventAt <= Date.now() && def.repeat === 'once') continue;
       if (!canCreate(def.type)) { toast('Der aktuelle Plan erreicht das Alarm-Limit für diesen Alarmtyp.'); break; }
       const id = uid();
-      const d = new Date(def.eventAt);
-      s.alarms = Array.isArray(s.alarms) ? s.alarms : [];
-      s.alarms.push({ id, accountId: a.id, title: String(def.title).slice(0, 80), type: def.type, eventAt: def.eventAt, date: dateValue(def.eventAt), time: timeValue(def.eventAt), warnings: def.warnings || [15], repeat: def.repeat || 'once', sound: def.sound || 'pulse', active: true, protected: Boolean(def.protected), completedOccurrences: {}, createdAt: iso(Date.now()), updatedAt: iso(Date.now()) });
-      alarmIds.push(id); created++;
+      additions.push({ id, accountId: a.id, title: String(def.title).trim().slice(0, 80), type: def.type, eventAt: def.eventAt, date: dateValue(def.eventAt), time: timeValue(def.eventAt), warnings: [...new Set(def.warnings || [15])].sort((x,y)=>y-x), repeat: def.repeat || 'once', sound: def.sound || 'pulse', active: true, protected: Boolean(def.protected), completedOccurrences: {}, createdAt: iso(Date.now()), updatedAt: iso(Date.now()) });
     }
-    if (!created) return [];
+    if (!additions.length) return [];
+    s.alarms = existing.concat(additions);
     localStorage.setItem(STORE, JSON.stringify(s));
     window.dispatchEvent(new Event('tgm-intelligence-alarm-created'));
-    return alarmIds;
+    return additions.map((x) => x.id);
   }
 
   function pushRecord(record) {
@@ -91,14 +91,14 @@
   }
 
   function categorySelect(value, label = 'Kategorie') {
-    return `<div class="tgm-int-field"><label>${esc(label)}</label><select id="intCategory">${CATEGORY_OPTIONS.map((k) => `<option value="${k}" ${k === value ? 'selected' : ''}>${esc(CATEGORY_LABEL[k])}</option>`).join('')}</select></div>`;
+    return `<div class="tgm-int-field"><label>${esc(label)}</label><select name="category">${CATEGORY_OPTIONS.map((k) => `<option value="${k}" ${k === value ? 'selected' : ''}>${esc(CATEGORY_LABEL[k])}</option>`).join('')}</select></div>`;
   }
   function eventForm() {
     const base = Date.now() + 2 * 3600000; return `<form class="tgm-int-form" data-int-form="event"><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Bezeichnung</label><input name="title" maxlength="80" value="Event Alarm"></div>${categorySelect('event')}</div><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Datum</label><input name="date" type="date" value="${dateValue(base)}"></div><div class="tgm-int-field"><label>Uhrzeit</label><input name="time" type="time" value="${timeValue(base)}"></div></div><div class="tgm-int-field"><label>Vorwarnungen</label><div class="tgm-int-checks">${[1440,360,60,30,15].map((v) => `<label class="tgm-int-check"><input type="checkbox" name="warning" value="${v}" ${v === 15 ? 'checked' : ''}>${v >= 60 ? `${Math.round(v/60)} Std.` : `${v} Min.`}</label>`).join('')}</div></div><div class="tgm-int-buttons"><button class="tgm-int-button primary" type="submit">Event als Alarm planen</button></div></form>`;
   }
   function goalForm() { const deadline = Date.now()+DAY; return `<form class="tgm-int-form" data-int-form="goal"><div class="tgm-int-form grid-3"><div class="tgm-int-field"><label>Zieltyp</label><select name="category"><option value="insignia-goal">Insignia</option><option value="family-currency-goal">Family Currency</option><option value="resource-goal">Ressourcen</option></select></div><div class="tgm-int-field"><label>Aktuell</label><input name="current" type="number" min="0" step="any" value="0"></div><div class="tgm-int-field"><label>Ziel</label><input name="target" type="number" min="0.0001" step="any" value="100"></div></div><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Einheit</label><input name="unit" maxlength="24" value="Punkte"></div><div class="tgm-int-field"><label>Deadline</label><input name="deadline" type="datetime-local" value="${new Date(deadline).toISOString().slice(0,16)}"></div></div><div class="tgm-int-buttons"><button class="tgm-int-button primary" type="submit">Zielalarm anlegen</button></div></form>`; }
   function factionForm() { const at = Date.now()+DAY; return `<form class="tgm-int-form" data-int-form="faction"><div class="tgm-int-form grid-3"><div class="tgm-int-field"><label>Fraktionsname</label><input name="title" maxlength="80" value="Faction Reminder"></div><div class="tgm-int-field"><label>Fehlende Mitglieder</label><input name="missing" type="number" min="1" value="1"></div><div class="tgm-int-field"><label>Mitglieder gesamt</label><input name="total" type="number" min="1" value="10"></div></div><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Nächste Erinnerung</label><input name="date" type="date" value="${dateValue(at)}"></div><div class="tgm-int-field"><label>Uhrzeit</label><input name="time" type="time" value="${timeValue(at)}"></div></div><div class="tgm-int-buttons"><button class="tgm-int-button primary" type="submit">Fraktions-Erinnerung planen</button></div></form>`; }
-  function gwForm() { const base = Date.now()+DAY; const e=(name,offset)=>`<div class="tgm-int-field"><label>${esc(name)}</label><input name="${offset}" type="datetime-local" value="${new Date(base + offset*0).toISOString().slice(0,16)}"></div>`; return `<form class="tgm-int-form" data-int-form="gw"><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Zyklus-ID</label><input name="cycle" maxlength="40" value="GW-${new Date().toISOString().slice(0,10)}"></div><div class="tgm-int-field"><label>Account</label><input value="${esc(account()?.name || 'Kein Account')}" disabled></div></div><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>GW Start</label><input name="start" type="datetime-local" value="${new Date(base).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>GW Ende</label><input name="end" type="datetime-local" value="${new Date(base+DAY).toISOString().slice(0,16)}"></div></div><div class="tgm-int-form grid-3"><div class="tgm-int-field"><label>GW Bubble</label><input name="bubble" type="datetime-local" value="${new Date(base+2*3600000).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>Reward Deadline</label><input name="reward" type="datetime-local" value="${new Date(base+DAY+2*3600000).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>Vorbereitung</label><input name="prep" type="datetime-local" value="${new Date(base-6*3600000).toISOString().slice(0,16)}"></div></div><div class="tgm-int-buttons"><button class="tgm-int-button primary" type="submit">GW Command Center planen</button></div></form>`; }
+  function gwForm() { const base = Date.now()+DAY; return `<form class="tgm-int-form" data-int-form="gw"><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>Zyklus-ID</label><input name="cycle" maxlength="40" value="GW-${new Date().toISOString().slice(0,10)}"></div><div class="tgm-int-field"><label>Account</label><input value="${esc(account()?.name || 'Kein Account')}" disabled></div></div><div class="tgm-int-form grid-2"><div class="tgm-int-field"><label>GW Start</label><input name="start" type="datetime-local" value="${new Date(base).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>GW Ende</label><input name="end" type="datetime-local" value="${new Date(base+DAY).toISOString().slice(0,16)}"></div></div><div class="tgm-int-form grid-3"><div class="tgm-int-field"><label>GW Bubble</label><input name="bubble" type="datetime-local" value="${new Date(base+2*3600000).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>Reward Deadline</label><input name="reward" type="datetime-local" value="${new Date(base+DAY+2*3600000).toISOString().slice(0,16)}"></div><div class="tgm-int-field"><label>Vorbereitung</label><input name="prep" type="datetime-local" value="${new Date(base-6*3600000).toISOString().slice(0,16)}"></div></div><div class="tgm-int-buttons"><button class="tgm-int-button primary" type="submit">GW Command Center planen</button></div></form>`; }
 
   const templates = [
     ['bubble','Bubble Schutz','Bubble Schutzfenster planen'], ['gw','GW Zyklus','GW Start, Ende und Schutzfenster'], ['event','Event Alarm','Freies Event mit Vorwarnung'], ['protection','Schutzende','Schutzende als Termin'],
@@ -115,7 +115,7 @@
 
   function overview() {
     const upcoming = recordsForCalendar().filter((x) => x.at >= Date.now()).slice(0,8); const planned = model.records.filter((r)=>r.status==='planned').length; const done = model.records.filter((r)=>r.status==='done').length;
-    return `<div class="tgm-int-grid"><article class="tgm-int-card"><div class="tgm-int-kicker">ALARM BRIDGE</div><div class="tgm-int-metric">${planned}</div><p>Geplante Intelligence-Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">VERLAUF</div><div class="tgm-int-metric">${done}</div><p>Abgeschlossene Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">KALENDER</div><div class="tgm-int-metric">${upcoming.length}</div><p>Nächste Termine</p></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">NÄCHSTE ALARME</div><div class="tgm-int-list">${upcoming.length ? upcoming.map((x)=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(x.title)}</strong><small>${esc(typeof x.type==='string'&&CATEGORY_LABEL[x.type]?CATEGORY_LABEL[x.type]:'Alarm')} · ${esc(fmt(x.at))}</small></div><span class="tgm-int-badge">${esc(x.source==='alarm'?'ALARM':'INTELLIGENCE')}</span></div>`).join('') : '<div class="tgm-int-empty">Noch keine Termine angelegt.</div>'}</div></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">SMART TEMPLATES</div><h2>Planbare Operationen</h2><p>Jede Vorlage erzeugt echte lokale Alarme und bleibt in der lokalen Datenhaltung erhalten.</p>${templateCards()}</article></div>`;
+    return `<div class="tgm-int-grid"><article class="tgm-int-card"><div class="tgm-int-kicker">ALARM BRIDGE</div><div class="tgm-int-metric">${planned}</div><p>Geplante Intelligence-Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">VERLAUF</div><div class="tgm-int-metric">${done}</div><p>Abgeschlossene Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">KALENDER</div><div class="tgm-int-metric">${upcoming.length}</div><p>Nächste Termine</p></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">NÄCHSTE ALARME</div><div class="tgm-int-list">${upcoming.length ? upcoming.map((x)=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(x.title)}</strong><small>${esc(typeof x.type==='string'&&CATEGORY_LABEL[x.type]?CATEGORY_LABEL[x.type]:'Alarm')} · ${esc(fmt(x.at))}</small></div><span class="tgm-int-badge">${esc(x.source==='alarm'?'ALARM':'INTELLIGENCE')}</span></div>`).join('') : '<div class="tgm-int-empty">Noch keine Termine angelegt.</div>'}</div></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">SMART TEMPLATES</div><h2>Planbare Operationen</h2><p>Jede Vorlage erzeugt echte lokale Alarme und bleibt in der lokalen Datenhaltung erhalten.</p>${templateCards()}</div></div>`;
   }
   function eventView(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">EVENT INBOX</div><h2>Event erfassen</h2><p>Erfasse einen Termin und übergib ihn direkt an die lokale Alarmplanung.</p>${eventForm()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">EVENT HISTORY</div><h2>Verlauf</h2><div class="tgm-int-list">${model.records.filter(r=>r.kind==='event').slice(0,12).map((r)=>`<div class="tgm-int-row"><span class="tgm-int-dot ${r.status==='done'?'gold':''}"></span><div><strong>${esc(r.title)}</strong><small>${esc(fmt(Date.parse(r.scheduledAt)))}</small></div><button class="tgm-int-button" data-int-action="done" data-id="${r.id}">${r.status==='done'?'OK':'Erledigt'}</button></div>`).join('') || '<div class="tgm-int-empty">Noch kein Event-Verlauf.</div>'}</div></article></div>`; }
   function gwView(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">GW COMMAND CENTER</div><h2>GW-Zyklus planen</h2><p>Ein Zyklus erzeugt Start, Ende sowie optionale Bubble-, Reward- und Vorbereitungsalarme.</p>${gwForm()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">GEPLANTE ZYKLEN</div><div class="tgm-int-list">${model.records.filter(r=>r.kind==='gw').slice(0,10).map(r=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(r.title)}</strong><small>${esc(fmt(Date.parse(r.scheduledAt)))}</small></div><span class="tgm-int-badge gold">GW</span></div>`).join('') || '<div class="tgm-int-empty">Noch kein GW-Zyklus angelegt.</div>'}</div></article></div>`; }
@@ -123,14 +123,14 @@
   function calendarView(){ const rows=recordsForCalendar().filter(x=>x.at>=Date.now()).slice(0,60); return `<article class="tgm-int-card full"><div class="tgm-int-kicker">PERSONAL TGM CALENDAR</div><h2>Persönlicher Kalender</h2><p>Alarme und Intelligence-Termine werden nach lokaler Gerätezeit zusammengeführt.</p><div class="tgm-int-calendar">${rows.length ? rows.map(x=>`<div class="tgm-int-cal-row"><span class="tgm-int-cal-time">${esc(short(x.at))}</span><div><strong>${esc(x.title)}</strong><small>${esc(CATEGORY_LABEL[x.type]||x.type||'Alarm')}</small></div><span class="tgm-int-badge">${esc(x.source==='alarm'?'ALARM':'PLAN')}</span></div>`).join('') : '<div class="tgm-int-empty">Keine kommenden Termine.</div>'}</div></article>`; }
   function renderBody(){ return tab==='events' ? eventView() : tab==='gw' ? gwView() : tab==='goals' ? goalView() : tab==='calendar' ? calendarView() : overview(); }
   function render(){
-    const app=document.getElementById('app'); if(!app) return; if(location.hash.slice(1)!=='intelligence') return;
+    const app=document.getElementById('app'); if(!app || location.hash.slice(1)!=='intelligence') return;
     lastMounted=Date.now(); app.innerHTML=`<div class="app-shell"><header class="topbar"><div class="toprow"><button class="crest-button" type="button" data-int-action="leave"><span class="brand-mark">TGM</span></button><div class="header-title">TGM ALARM-CENTER</div><button class="live-button" type="button" data-int-action="leave"><span class="live-dot"></span><span>LIVE</span></button></div><div class="tgm-int-nav"><span class="tgm-int-badge">INTELLIGENCE</span></div></header><main class="main"><section class="tgm-intelligence"><div class="tgm-int-header"><div><div class="tgm-int-kicker">TGM INTELLIGENCE</div><h1>Planer & Alarm Bridge</h1><p>Events, Ziele, GW, Fraktion und persönlicher Kalender werden direkt in die lokale Alarmplanung überführt.</p></div><div class="tgm-int-actions"><button class="tgm-int-button" data-int-action="refresh">Aktualisieren</button><button class="tgm-int-button ghost" data-int-action="leave">Zurück</button></div></div><div class="tgm-int-tabs">${[['overview','Übersicht'],['events','Events'],['gw','GW Command Center'],['goals','Ziele & Fraktion'],['calendar','Kalender']].map(([k,l])=>`<button class="tgm-int-tab ${tab===k?'active':''}" data-int-action="tab" data-tab="${k}">${l}</button>`).join('')}</div>${renderBody()}</section></main></div>`;
   }
 
   function handleForm(form){
     const data=new FormData(form); const a=account(); if(!a){toast('Lege zuerst einen Account an.');return;}
     if(form.dataset.intForm==='event'){
-      const eventAt=parseLocal(data.get('date'),data.get('time')); const category=String(data.get('category')); const config=TYPE_MAP[category]; const warnings=[...form.querySelectorAll('input[name="warning"]:checked')].map(x=>Number(x.value));
+      const eventAt=parseLocal(data.get('date'),data.get('time')); const category=String(data.get('category') || 'event'); const config=TYPE_MAP[category]; const warnings=[...form.querySelectorAll('input[name="warning"]:checked')].map(x=>Number(x.value));
       if(!Number.isFinite(eventAt)||eventAt<=Date.now()||!config||!warnings.length){toast('Eventdaten sind ungültig.');return;} const title=String(data.get('title')||'Event Alarm').trim(); const ids=createAlarms([{title,type:config.type,repeat:config.repeat,sound:config.sound,warnings,protected:config.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'event',category,title,accountId:a.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast('Event wurde als Alarm geplant.');
     }
     if(form.dataset.intForm==='goal'){
@@ -144,12 +144,12 @@
     if(form.dataset.intForm==='gw'){
       const cycle=String(data.get('cycle')||'').trim(); const start=Date.parse(String(data.get('start'))); const end=Date.parse(String(data.get('end'))); const bubble=Date.parse(String(data.get('bubble'))); const reward=Date.parse(String(data.get('reward'))); const prep=Date.parse(String(data.get('prep'))); const defs=[];
       if(!cycle||!Number.isFinite(start)||!Number.isFinite(end)||end<=start||start<=Date.now()){toast('GW-Zeitpunkte sind ungültig.');return;}
-      defs.push({title:'GW Start',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:start}); defs.push({title:'GW Ende',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:end}); if(Number.isFinite(bubble)&&bubble>0)defs.push({title:'GW Bubble',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:bubble}); if(Number.isFinite(reward)&&reward>0)defs.push({title:'GW Reward',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:reward}); if(Number.isFinite(prep)&&prep>0)defs.push({title:'GW Vorbereitung',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:prep});
+      defs.push({title:'GW Start',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:start}); defs.push({title:'GW Ende',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:end}); if(Number.isFinite(bubble)&&bubble>start)defs.push({title:'GW Bubble',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:bubble}); if(Number.isFinite(reward)&&reward>end)defs.push({title:'GW Reward',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:reward}); if(Number.isFinite(prep)&&prep>0&&prep<start)defs.push({title:'GW Vorbereitung',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:prep});
       const ids=[]; for(const d of defs){ const created=createAlarms([d]); ids.push(...created); } if(!ids.length)return; pushRecord({kind:'gw',category:'gw',title:`GW ${cycle}`,accountId:a.id,scheduledAt:iso(start),startAt:iso(start),endAt:iso(end),linkedAlarmIds:ids,cycleId:cycle}); toast('GW Command Center wurde geplant.');
     }
   }
 
-  function template(category){ const a=account(); const cfg=TYPE_MAP[category]; if(!a||!cfg)return; const eventAt=Date.now()+2*3600000; const title=CATEGORY_LABEL[category] || category; const ids=createAlarms([{title,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:cfg.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'template',category,title,accountId:a.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast(`${title} wurde als Alarm angelegt.`); }
+  function template(category){ const a=account(); const cfg=TYPE_MAP[category]; if(!a||!cfg){toast('Vorlage konnte nicht angelegt werden.');return;} const eventAt=Date.now()+2*3600000; const title=CATEGORY_LABEL[category] || category; const ids=createAlarms([{title,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:cfg.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'template',category,title,accountId:a.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast(`${title} wurde als Alarm angelegt.`); }
 
   document.addEventListener('click',(event)=>{
     const target=event.target.closest('[data-int-action]'); if(!target) return;
@@ -172,7 +172,8 @@
     else enhanceNavigation();
   }
   model=load();
-  observer=new MutationObserver(sync); observer.observe(document.getElementById('app')||document.body,{childList:true,subtree:true});
+  const app=document.getElementById('app');
+  const observer = new MutationObserver(sync); observer.observe(app||document.body,{childList:true,subtree:true});
   window.addEventListener('hashchange',()=>{ if(location.hash.slice(1)==='intelligence')render(); else setTimeout(enhanceNavigation,0); });
   const boot=()=>{ sync(); if(location.hash.slice(1)==='intelligence')render(); }; setTimeout(boot,250); setTimeout(boot,1000); setTimeout(boot,2000);
 })();
