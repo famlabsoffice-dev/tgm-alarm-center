@@ -4,7 +4,19 @@ import { execFileSync } from 'node:child_process';
 const root = process.cwd();
 const outputRoot = new URL('../dist/web/', import.meta.url);
 
-const sourceFiles = ['index.html', 'app.js', 'styles.css', 'styles-accessibility.css', 'sw.js', 'manifest.webmanifest', 'icon.png'];
+const sourceFiles = [
+  'index.html',
+  'app.js',
+  'styles.css',
+  'styles-accessibility.css',
+  'reference-theme.css',
+  'reference-theme-global.css',
+  'account-delete.js',
+  'ui-cleanup.js',
+  'sw.js',
+  'manifest.webmanifest',
+  'icon.png',
+];
 const soundFiles = [
   'assets/notifications/alarm-pulse.wav',
   'assets/notifications/alarm-siren.wav',
