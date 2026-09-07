@@ -105,18 +105,15 @@
     ['resource','Ressourcen','Ressourcen-Fortschritt'], ['training','Training','Trainingsabschluss'], ['upgrade','Upgrade','Upgrade-Abschluss'], ['faction','Fraktion','Fraktions-Erinnerung'],
     ['insignia-goal','Insignia Ziel','Insignia-Fortschritt'], ['family-currency-goal','Family Currency Ziel','Family Currency-Fortschritt'], ['helicopter-training','Helikopter Training','Trainingsabschluss'], ['resource-goal','Ressourcen Ziel','Ressourcen-Meilenstein'],
   ];
-  function templateCards() { return `<div class="tgm-int-list">${templates.map(([cat,title,desc]) => `<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(title)}</strong><small>${esc(desc)}</small></div><button class="tgm-int-button" data-int-action="template" data-category="${cat}">Anlegen</button></div>`).join('')}</div>`; }
+  function templateCards() { return `<div class="tgm-int-list">${templates.map(([cat,title,desc]) => `<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(title)}</strong><small>${esc(desc)}</small></div><button class="tgm-int-button" data-int-action="template" data-category="${cat}">Planen</button></div>`).join('')}</div>`; }
 
-  function recordsForCalendar() {
-    const s = appState(); const alarms = (s?.alarms || []).filter((a) => a.accountId === account()?.id).map((a) => ({ id: a.id, title: a.title, at: a.eventAt, type: a.type, source: 'alarm' }));
-    const int = model.records.map((r) => ({ id: r.id, title: r.title, at: Date.parse(r.scheduledAt || r.deadlineAt || r.startAt), type: r.category, source: r.kind }));
-    return [...alarms, ...int].filter((x) => Number.isFinite(x.at)).sort((a,b)=>a.at-b.at);
+  function recordsForCalendar(){
+    const s=appState(); const aid=account()?.id; const alarms=(s?.alarms||[]).filter(a=>a.accountId===aid).map(a=>({at:Number(a.eventAt),title:a.title,type:a.type,source:'alarm'}));
+    const records=model.records.filter(r=>r.accountId===aid).map(r=>({at:Date.parse(r.scheduledAt||r.deadlineAt),title:r.title,type:r.category,source:'plan'}));
+    return alarms.concat(records).filter(x=>Number.isFinite(x.at)).sort((a,b)=>a.at-b.at);
   }
 
-  function overview() {
-    const upcoming = recordsForCalendar().filter((x) => x.at >= Date.now()).slice(0,8); const planned = model.records.filter((r)=>r.status==='planned').length; const done = model.records.filter((r)=>r.status==='done').length;
-    return `<div class="tgm-int-grid"><article class="tgm-int-card"><div class="tgm-int-kicker">ALARM BRIDGE</div><div class="tgm-int-metric">${planned}</div><p>Geplante Intelligence-Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">VERLAUF</div><div class="tgm-int-metric">${done}</div><p>Abgeschlossene Vorgänge</p></article><article class="tgm-int-card"><div class="tgm-int-kicker">KALENDER</div><div class="tgm-int-metric">${upcoming.length}</div><p>Nächste Termine</p></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">NÄCHSTE ALARME</div><div class="tgm-int-list">${upcoming.length ? upcoming.map((x)=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(x.title)}</strong><small>${esc(typeof x.type==='string'&&CATEGORY_LABEL[x.type]?CATEGORY_LABEL[x.type]:'Alarm')} · ${esc(fmt(x.at))}</small></div><span class="tgm-int-badge">${esc(x.source==='alarm'?'ALARM':'INTELLIGENCE')}</span></div>`).join('') : '<div class="tgm-int-empty">Noch keine Termine angelegt.</div>'}</div></article><article class="tgm-int-card wide"><div class="tgm-int-kicker">SMART TEMPLATES</div><h2>Planbare Operationen</h2><p>Jede Vorlage erzeugt echte lokale Alarme und bleibt in der lokalen Datenhaltung erhalten.</p>${templateCards()}</div></div>`;
-  }
+  function overview(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">EVENT → ALARM</div><h2>Alarm Bridge</h2><p>Erzeuge aus Event-, Ziel- und Fraktionsdaten echte lokale Alarme mit den vorhandenen Vorwarnregeln.</p><div class="tgm-int-buttons"><button class="tgm-int-button primary" data-int-action="tab" data-tab="events">Event erfassen</button><button class="tgm-int-button" data-int-action="tab" data-tab="goals">Ziele & Fraktion</button><button class="tgm-int-button" data-int-action="tab" data-tab="gw">GW Command Center</button></div></article><article class="tgm-int-card"><div class="tgm-int-kicker">SMART TEMPLATES</div><h2>Schnellplanung</h2>${templateCards()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">PERSONAL TGM CALENDAR</div><h2>Kalender</h2><p>${recordsForCalendar().filter(x=>x.at>=Date.now()).length} kommende Einträge werden aus Alarmen und Planungen zusammengeführt.</p><button class="tgm-int-button" data-int-action="tab" data-tab="calendar">Kalender öffnen</button></article></div>`; }
   function eventView(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">EVENT INBOX</div><h2>Event erfassen</h2><p>Erfasse einen Termin und übergib ihn direkt an die lokale Alarmplanung.</p>${eventForm()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">EVENT HISTORY</div><h2>Verlauf</h2><div class="tgm-int-list">${model.records.filter(r=>r.kind==='event').slice(0,12).map((r)=>`<div class="tgm-int-row"><span class="tgm-int-dot ${r.status==='done'?'gold':''}"></span><div><strong>${esc(r.title)}</strong><small>${esc(fmt(Date.parse(r.scheduledAt)))}</small></div><button class="tgm-int-button" data-int-action="done" data-id="${r.id}">${r.status==='done'?'OK':'Erledigt'}</button></div>`).join('') || '<div class="tgm-int-empty">Noch kein Event-Verlauf.</div>'}</div></article></div>`; }
   function gwView(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">GW COMMAND CENTER</div><h2>GW-Zyklus planen</h2><p>Ein Zyklus erzeugt Start, Ende sowie optionale Bubble-, Reward- und Vorbereitungsalarme.</p>${gwForm()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">GEPLANTE ZYKLEN</div><div class="tgm-int-list">${model.records.filter(r=>r.kind==='gw').slice(0,10).map(r=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(r.title)}</strong><small>${esc(fmt(Date.parse(r.scheduledAt)))}</small></div><span class="tgm-int-badge gold">GW</span></div>`).join('') || '<div class="tgm-int-empty">Noch kein GW-Zyklus angelegt.</div>'}</div></article></div>`; }
   function goalView(){ return `<div class="tgm-int-grid"><article class="tgm-int-card wide"><div class="tgm-int-kicker">GOAL ALARMS</div><h2>Ziel → Alarm</h2><p>Ein Fortschrittsziel erhält eine Deadline und einen echten lokalen Alarm.</p>${goalForm()}</article><article class="tgm-int-card"><div class="tgm-int-kicker">FACTION REMINDERS</div><h2>Fehlende Mitglieder</h2><p>Nutze die gleiche Alarmbrücke für tägliche Fraktions-Erinnerungen.</p>${factionForm()}</article><article class="tgm-int-card full"><div class="tgm-int-kicker">AKTIVE ZIELE</div><div class="tgm-int-list">${model.records.filter(r=>r.kind==='goal'||r.kind==='faction').slice(0,20).map(r=>`<div class="tgm-int-row"><span class="tgm-int-dot"></span><div><strong>${esc(r.title)}</strong><small>${esc(CATEGORY_LABEL[r.category]||r.category)} · ${esc(fmt(Date.parse(r.scheduledAt||r.deadlineAt)))}</small></div><span class="tgm-int-badge">${r.status==='done'?'ERLEDIGT':'GEPLANT'}</span></div>`).join('') || '<div class="tgm-int-empty">Noch keine Ziele oder Erinnerungen.</div>'}</div></article></div>`; }
@@ -128,7 +125,7 @@
   }
 
   function handleForm(form){
-    const data=new FormData(form); const a=account(); if(!a){toast('Lege zuerst einen Account an.');return;}
+    const data=new globalThis.FormData(form); const a=account(); if(!a){toast('Lege zuerst einen Account an.');return;}
     if(form.dataset.intForm==='event'){
       const eventAt=parseLocal(data.get('date'),data.get('time')); const category=String(data.get('category') || 'event'); const config=TYPE_MAP[category]; const warnings=[...form.querySelectorAll('input[name="warning"]:checked')].map(x=>Number(x.value));
       if(!Number.isFinite(eventAt)||eventAt<=Date.now()||!config||!warnings.length){toast('Eventdaten sind ungültig.');return;} const title=String(data.get('title')||'Event Alarm').trim(); const ids=createAlarms([{title,type:config.type,repeat:config.repeat,sound:config.sound,warnings,protected:config.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'event',category,title,accountId:a.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast('Event wurde als Alarm geplant.');
@@ -138,42 +135,34 @@
       if(!Number.isFinite(current)||!Number.isFinite(target)||current<0||target<=current||!unit||!Number.isFinite(deadline)||deadline<=Date.now()){toast('Zielwerte oder Deadline sind ungültig.');return;} const cfg=TYPE_MAP[category]; const title=`${CATEGORY_LABEL[category]}: ${target} ${unit}`; const ids=createAlarms([{title,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:false,eventAt:deadline}]); if(!ids.length)return; pushRecord({kind:'goal',category,title,accountId:a.id,current,target,unit,deadlineAt:iso(deadline),scheduledAt:iso(deadline),linkedAlarmIds:ids}); toast('Zielalarm wurde angelegt.');
     }
     if(form.dataset.intForm==='faction'){
-      const missing=Number(data.get('missing')); const total=Number(data.get('total')); const eventAt=parseLocal(data.get('date'),data.get('time')); const title=String(data.get('title')||'Faction Reminder').trim(); const cfg=TYPE_MAP.faction;
-      if(!Number.isInteger(missing)||!Number.isInteger(total)||missing<1||total<missing||!Number.isFinite(eventAt)||eventAt<=Date.now()){toast('Fraktionsdaten sind ungültig.');return;} const ids=createAlarms([{title:`${title}: ${missing} fehlend`,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:false,eventAt}]); if(!ids.length)return; pushRecord({kind:'faction',category:'faction',title,accountId:a.id,missingMembers:missing,totalMembers:total,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast('Fraktions-Erinnerung wurde angelegt.');
+      const title=String(data.get('title')||'Faction Reminder').trim(); const missing=Number(data.get('missing')); const total=Number(data.get('total')); const eventAt=parseLocal(data.get('date'),data.get('time'));
+      if(!title||!Number.isInteger(missing)||!Number.isInteger(total)||missing<1||total<missing||!Number.isFinite(eventAt)||eventAt<=Date.now()){toast('Fraktionsdaten sind ungültig.');return;} const cfg=TYPE_MAP.faction; const ids=createAlarms([{title:`${title}: ${missing} fehlen`,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:false,eventAt}]); if(!ids.length)return; pushRecord({kind:'faction',category:'faction',title:`${title}: ${missing} fehlen`,accountId:a.id,missing,total,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast('Fraktions-Erinnerung wurde geplant.');
     }
     if(form.dataset.intForm==='gw'){
-      const cycle=String(data.get('cycle')||'').trim(); const start=Date.parse(String(data.get('start'))); const end=Date.parse(String(data.get('end'))); const bubble=Date.parse(String(data.get('bubble'))); const reward=Date.parse(String(data.get('reward'))); const prep=Date.parse(String(data.get('prep'))); const defs=[];
-      if(!cycle||!Number.isFinite(start)||!Number.isFinite(end)||end<=start||start<=Date.now()){toast('GW-Zeitpunkte sind ungültig.');return;}
-      defs.push({title:'GW Start',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:start}); defs.push({title:'GW Ende',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:end}); if(Number.isFinite(bubble)&&bubble>start)defs.push({title:'GW Bubble',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:bubble}); if(Number.isFinite(reward)&&reward>end)defs.push({title:'GW Reward',type:'custom',repeat:'once',sound:'chime',warnings:[360,60,15],protected:true,eventAt:reward}); if(Number.isFinite(prep)&&prep>0&&prep<start)defs.push({title:'GW Vorbereitung',type:'gw',repeat:'gw5d',sound:'siren',warnings:[1440,360,60,15],protected:true,eventAt:prep});
-      const ids=[]; for(const d of defs){ const created=createAlarms([d]); ids.push(...created); } if(!ids.length)return; pushRecord({kind:'gw',category:'gw',title:`GW ${cycle}`,accountId:a.id,scheduledAt:iso(start),startAt:iso(start),endAt:iso(end),linkedAlarmIds:ids,cycleId:cycle}); toast('GW Command Center wurde geplant.');
+      const values=['start','end','bubble','reward','prep'].map((name)=>[name,Date.parse(String(data.get(name)||''))]).filter(([,value])=>Number.isFinite(value));
+      const valid=values.every(([,value])=>value>Date.now()); if(!valid||!values.length){toast('GW-Zeitpunkte sind ungültig.');return;} const defs=values.map(([name,value])=>{ const map={start:['GW Start','gw'],end:['GW Ende','gw'],bubble:['GW Bubble','bubble'],reward:['GW Reward','gw-reward'],prep:['GW Vorbereitung','gw-prep']}; const [label,category]=map[name]; const cfg=TYPE_MAP[category]; return {title:label,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:cfg.protected,eventAt:value}; }); const ids=createAlarms(defs); if(!ids.length)return; const start=Date.parse(String(data.get('start'))); const cycle=String(data.get('cycle')||'GW-Zyklus').trim(); pushRecord({kind:'gw',category:'gw',title:cycle,accountId:a.id,scheduledAt:iso(start),linkedAlarmIds:ids}); toast('GW Command Center wurde geplant.');
     }
+    render();
   }
 
-  function template(category){ const a=account(); const cfg=TYPE_MAP[category]; if(!a||!cfg){toast('Vorlage konnte nicht angelegt werden.');return;} const eventAt=Date.now()+2*3600000; const title=CATEGORY_LABEL[category] || category; const ids=createAlarms([{title,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:cfg.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'template',category,title,accountId:a.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast(`${title} wurde als Alarm angelegt.`); }
+  function template(category){
+    const now=Date.now(); const cfg=TYPE_MAP[category]; if(!cfg){toast('Vorlage nicht verfügbar.');return;}
+    const offsets={bubble:2*3600000,gw:DAY,event:3*3600000,protection:4*3600000,resource:6*3600000,training:8*3600000,upgrade:10*3600000,faction:DAY,'insignia-goal':DAY,'family-currency-goal':DAY,'helicopter-training':12*3600000,'resource-goal':DAY};
+    const eventAt=now+(offsets[category]||DAY); const title=CATEGORY_LABEL[category]||'Alarm'; const ids=createAlarms([{title,type:cfg.type,repeat:cfg.repeat,sound:cfg.sound,warnings:cfg.warnings,protected:cfg.protected,eventAt}]); if(!ids.length)return; pushRecord({kind:'template',category,title,accountId:account()?.id,scheduledAt:iso(eventAt),linkedAlarmIds:ids}); toast('Vorlage wurde als Alarm angelegt.');
+  }
 
   document.addEventListener('click',(event)=>{
-    const target=event.target.closest('[data-int-action]'); if(!target) return;
-    if(location.hash.slice(1)==='intelligence' || target.dataset.intAction==='leave' || target.dataset.intAction==='tab') event.stopImmediatePropagation();
-    const action=target.dataset.intAction;
-    if(action==='leave'){ location.hash='today'; return; }
-    if(action==='tab'){ tab=target.dataset.tab||'overview'; render(); return; }
-    if(action==='refresh'){ model=load(); render(); return; }
-    if(action==='template'){ template(target.dataset.category); return; }
-    if(action==='done'){ const r=model.records.find(x=>x.id===target.dataset.id); if(r){r.status='done';save();render();} return; }
-  },true);
-  document.addEventListener('submit',(event)=>{ const form=event.target.closest('[data-int-form]'); if(!form||location.hash.slice(1)!=='intelligence')return; event.preventDefault(); event.stopImmediatePropagation(); handleForm(form); },true);
-
-  function enhanceNavigation(){
-    const nav=document.querySelector('.nav'); if(!nav) return;
-    if(!nav.querySelector('[data-tgm-intelligence-link]')){ const b=document.createElement('button'); b.type='button'; b.className='tgm-int-nav'; b.textContent='Intelligence'; b.dataset.tgmIntelligenceLink='1'; b.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();location.hash='intelligence';render();},{capture:true}); nav.appendChild(b); }
-  }
-  function sync(){
-    if(location.hash.slice(1)==='intelligence'){ if(Date.now()-lastMounted>250) render(); }
-    else enhanceNavigation();
-  }
-  model=load();
-  const app=document.getElementById('app');
-  const observer = new MutationObserver(sync); observer.observe(app||document.body,{childList:true,subtree:true});
-  window.addEventListener('hashchange',()=>{ if(location.hash.slice(1)==='intelligence')render(); else setTimeout(enhanceNavigation,0); });
-  const boot=()=>{ sync(); if(location.hash.slice(1)==='intelligence')render(); }; setTimeout(boot,250); setTimeout(boot,1000); setTimeout(boot,2000);
+    const target=event.target.closest('[data-int-action]'); if(!target)return; const action=target.dataset.intAction;
+    if(action==='tab'){tab=target.dataset.tab||'overview';render();}
+    else if(action==='refresh'){model=load();render();}
+    else if(action==='leave'){location.hash='';}
+    else if(action==='template'){template(target.dataset.category);}
+    else if(action==='done'){const r=model.records.find(x=>x.id===target.dataset.id);if(r){r.status='done';save();render();}}
+  });
+  document.addEventListener('submit',(event)=>{ if(event.target.matches('[data-int-form]')){event.preventDefault();handleForm(event.target);} });
+  function mount(){ if(location.hash.slice(1)==='intelligence'){if(!model)model=load();render();} else if(Date.now()-lastMounted<1500){model=load();} }
+  window.addEventListener('hashchange',mount);
+  window.addEventListener('tgm-intelligence-alarm-created',()=>{if(location.hash.slice(1)==='intelligence')render();});
+  const observer=new MutationObserver(()=>{if(location.hash.slice(1)==='intelligence'&&document.getElementById('app')?.children.length===0)render();}); observer.observe(document.documentElement,{childList:true,subtree:true});
+  mount();
 })();
