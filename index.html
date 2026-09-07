@@ -27,7 +27,14 @@
   <script src="ui-cleanup.js?v=3" defer></script>
   <script>
     if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => navigator.serviceWorker.register('./sw-v29.js').catch(() => undefined));
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw-v29.js').then((registration) => registration.update()).catch(() => undefined);
+      });
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (sessionStorage.getItem('tgm-sw-v29-reloaded') === '1') return;
+        sessionStorage.setItem('tgm-sw-v29-reloaded', '1');
+        window.location.reload();
+      });
     }
   </script>
 </body>
