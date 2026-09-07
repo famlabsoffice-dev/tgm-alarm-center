@@ -5,6 +5,9 @@ import { test } from 'node:test';
 import vm from 'node:vm';
 
 const source = readFileSync(join(process.cwd(), 'founder-access.js'), 'utf8');
+const runtimeSource = readFileSync(join(process.cwd(), 'founder-runtime.js'), 'utf8');
+const indexSource = readFileSync(join(process.cwd(), 'index.html'), 'utf8');
+const finalTheme = readFileSync(join(process.cwd(), 'reference-theme-final.css'), 'utf8');
 const founderNames = ['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'];
 
 function createContext(state) {
@@ -53,19 +56,18 @@ test('non-founder accounts retain their original tier after founder switching', 
   assert.equal(state.tier, 'streetBoss');
 });
 
-test('browser runtime founder contract stays active for all authorized names', () => {
-  const appSource = readFileSync(join(process.cwd(), 'app.js'), 'utf8');
-  const serviceWorker = readFileSync(join(process.cwd(), 'sw-v29.js'), 'utf8');
-  for (const name of founderNames.map((value) => value.toLowerCase())) assert.match(appSource + serviceWorker, new RegExp(name));
-  assert.match(appSource + serviceWorker, /hasFounderAccess\(\) \? 'godfather'/);
-  assert.match(appSource + serviceWorker, /state\.tier = 'godfather'/);
+test('browser bootstrap patches the effective tier and persistence path', () => {
+  for (const name of founderNames.map((value) => value.toLowerCase())) assert.match(runtimeSource, new RegExp(name));
+  assert.match(runtimeSource, /hasFounderAccess\(\) \? 'godfather'/);
+  assert.match(runtimeSource, /state\.tier = 'godfather'/);
+  assert.match(indexSource, /founder-runtime\.js\?v=1/);
+  assert.match(indexSource, /app\.js\?v=26/);
 });
 
-test('reference surface keeps green as the primary accent', () => {
-  const css = readFileSync(join(process.cwd(), 'reference-theme-global.css'), 'utf8');
-  const serviceWorker = readFileSync(join(process.cwd(), 'sw-v29.js'), 'utf8');
-  assert.match(css + serviceWorker, /GREEN REFERENCE SYSTEM/);
-  assert.match(css + serviceWorker, /--tgm-gold: #48D383/);
-  assert.match(css + serviceWorker, /reference-save/);
-  assert.match(css + serviceWorker, /#48D383/);
+test('final browser reference surface uses green as the primary accent', () => {
+  assert.match(finalTheme, /--ref-green: #48d383/i);
+  assert.match(finalTheme, /--ref-green-bright: #6be6a0/i);
+  assert.match(finalTheme, /\.btn\.primary/);
+  assert.match(finalTheme, /\.reference-save/);
+  assert.match(finalTheme, /\.reference-dashboard/);
 });
