@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import vm from 'node:vm';
@@ -24,7 +23,7 @@ function createContext(state) {
     setInterval() { return { unref() {} }; },
   };
   vm.runInNewContext(source, context, { filename: 'founder-access.js' });
-  return { storage, values };
+  return storage;
 }
 
 function stateFor(name, tier = 'free') {
@@ -39,14 +38,14 @@ function stateFor(name, tier = 'free') {
 
 test('all authorized founder accounts receive persistent Godfather entitlement', () => {
   for (const name of founderNames) {
-    const { storage } = createContext(stateFor(name));
+    const storage = createContext(stateFor(name));
     const state = JSON.parse(storage.getItem('tgm-alarm-center-web-v2'));
     assert.equal(state.tier, 'godfather', `${name} must resolve to Godfather`);
   }
 });
 
 test('non-founder accounts retain their original tier after founder switching', () => {
-  const { storage } = createContext(stateFor('TGMack', 'streetBoss'));
+  const storage = createContext(stateFor('TGMack', 'streetBoss'));
   assert.equal(JSON.parse(storage.getItem('tgm-alarm-center-web-v2')).tier, 'godfather');
 
   storage.setItem('tgm-alarm-center-web-v2', JSON.stringify(stateFor('RegularPlayer', 'streetBoss')));
