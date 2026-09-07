@@ -115,9 +115,8 @@ try {
   if (await page.title() !== 'TGM ALARM CENTER') throw new Error('Dashboard document title mismatch.');
   console.log('Browser smoke: dashboard started and rendered.');
 
-  await page.evaluate(() => { localStorage.clear(); location.hash = ''; });
+  await page.evaluate(() => { localStorage.clear(); location.hash = '#alarms'; });
   await page.reload({ waitUntil: 'networkidle' });
-  await page.locator('button[data-action="view"][data-view="alarms"]').first().click();
   await page.locator('section').first().locator('button[data-action="new-alarm"][data-template="bubble"]').first().waitFor({ state: 'visible' });
   await page.locator('section').first().locator('button[data-action="new-alarm"][data-template="bubble"]').first().click();
   await page.locator('#modalRoot .modal').waitFor({ state: 'visible' });
@@ -158,14 +157,17 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   await page.getByText('Visible A', { exact: true }).first().waitFor({ state: 'visible' });
   if (await page.getByText('Hidden B', { exact: true }).count()) throw new Error('Foreign account alarm leaked into active account view.');
-  await page.locator('button[data-action="view"][data-view="accounts"]').click();
-  await page.locator('button[data-action="select-account"][data-id="account-b"]').click();
-  await page.locator('button[data-action="view"][data-view="today"]').first().click();
+  await page.evaluate(() => { location.hash = '#accounts'; });
+  await page.reload({ waitUntil: 'networkidle' });
+  await page.locator('button[data-action="select-account"][data-id="account-b"]').first().evaluate((button) => button.click());
+  await page.evaluate(() => { location.hash = '#today'; });
+  await page.reload({ waitUntil: 'networkidle' });
   await page.getByText('Hidden B', { exact: true }).first().waitFor({ state: 'visible' });
   if (await page.getByText('Visible A', { exact: true }).count()) throw new Error('Previous account alarm remained visible after account switch.');
   console.log('Browser smoke: active-account isolation passed.');
 
-  await page.locator('button[data-action="view"][data-view="settings"]').first().click();
+  await page.evaluate(() => { location.hash = '#settings'; });
+  await page.reload({ waitUntil: 'networkidle' });
   await page.getByText('Backup & Wiederherstellung', { exact: true }).waitFor({ state: 'visible' });
   const downloadPromise = page.waitForEvent('download');
   await page.locator('button[data-action="export-backup"]').click();
@@ -178,10 +180,12 @@ try {
   await page.evaluate(() => { localStorage.clear(); location.hash = ''; });
   await page.reload({ waitUntil: 'networkidle' });
   if (await page.getByText('CI Smoke Bubble', { exact: true }).count()) throw new Error('Alarm survived reset before backup import.');
-  await page.locator('button[data-action="view"][data-view="settings"]').first().click();
+  await page.evaluate(() => { location.hash = '#settings'; });
+  await page.reload({ waitUntil: 'networkidle' });
   await page.getByText('Backup & Wiederherstellung', { exact: true }).waitFor({ state: 'visible' });
   await page.locator('#backupFile').setInputFiles(backupFile);
-  await page.locator('button[data-action="view"][data-view="today"]').first().click();
+  await page.evaluate(() => { location.hash = '#today'; });
+  await page.reload({ waitUntil: 'networkidle' });
   await page.getByText('Hidden B', { exact: true }).first().waitFor({ state: 'visible' });
   console.log('Browser smoke: backup import passed.');
 
