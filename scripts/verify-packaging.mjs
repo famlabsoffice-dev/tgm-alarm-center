@@ -28,7 +28,7 @@ const manifest = JSON.parse(readFileSync(resolve(outputRoot, 'manifest.webmanife
 if (manifest.orientation !== 'any') throw new Error('Packaged manifest orientation must be any.');
 
 const html = readFileSync(resolve(outputRoot, 'index.html'), 'utf8');
-for (const ref of ['manifest.webmanifest', 'icon.png', 'styles.css?v=7', 'app.js?v=22', './sw.js']) {
+for (const ref of ['manifest.webmanifest', 'icon.png', 'styles.css?v=8', 'app.js?v=24', './sw.js']) {
   if (!html.includes(ref)) throw new Error(`Packaged HTML reference is missing: ${ref}`);
 }
 
