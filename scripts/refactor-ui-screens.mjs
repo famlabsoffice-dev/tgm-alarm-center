@@ -8,6 +8,12 @@ let source = readFileSync(appPath, 'utf8');
 const fail = (message) => { throw new Error(`UI screen refactor failed: ${message}`); };
 const requireOnce = (condition, message) => { if (!condition) fail(message); };
 
+const alreadyRefactored = source.includes("from './src/ui/screens/AlarmCard';") && source.includes("from './src/ui/screens/AlarmEditorModal';") && source.includes("from './src/ui/screens/SettingsScreen';") && source.includes('<AlarmCard ') && source.includes('<AlarmEditorModal');
+if (alreadyRefactored) {
+  console.log('UI screen refactor PASS: App.tsx is already in the extracted screen architecture');
+  process.exit(0);
+}
+
 function extractBalancedBlock(text, startIndex, openChar = '{', closeChar = '}') {
   const openIndex = text.indexOf(openChar, startIndex);
   if (openIndex < 0) fail(`missing opening ${openChar}`);
@@ -24,10 +30,7 @@ function extractBalancedBlock(text, startIndex, openChar = '{', closeChar = '}')
     }
     if (char === '"' || char === "'" || char === '`') { quote = char; continue; }
     if (char === openChar) depth += 1;
-    else if (char === closeChar) {
-      depth -= 1;
-      if (depth === 0) return { start: openIndex, end: index + 1, body: text.slice(openIndex + 1, index) };
-    }
+    else if (char === closeChar) { depth -= 1; if (depth === 0) return { start: openIndex, end: index + 1, body: text.slice(openIndex + 1, index) }; }
   }
   fail(`unclosed block beginning at ${startIndex}`);
 }
@@ -44,74 +47,23 @@ function removeFunction(text, signature, bodyMarker = null) {
 
 const original = source;
 requireOnce(!source.includes("from './src/ui/screens/AlarmCard';"), 'App.tsx is already partially refactored; refusing a non-idempotent rewrite');
-
 source = source.replace('  KeyboardAvoidingView,\n', '').replace('  Modal,\n', '').replace('  SafeAreaView,\n', '').replace('  Switch,\n', '').replace('  TextInput,\n', '');
 source = source.replace("  momentLabel,\n", '').replace("  repeatLabel,\n", '').replace("  upcomingMoments,\n", '');
 source = source.replace("import { BillingPanel } from './src/billing/BillingPanel';\n", '');
-
 const alarmImport = "import { reconcileAlarmNotifications } from './src/native/schedulerService';\n";
 requireOnce(source.includes(alarmImport), 'scheduler import anchor missing');
 source = source.replace(alarmImport, `${alarmImport}import { AlarmCard } from './src/ui/screens/AlarmCard';\nimport { AlarmEditorModal, defaultEditor, type EditorValues } from './src/ui/screens/AlarmEditorModal';\nimport { CommandCenterScreen } from './src/ui/screens/CommandCenterScreen';\nimport { SettingsScreen } from './src/ui/screens/SettingsScreen';\n`);
-
-const typeStart = source.indexOf('type EditorValues = {');
-requireOnce(typeStart >= 0, 'EditorValues block missing');
-const typeEnd = source.indexOf('\n};', typeStart);
-requireOnce(typeEnd >= 0, 'EditorValues block end missing');
-source = source.slice(0, typeStart) + source.slice(typeEnd + 4);
-
-const defaultStart = source.indexOf('const defaultEditor = (template: AlarmTemplate): EditorValues => {');
-requireOnce(defaultStart >= 0, 'defaultEditor block missing');
-const defaultOpen = source.indexOf('{', defaultStart);
-const defaultBlock = extractBalancedBlock(source, defaultOpen);
-source = source.slice(0, defaultStart) + source.slice(defaultBlock.end);
-
+const typeStart = source.indexOf('type EditorValues = {'); requireOnce(typeStart >= 0, 'EditorValues block missing'); const typeEnd = source.indexOf('\n};', typeStart); requireOnce(typeEnd >= 0, 'EditorValues block end missing'); source = source.slice(0, typeStart) + source.slice(typeEnd + 4);
+const defaultStart = source.indexOf('const defaultEditor = (template: AlarmTemplate): EditorValues => {'); requireOnce(defaultStart >= 0, 'defaultEditor block missing'); const defaultOpen = source.indexOf('{', defaultStart); const defaultBlock = extractBalancedBlock(source, defaultOpen); source = source.slice(0, defaultStart) + source.slice(defaultBlock.end);
 source = removeFunction(source, 'function isOccurrenceCompleted(');
 source = removeFunction(source, 'function SettingRow(', '): React.ReactElement {');
 source = removeFunction(source, '  const renderAlarm = ({ item }: { item: Alarm }): React.ReactElement => {', '=> {');
 source = source.replace('renderItem={renderAlarm}', 'renderItem={({ item }) => <AlarmCard alarm={item} now={now} onEdit={openEdit} onToggle={toggleAlarm} onComplete={completeAlarm} onDelete={deleteAlarm} />}');
-
-const footerMarker = '        ListFooterComponent={';
-const footerStart = source.indexOf(footerMarker);
-requireOnce(footerStart >= 0, 'ListFooterComponent block missing');
-const footerOpen = source.indexOf('{', footerStart);
-const footerBlock = extractBalancedBlock(source, footerOpen);
-const footerReplacement = `        ListFooterComponent={\n          <SettingsScreen\n            storageError={storageError}\n            notificationPreferences={state.notificationPreferences}\n            currentTier={state.tier}\n            showBilling={Platform.OS !== 'web'}\n            onUpdatePreference={updatePreference}\n            onTierConfirmed={confirmStoreTier}\n            onExportBackup={exportCurrentBackup}\n            onImportBackup={importBackup}\n            onDeviceTest={runDeviceTest}\n          />\n        }`;
-source = source.slice(0, footerStart) + footerReplacement + source.slice(footerBlock.end);
-
-const modalStart = source.indexOf('      <Modal visible={editorVisible}');
-requireOnce(modalStart >= 0, 'editor Modal block missing');
-const modalEndTag = '\n      </Modal>';
-const modalEnd = source.indexOf(modalEndTag, modalStart);
-requireOnce(modalEnd >= 0, 'editor Modal closing tag missing');
-const modalReplacement = `      <AlarmEditorModal\n        visible={editorVisible}\n        editingId={editingId}\n        editor={editor}\n        onChange={setEditor}\n        onClose={() => setEditorVisible(false)}\n        onSave={saveEditor}\n      />`;
-source = source.slice(0, modalStart) + modalReplacement + source.slice(modalEnd + modalEndTag.length);
-
+const footerMarker = '        ListFooterComponent={'; const footerStart = source.indexOf(footerMarker); requireOnce(footerStart >= 0, 'ListFooterComponent block missing'); const footerOpen = source.indexOf('{', footerStart); const footerBlock = extractBalancedBlock(source, footerOpen); const footerReplacement = `        ListFooterComponent={\n          <SettingsScreen\n            storageError={storageError}\n            notificationPreferences={state.notificationPreferences}\n            currentTier={state.tier}\n            showBilling={Platform.OS !== 'web'}\n            onUpdatePreference={updatePreference}\n            onTierConfirmed={confirmStoreTier}\n            onExportBackup={exportCurrentBackup}\n            onImportBackup={importBackup}\n            onDeviceTest={runDeviceTest}\n          />\n        }`; source = source.slice(0, footerStart) + footerReplacement + source.slice(footerBlock.end);
+const modalStart = source.indexOf('      <Modal visible={editorVisible}'); requireOnce(modalStart >= 0, 'editor Modal block missing'); const modalEndTag = '\n      </Modal>'; const modalEnd = source.indexOf(modalEndTag, modalStart); requireOnce(modalEnd >= 0, 'editor Modal closing tag missing'); const modalReplacement = `      <AlarmEditorModal\n        visible={editorVisible}\n        editingId={editingId}\n        editor={editor}\n        onChange={setEditor}\n        onClose={() => setEditorVisible(false)}\n        onSave={saveEditor}\n      />`; source = source.slice(0, modalStart) + modalReplacement + source.slice(modalEnd + modalEndTag.length);
 source = source.replace(/^const localDate = .*?;\n/m, '').replace(/^const localTime = .*?;\n/m, '');
-
-const loadingReplacement = 'if (!ready) return <CommandCenterScreen><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></CommandCenterScreen>;';
-const loadingPattern = /if \(!ready\) return <SafeAreaView style=\{styles\.root\}>[\s\S]*?<\/SafeAreaView>;/m;
-requireOnce(loadingPattern.test(source), 'loading shell not found');
-source = source.replace(loadingPattern, loadingReplacement);
-
-const rootReturnPattern = /return \(\n    <SafeAreaView style=\{styles\.root\}>/;
-requireOnce(rootReturnPattern.test(source), 'main SafeAreaView root not found');
-source = source.replace(rootReturnPattern, 'return (\n    <CommandCenterScreen>');
-const rootClosePattern = /\n    <\/SafeAreaView>\n  \);/;
-requireOnce(rootClosePattern.test(source), 'main SafeAreaView closing tag not found');
-source = source.replace(rootClosePattern, '\n    </CommandCenterScreen>\n  );');
-
-requireOnce(source.includes('<AlarmCard '), 'AlarmCard not wired');
-requireOnce(source.includes('<SettingsScreen'), 'SettingsScreen not wired');
-requireOnce(source.includes('<AlarmEditorModal'), 'AlarmEditorModal not wired');
-requireOnce(source.includes('<CommandCenterScreen>'), 'CommandCenterScreen not wired');
-requireOnce(!source.includes('renderAlarm'), 'renderAlarm inline responsibility remains');
-requireOnce(!source.includes('<Modal '), 'Modal inline responsibility remains');
-requireOnce(!source.includes('function SettingRow'), 'SettingRow inline responsibility remains');
-requireOnce(!source.includes('localDate ='), 'localDate inline helper remains');
-requireOnce(!source.includes('localTime ='), 'localTime inline helper remains');
-requireOnce(!source.includes('momentLabel'), 'momentLabel inline import remains');
-requireOnce(!source.includes('repeatLabel'), 'repeatLabel inline import remains');
-requireOnce(!source.includes('upcomingMoments'), 'upcomingMoments inline import remains');
-
+const loadingReplacement = 'if (!ready) return <CommandCenterScreen><View style={styles.loading}><Text style={styles.brand}>TGM ALARM CENTER</Text><Text style={styles.muted}>Wird geladen …</Text></View></CommandCenterScreen>;'; const loadingPattern = /if \(!ready\) return <SafeAreaView style=\{styles\.root\}>[\s\S]*?<\/SafeAreaView>;/m; requireOnce(loadingPattern.test(source), 'loading shell not found'); source = source.replace(loadingPattern, loadingReplacement);
+const rootReturnPattern = /return \(\n    <SafeAreaView style=\{styles\.root\}>/; requireOnce(rootReturnPattern.test(source), 'main SafeAreaView root not found'); source = source.replace(rootReturnPattern, 'return (\n    <CommandCenterScreen>'); const rootClosePattern = /\n    <\/SafeAreaView>\n  \);/; requireOnce(rootClosePattern.test(source), 'main SafeAreaView closing tag not found'); source = source.replace(rootClosePattern, '\n    </CommandCenterScreen>\n  );');
+requireOnce(source.includes('<AlarmCard '), 'AlarmCard not wired'); requireOnce(source.includes('<SettingsScreen'), 'SettingsScreen not wired'); requireOnce(source.includes('<AlarmEditorModal'), 'AlarmEditorModal not wired'); requireOnce(source.includes('<CommandCenterScreen>'), 'CommandCenterScreen not wired'); requireOnce(!source.includes('renderAlarm'), 'renderAlarm inline responsibility remains'); requireOnce(!source.includes('<Modal '), 'Modal inline responsibility remains'); requireOnce(!source.includes('function SettingRow'), 'SettingRow inline responsibility remains'); requireOnce(!source.includes('localDate ='), 'localDate inline helper remains'); requireOnce(!source.includes('localTime ='), 'localTime inline helper remains'); requireOnce(!source.includes('momentLabel'), 'momentLabel inline import remains'); requireOnce(!source.includes('repeatLabel'), 'repeatLabel inline import remains'); requireOnce(!source.includes('upcomingMoments'), 'upcomingMoments inline import remains');
 writeFileSync(appPath, source, 'utf8');
 console.log(`UI screen refactor PASS: ${Buffer.byteLength(original)} -> ${Buffer.byteLength(source)} bytes`);
