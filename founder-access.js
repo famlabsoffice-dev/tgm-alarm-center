@@ -5,13 +5,23 @@
   const BASE_TIER_KEY = `${STORAGE_KEY}:founder-base-tier`;
   const GODFATHER_TIER = 'godfather';
   const VALID_TIERS = new Set(['free', 'streetBoss', 'caporegime', 'underboss', 'boss', GODFATHER_TIER]);
-  const FOUNDER_NAME_HASHES = new Set([
-    '4a96bdc78702bfc1f03fea88a4ccb6a661113d7d4739a428fc683b8ccd1d0e3e',
-    '1d4c5dd0de03fe655fdcecf45f2ca3be9527c95f6fb764778cb4785e0f73260e',
-    '2b4651a8bcb9f05fba64801a1de9235984bb91a7950a7e6ff15fd99880969be6',
-    '98829b72c7acf54e4ab033f5bbeab5b8644b3630a1c243c0bfc18533c4b54fef',
-    'f2cc6c229ad68ac06c0085da255fbc9da52643c03736fb5a79e3e30fb5a20bb9',
+  const FOUNDER_IDS = new Set([
+    'dGdtYWNr',
+    'dGdta2VsbHo=',
+    'dGdtajk=',
+    'dGdtdmFueQ==',
+    'dGdtcmVk',
   ]);
+
+  const encodeFounderId = (name) => {
+    const normalized = String(name ?? '').trim().toLowerCase();
+    if (!normalized) return '';
+    try {
+      return btoa(unescape(encodeURIComponent(normalized)));
+    } catch {
+      return '';
+    }
+  };
 
   const readState = () => {
     try {
@@ -29,50 +39,61 @@
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   };
 
-  const sha256 = async (value) => {
-    const bytes = new TextEncoder().encode(value.trim().toLowerCase());
-    const digest = await crypto.subtle.digest('SHA-256', bytes);
-    return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
-  };
+  const activeAccount = (state) => state.accounts.find((account) => account.id === state.activeAccountId) || null;
+  const isFounderState = (state) => Boolean(activeAccount(state)?.name) && FOUNDER_IDS.has(encodeFounderId(activeAccount(state).name));
 
-  const syncFounderEntitlement = async () => {
-    const state = readState();
-    if (!state) return;
-    const active = state.accounts.find((account) => account.id === state.activeAccountId);
-    const isFounder = Boolean(active?.name) && FOUNDER_NAME_HASHES.has(await sha256(active.name));
+  const enforceFounderTier = (state) => {
+    if (!state) return state;
+    const founder = isFounderState(state);
     const storedBaseTier = localStorage.getItem(BASE_TIER_KEY);
 
-    if (isFounder) {
+    if (founder) {
       if (state.tier !== GODFATHER_TIER) {
-        if (!storedBaseTier && VALID_TIERS.has(state.tier) && state.tier !== GODFATHER_TIER) localStorage.setItem(BASE_TIER_KEY, state.tier);
+        if (!storedBaseTier && VALID_TIERS.has(state.tier) && state.tier !== GODFATHER_TIER) {
+          localStorage.setItem(BASE_TIER_KEY, state.tier);
+        }
         state.tier = GODFATHER_TIER;
-        writeState(state);
-        location.reload();
       }
-      return;
+      return state;
     }
 
     if (state.tier === GODFATHER_TIER && storedBaseTier && VALID_TIERS.has(storedBaseTier) && storedBaseTier !== GODFATHER_TIER) {
       state.tier = storedBaseTier;
       localStorage.removeItem(BASE_TIER_KEY);
-      writeState(state);
-      location.reload();
     } else if (storedBaseTier) {
       localStorage.removeItem(BASE_TIER_KEY);
     }
+    return state;
   };
 
-  const start = () => {
-    syncFounderEntitlement().catch(() => undefined);
-    let lastState = localStorage.getItem(STORAGE_KEY);
-    setInterval(() => {
-      const current = localStorage.getItem(STORAGE_KEY);
-      if (current === lastState) return;
-      lastState = current;
-      syncFounderEntitlement().catch(() => undefined);
-    }, 250);
+  const originalSetItem = localStorage.setItem.bind(localStorage);
+  localStorage.setItem = (key, value) => {
+    if (key === STORAGE_KEY) {
+      try {
+        const state = JSON.parse(value);
+        const enforced = enforceFounderTier(state);
+        value = JSON.stringify(enforced);
+      } catch {
+        // Preserve normal localStorage semantics for malformed values.
+      }
+    }
+    originalSetItem(key, value);
   };
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
-  else start();
+  const syncFounderEntitlement = () => {
+    const state = readState();
+    if (!state) return;
+    const enforced = enforceFounderTier(state);
+    const serialized = JSON.stringify(enforced);
+    if (localStorage.getItem(STORAGE_KEY) !== serialized) originalSetItem(STORAGE_KEY, serialized);
+  };
+
+  syncFounderEntitlement();
+  let lastState = localStorage.getItem(STORAGE_KEY);
+  setInterval(() => {
+    const current = localStorage.getItem(STORAGE_KEY);
+    if (current === lastState) return;
+    lastState = current;
+    syncFounderEntitlement();
+  }, 250);
 })();
