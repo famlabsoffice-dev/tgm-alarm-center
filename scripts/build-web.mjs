@@ -4,34 +4,27 @@ import { execFileSync } from 'node:child_process';
 const outputRoot = new URL('../dist/web/', import.meta.url);
 
 const sourceFiles = [
-  'index.html',
-  'app.js',
-  'styles.css',
-  'styles-accessibility.css',
-  'reference-theme.css',
-  'reference-theme-global.css',
-  'reference-theme-final.css',
-  'founder-access.js',
-  'founder-runtime.js',
-  'account-delete.js',
-  'ui-cleanup.js',
-  'sw.js',
-  'sw-v27.js',
-  'sw-v28.js',
-  'sw-v30.js',
-  'manifest.webmanifest',
-  'icon.png',
+  'index.html', 'app.js', 'styles.css', 'styles-accessibility.css',
+  'reference-theme.css', 'reference-theme-global.css', 'reference-theme-final.css',
+  'founder-access.js', 'founder-runtime.js', 'account-delete.js', 'ui-cleanup.js',
+  'sw.js', 'sw-v27.js', 'sw-v28.js', 'sw-v30.js', 'manifest.webmanifest',
 ];
-const soundFiles = [
-  'assets/notifications/alarm-pulse.wav',
-  'assets/notifications/alarm-siren.wav',
-  'assets/notifications/alarm-chime.wav',
+const binaryFiles = [
+  ['assets/tgm-alarm-center-icon.png', 'icon.png'],
+  ['assets/notifications/alarm-pulse.wav', 'assets/notifications/alarm-pulse.wav'],
+  ['assets/notifications/alarm-siren.wav', 'assets/notifications/alarm-siren.wav'],
+  ['assets/notifications/alarm-chime.wav', 'assets/notifications/alarm-chime.wav'],
 ];
 
-for (const file of [...sourceFiles, ...soundFiles]) {
+for (const file of sourceFiles) {
   const path = new URL(`../${file}`, import.meta.url);
   if (!existsSync(path)) throw new Error(`Missing web source asset: ${file}`);
   if (statSync(path).size === 0) throw new Error(`Empty web source asset: ${file}`);
+}
+for (const [source] of binaryFiles) {
+  const path = new URL(`../${source}`, import.meta.url);
+  if (!existsSync(path)) throw new Error(`Missing web binary asset: ${source}`);
+  if (statSync(path).size === 0) throw new Error(`Empty web binary asset: ${source}`);
 }
 
 const fs = await import('node:fs/promises');
@@ -41,10 +34,17 @@ await fs.mkdir(outputRoot, { recursive: true });
 for (const file of sourceFiles) {
   await fs.copyFile(new URL(`../${file}`, import.meta.url), new URL(file, outputRoot));
 }
-await fs.cp(new URL('../assets/', import.meta.url), new URL('assets/', outputRoot), { recursive: true });
+for (const [source, destination] of binaryFiles) {
+  const target = new URL(destination, outputRoot);
+  await fs.mkdir(new URL('./', target), { recursive: true });
+  await fs.copyFile(new URL(`../${source}`, import.meta.url), target);
+}
 
 const manifest = JSON.parse(readFileSync(new URL('manifest.webmanifest', outputRoot), 'utf8'));
 if (manifest.orientation !== 'any') throw new Error('Web manifest must allow portrait and landscape orientation.');
+if (!Array.isArray(manifest.icons) || !manifest.icons.some((icon) => icon.src === './icon.png')) {
+  throw new Error('Web manifest must reference the packaged icon asset.');
+}
 
 const index = readFileSync(new URL('index.html', outputRoot), 'utf8');
 for (const requiredScript of ['founder-access.js?v=4', 'founder-runtime.js?v=1', 'sw-v30.js']) {
