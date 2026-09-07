@@ -1,4 +1,4 @@
-import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, validateAlarmTiming, validateDateTime } from '../domain/alarm';
+import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, Tier, validateAlarmTiming, validateDateTime } from '../domain/alarm';
 
 export const FORMAT = 'tgm-alarm-center-backup';
 export const VERSION = 1;
