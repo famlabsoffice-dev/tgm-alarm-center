@@ -1,6 +1,14 @@
 (() => {
   'use strict';
 
+  const THEME_HREF = './reference-theme.css?v=1';
+  if (!document.querySelector(`link[href="${THEME_HREF}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = THEME_HREF;
+    document.head.appendChild(link);
+  }
+
   const MARKETING_COPY = new Set([
     'Dein nächster Alarm, immer im Blick',
     'DEIN GAMING-ALARM CENTER',
