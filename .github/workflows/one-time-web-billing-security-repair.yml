@@ -1,0 +1,59 @@
+name: one-time web billing security repair
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/web-billing-security-repair.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source of truth
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply exact web entitlement boundary repair
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('app.js')
+          text = path.read_text(encoding='utf-8')
+          old = "  const FOUNDER_ACCOUNT_NAMES = new Set(['TGMack', 'TGMkellz', 'TGMj9', 'TGMvany', 'TGMred'].map((name) => name.toLowerCase()));\n"
+          if old not in text:
+              raise SystemExit('expected founder constant not found')
+          text = text.replace(old, '', 1)
+          old_fn = "  const activeFounderAccount = () => {\n    const account = state?.accounts?.find((item) => item.id === state.activeAccountId);\n    return Boolean(account?.name && FOUNDER_ACCOUNT_NAMES.has(account.name.trim().toLowerCase()));\n  };\n"
+          if old_fn not in text:
+              raise SystemExit('expected founder helper not found')
+          text = text.replace(old_fn, '', 1)
+          old_tier = "  const effectiveTierKey = () => activeFounderAccount() || freeTrialActive() ? FREE_TRIAL_TIER : 'free';"
+          new_tier = "  const effectiveTierKey = () => freeTrialActive() ? FREE_TRIAL_TIER : 'free';"
+          if old_tier not in text:
+              raise SystemExit('expected effective tier expression not found')
+          text = text.replace(old_tier, new_tier, 1)
+          path.write_text(text, encoding='utf-8')
+          PY
+      - name: Validate repair
+        run: |
+          node --check app.js
+          node --test tests/billing-security.test.mjs
+      - name: Remove one-time repair harness and commit
+        shell: bash
+        run: |
+          git rm .github/workflows/one-time-web-billing-security-repair.yml docs/web-billing-security-repair.txt
+          git add app.js
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "fix(web): enforce server-authoritative paid tiers"
+          git push origin HEAD:main
