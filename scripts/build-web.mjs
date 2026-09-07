@@ -16,6 +16,7 @@ const sourceFiles = [
   'founder-access.js',
   'sw.js',
   'sw-v27.js',
+  'sw-v28.js',
   'manifest.webmanifest',
   'icon.png',
 ];
