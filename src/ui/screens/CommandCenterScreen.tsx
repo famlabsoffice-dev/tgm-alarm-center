@@ -8,6 +8,6 @@ export function CommandCenterScreen({ children }: CommandCenterScreenProps): Rea
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: '#090C12' },
-  content: { flex: 1 },
+  root: { flex: 1, backgroundColor: '#050708' },
+  content: { flex: 1, backgroundColor: '#050708' },
 });
