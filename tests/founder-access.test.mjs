@@ -52,3 +52,20 @@ test('non-founder accounts retain their original tier after founder switching', 
   const state = JSON.parse(storage.getItem('tgm-alarm-center-web-v2'));
   assert.equal(state.tier, 'streetBoss');
 });
+
+test('browser runtime founder contract stays active for all authorized names', () => {
+  const appSource = readFileSync(join(process.cwd(), 'app.js'), 'utf8');
+  const serviceWorker = readFileSync(join(process.cwd(), 'sw-v29.js'), 'utf8');
+  for (const name of founderNames.map((value) => value.toLowerCase())) assert.match(appSource + serviceWorker, new RegExp(name));
+  assert.match(appSource + serviceWorker, /hasFounderAccess\(\) \? 'godfather'/);
+  assert.match(appSource + serviceWorker, /state\.tier = 'godfather'/);
+});
+
+test('reference surface keeps green as the primary accent', () => {
+  const css = readFileSync(join(process.cwd(), 'reference-theme-global.css'), 'utf8');
+  const serviceWorker = readFileSync(join(process.cwd(), 'sw-v29.js'), 'utf8');
+  assert.match(css + serviceWorker, /GREEN REFERENCE SYSTEM/);
+  assert.match(css + serviceWorker, /--tgm-gold: #48D383/);
+  assert.match(css + serviceWorker, /reference-save/);
+  assert.match(css + serviceWorker, /#48D383/);
+});
