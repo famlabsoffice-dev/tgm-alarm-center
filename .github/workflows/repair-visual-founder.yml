@@ -1,0 +1,46 @@
+name: repair visual reference and founder access
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/repair-visual-founder.mjs'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source of truth
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Enable pnpm
+        run: corepack enable
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Apply deterministic browser repair
+        run: node scripts/repair-visual-founder.mjs
+      - name: Verify tests
+        run: pnpm test
+      - name: Verify web contract
+        run: node scripts/verify-web-core.mjs
+      - name: Commit repaired browser surface
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Browser visual/founder contract already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app.js styles.css reference-theme.css reference-theme-global.css index.html founder-access.js sw-v29.js tests/founder-access.test.mjs scripts/repair-visual-founder.mjs
+          git commit -m "fix(web): restore reference green visual system and founder access"
+          git push origin HEAD:main
