@@ -60,8 +60,12 @@ test('personal TGM calendar preserves account and utility ordering', () => {
     plannerResultToAlarm({ id: 'b', title: 'Goal', accountId: 'b', category: 'resource-goal', startAtUtc: '2026-09-09T10:00:00.000Z', endAtUtc: null }),
     plannerResultToAlarm({ id: 'a', title: 'GW', accountId: 'a', category: 'gw', startAtUtc: '2026-09-09T09:00:00.000Z', endAtUtc: '2026-09-10T09:00:00.000Z' }),
   ]);
+  const first = entries.at(0);
+  const second = entries.at(1);
+  assert.ok(first);
+  assert.ok(second);
   assert.deepEqual(entries.map((entry) => entry.id), ['a', 'b']);
-  assert.equal(entries[0].source, 'gw');
-  assert.equal(entries[1].source, 'goal');
-  assert.equal(entries[0].endsAtUtc, '2026-09-10T09:00:00.000Z');
+  assert.equal(first.source, 'gw');
+  assert.equal(second.source, 'goal');
+  assert.equal(first.endsAtUtc, '2026-09-10T09:00:00.000Z');
 });
