@@ -1,4 +1,4 @@
-import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, Tier, validateDateTime } from '../domain/alarm';
+import { AppState, Alarm, AlarmType, RepeatMode, SoundProfile, validateAlarmTiming, validateDateTime } from '../domain/alarm';
 
 export const FORMAT = 'tgm-alarm-center-backup';
 export const VERSION = 1;
@@ -35,7 +35,7 @@ function validateAlarm(value: unknown, accountIds: Set<string>, alarmIds: Set<st
   if (!isRecord(value)) throw new Error('Ungültige Alarmdaten');
   const alarm = value as Partial<Alarm> & Record<string, unknown>;
   const warnings = alarm.warnings;
-  if (typeof alarm.id !== 'string' || alarm.id.length === 0 || alarmIds.has(alarm.id) || typeof alarm.accountId !== 'string' || !accountIds.has(alarm.accountId) || typeof alarm.title !== 'string' || alarm.title.trim().length === 0 || alarm.title.length > 80 || !validType(alarm.type) || typeof alarm.date !== 'string' || typeof alarm.time !== 'string' || !validateDateTime(alarm.date, alarm.time) || typeof alarm.eventAtUtc !== 'string' || !isIso(alarm.eventAtUtc) || !Array.isArray(warnings) || warnings.length > MAX_WARNINGS || !warnings.every((item) => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= 7 * 24 * 60) || !validRepeat(alarm.repeat) || !validSound(alarm.sound) || typeof alarm.active !== 'boolean' || typeof alarm.protected !== 'boolean' || !validateCompleted(alarm.completedOccurrences) || !isIso(alarm.createdAt) || !isIso(alarm.updatedAt)) throw new Error('Ungültige Alarmdaten');
+  if (typeof alarm.id !== 'string' || alarm.id.length === 0 || alarmIds.has(alarm.id) || typeof alarm.accountId !== 'string' || !accountIds.has(alarm.accountId) || typeof alarm.title !== 'string' || alarm.title.trim().length === 0 || alarm.title.length > 80 || !validType(alarm.type) || typeof alarm.date !== 'string' || typeof alarm.time !== 'string' || !validateDateTime(alarm.date, alarm.time) || typeof alarm.eventAtUtc !== 'string' || !isIso(alarm.eventAtUtc) || (alarm.startAtUtc !== undefined && alarm.startAtUtc !== null && !isIso(alarm.startAtUtc)) || !validateAlarmTiming(alarm.startAtUtc as string | null | undefined, alarm.eventAtUtc) || !Array.isArray(warnings) || warnings.length > MAX_WARNINGS || !warnings.every((item) => typeof item === 'number' && Number.isInteger(item) && item >= 1 && item <= 7 * 24 * 60) || !validRepeat(alarm.repeat) || !validSound(alarm.sound) || typeof alarm.active !== 'boolean' || typeof alarm.protected !== 'boolean' || !validateCompleted(alarm.completedOccurrences) || !isIso(alarm.createdAt) || !isIso(alarm.updatedAt)) throw new Error('Ungültige Alarmdaten');
   alarmIds.add(alarm.id);
 }
 
