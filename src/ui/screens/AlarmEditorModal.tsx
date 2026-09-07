@@ -6,6 +6,8 @@ import { TEMPLATES, alarmTypeLabel, repeatLabel } from '../../domain/alarm';
 export type EditorValues = {
   type: Alarm['type'];
   title: string;
+  startDate: string;
+  startTime: string;
   date: string;
   time: string;
   warnings: number[];
@@ -14,13 +16,23 @@ export type EditorValues = {
   protected: boolean;
 };
 
+const localParts = (date: Date): { date: string; time: string } => ({
+  date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+  time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+});
+
 export const defaultEditor = (template: AlarmTemplate): EditorValues => {
-  const date = new Date(Date.now() + 60 * 60 * 1000);
+  const alarmDate = new Date(Date.now() + 60 * 60 * 1000);
+  const startDate = new Date(alarmDate.getTime() - 15 * 60 * 1000);
+  const alarm = localParts(alarmDate);
+  const start = localParts(startDate);
   return {
     type: template.type,
     title: template.title,
-    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
-    time: `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`,
+    startDate: start.date,
+    startTime: start.time,
+    date: alarm.date,
+    time: alarm.time,
     warnings: [...template.warnings],
     repeat: template.repeat,
     sound: template.sound,
@@ -89,13 +101,17 @@ export function AlarmEditorModal({ visible, editingId, editor, onChange, onClose
             </View>
           </View>
 
-          <Text style={styles.sectionTitle}>DETAILS</Text>
+          <Text style={styles.sectionTitle}>ZEITPLAN</Text>
           <View style={styles.detailsCard}>
-            <Text style={styles.fieldLabel}>BEZEICHNUNG</Text>
-            <TextInput accessibilityLabel="Alarmbezeichnung" value={editor.title} onChangeText={(title) => onChange((current) => ({ ...current, title }))} placeholder="z. B. Samstagabend Bubble Alarm" placeholderTextColor="#777E80" maxLength={80} style={styles.input} returnKeyType="done" />
+            <Text style={styles.fieldLabel}>EIGENE STARTZEIT</Text>
             <View style={styles.twoColumns}>
-              <View style={styles.column}><Text style={styles.fieldLabel}>DATUM</Text><TextInput accessibilityLabel="Alarmdatum" value={editor.date} onChangeText={(date) => onChange((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
-              <View style={styles.column}><Text style={styles.fieldLabel}>UHRZEIT</Text><TextInput accessibilityLabel="Alarmuhrzeit" value={editor.time} onChangeText={(time) => onChange((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
+              <View style={styles.column}><TextInput accessibilityLabel="Eigene Startzeit Datum" value={editor.startDate} onChangeText={(startDate) => onChange((current) => ({ ...current, startDate }))} placeholder="JJJJ-MM-TT" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
+              <View style={styles.column}><TextInput accessibilityLabel="Eigene Startzeit Uhrzeit" value={editor.startTime} onChangeText={(startTime) => onChange((current) => ({ ...current, startTime }))} placeholder="HH:MM" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
+            </View>
+            <Text style={styles.fieldLabel}>EIGENER ALARMZEITPUNKT</Text>
+            <View style={styles.twoColumns}>
+              <View style={styles.column}><TextInput accessibilityLabel="Alarmdatum" value={editor.date} onChangeText={(date) => onChange((current) => ({ ...current, date }))} placeholder="JJJJ-MM-TT" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
+              <View style={styles.column}><TextInput accessibilityLabel="Alarmuhrzeit" value={editor.time} onChangeText={(time) => onChange((current) => ({ ...current, time }))} placeholder="HH:MM" placeholderTextColor="#777E80" keyboardType="numbers-and-punctuation" style={styles.input} /></View>
             </View>
             <Text style={styles.fieldLabel}>WIEDERHOLUNG</Text>
             <View style={styles.choiceRow}>{(['once', 'daily', 'gw5d'] as Alarm['repeat'][]).map((repeat) => <Pressable key={repeat} onPress={() => onChange((current) => ({ ...current, repeat }))} style={[styles.choice, editor.repeat === repeat && styles.choiceActive]}><Text style={styles.choiceText}>{repeatLabel(repeat)}</Text></Pressable>)}</View>
