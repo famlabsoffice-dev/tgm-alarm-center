@@ -1,0 +1,178 @@
+/* TGM ALARM CENTER — project-wide visual language derived from the supplied reference screens. */
+:root {
+  --tgm-bg: #050708;
+  --tgm-surface: #101617;
+  --tgm-surface-2: #151b1d;
+  --tgm-surface-3: #1b2224;
+  --tgm-border: #344043;
+  --tgm-border-strong: #3f4b4e;
+  --tgm-cream: #f1f0ea;
+  --tgm-muted: #929a97;
+  --tgm-gold: #e7b84c;
+  --tgm-gold-bright: #ffd76a;
+  --tgm-green: #39cf83;
+  --tgm-green-deep: #17724e;
+  --tgm-danger: #d65a50;
+  --tgm-danger-bg: #291416;
+  --tgm-radius: 14px;
+  --tgm-radius-lg: 18px;
+  --tgm-shadow: 0 14px 36px rgba(0,0,0,.34);
+}
+
+html, body, .app-shell { background: var(--tgm-bg); }
+body { color: var(--tgm-cream); }
+
+/* Shared navigation */
+.topbar { background: linear-gradient(var(--tgm-bg) 75%, transparent); }
+.nav button { color: #7f8885; border-color: transparent; background: transparent; }
+.nav button:hover { color: var(--tgm-cream); background: var(--tgm-surface-2); }
+.nav button.active { color: var(--tgm-gold); background: var(--tgm-surface-2); border-color: #3e4547; }
+.account-pill, .audio-state, .language-toggle { color: var(--tgm-cream); background: var(--tgm-surface-2); border-color: var(--tgm-border); }
+
+/* Shared menu/screen surface */
+.main > section:not(.reference-dashboard) {
+  width: min(700px, 100%);
+  margin: 0 auto;
+  padding: 22px 0 96px;
+}
+.main > section:not(.reference-dashboard) .section-head {
+  margin: 0 2px 14px;
+}
+.main > section:not(.reference-dashboard) .section-head h2,
+.main > section:not(.reference-dashboard) h2 {
+  color: var(--tgm-cream);
+}
+.main > section:not(.reference-dashboard) .section-head .eyebrow,
+.main > section:not(.reference-dashboard) .eyebrow {
+  color: var(--tgm-muted);
+}
+.main > section:not(.reference-dashboard) .section-head p,
+.main > section:not(.reference-dashboard) .muted,
+.main > section:not(.reference-dashboard) .field-help,
+.main > section:not(.reference-dashboard) .plan-note {
+  color: var(--tgm-muted);
+}
+
+.main > section:not(.reference-dashboard) .card,
+.main > section:not(.reference-dashboard) .note,
+.main > section:not(.reference-dashboard) .plan,
+.main > section:not(.reference-dashboard) .alarm-card,
+.main > section:not(.reference-dashboard) .account-row,
+.main > section:not(.reference-dashboard) .trial-panel {
+  background: linear-gradient(145deg, rgba(22,29,31,.96), rgba(8,11,12,.98));
+  border: 1px solid var(--tgm-border);
+  border-radius: var(--tgm-radius);
+  box-shadow: var(--tgm-shadow);
+}
+.main > section:not(.reference-dashboard) .card.pad { padding: 17px; }
+.main > section:not(.reference-dashboard) .plan.current,
+.main > section:not(.reference-dashboard) .account-row.selected { border-color: #8e6b29; box-shadow: 0 0 0 1px rgba(231,184,76,.12) inset, var(--tgm-shadow); }
+
+/* Shared controls */
+.main > section:not(.reference-dashboard) .btn,
+.main > section:not(.reference-dashboard) .alarm-action,
+.main > section:not(.reference-dashboard) .template {
+  border-radius: 10px;
+}
+.main > section:not(.reference-dashboard) .btn.primary {
+  color: #130f06;
+  background: linear-gradient(180deg, var(--tgm-gold-bright), #c28a19);
+  border-color: var(--tgm-gold);
+  box-shadow: 0 7px 22px rgba(231,184,76,.17);
+}
+.main > section:not(.reference-dashboard) .btn.secondary,
+.main > section:not(.reference-dashboard) .btn.ghost,
+.main > section:not(.reference-dashboard) .alarm-action {
+  color: var(--tgm-cream);
+  background: var(--tgm-surface-2);
+  border-color: var(--tgm-border-strong);
+}
+.main > section:not(.reference-dashboard) .btn.ghost { color: var(--tgm-gold); border-color: #624d28; }
+.main > section:not(.reference-dashboard) .btn.danger,
+.main > section:not(.reference-dashboard) .alarm-action.delete {
+  color: #ffb8b0;
+  background: var(--tgm-danger-bg);
+  border-color: #693039;
+}
+.main > section:not(.reference-dashboard) .alarm-action.complete {
+  color: #132215;
+  background: var(--tgm-green);
+  border-color: var(--tgm-green);
+}
+.main > section:not(.reference-dashboard) .template {
+  color: var(--tgm-cream);
+  background: var(--tgm-surface);
+  border-color: var(--tgm-border);
+}
+.main > section:not(.reference-dashboard) .template:hover { background: var(--tgm-surface-2); border-color: #6f582a; }
+.main > section:not(.reference-dashboard) .template .template-icon { color: var(--tgm-gold); background: rgba(231,184,76,.11); }
+
+/* Shared form fields */
+.main > section:not(.reference-dashboard) .field input,
+.main > section:not(.reference-dashboard) .field select,
+.modal .field input,
+.modal .field select {
+  color: var(--tgm-cream);
+  background: #0b1011;
+  border-color: var(--tgm-border-strong);
+  border-radius: 10px;
+}
+.main > section:not(.reference-dashboard) .choice {
+  color: #d5dad6;
+  background: var(--tgm-surface-2);
+  border-color: #3b474a;
+}
+.main > section:not(.reference-dashboard) .choice:has(input:checked) {
+  color: var(--tgm-gold-bright);
+  background: #241e10;
+  border-color: #8b6828;
+}
+.main > section:not(.reference-dashboard) .switch-row { border-color: #2a3437; }
+.main > section:not(.reference-dashboard) .switch-row label { color: #dbe0dc; }
+
+/* Plans, accounts, sounds and settings inherit the same hierarchy. */
+.plan h3, .account-main strong, .alarm-title strong { color: var(--tgm-cream) !important; }
+.plan .plan-price, .alarm-time .time-left, .plan-price-row.featured strong { color: var(--tgm-gold) !important; }
+.plan-limit, .plan-price-row, .alarm-time { background: #0b1011 !important; border-color: #2c373a !important; }
+.badge.gold, .badge.blue, .badge.mint, .badge.red { border-radius: 999px; }
+.badge.gold { color: var(--tgm-gold-bright); background: #21190a; border-color: #674f21; }
+.badge.mint { color: #8ce0a5; background: #0f2418; border-color: #2c633b; }
+
+/* Every non-dashboard modal follows the same dark/gold/mint language. */
+.modal-wrap {
+  background: rgba(0,0,0,.86);
+  backdrop-filter: blur(9px);
+}
+.modal {
+  color: var(--tgm-cream);
+  background: linear-gradient(160deg, #171c1e 0%, #080b0c 82%);
+  border: 1px solid #374245;
+  border-radius: var(--tgm-radius-lg);
+  box-shadow: 0 26px 100px rgba(0,0,0,.68);
+}
+.modal-head h2 { color: var(--tgm-gold) !important; }
+.modal .note { background: #0f1617; border-color: var(--tgm-border); color: #c1c7c3; }
+.modal .choice:has(input:checked) { color: var(--tgm-gold-bright); background: #241e10; border-color: #8b6828; }
+.close { color: var(--tgm-gold); background: var(--tgm-surface-2); border: 1px solid var(--tgm-border); }
+
+/* Alarm overlay is treated as a critical variant of the same system. */
+.alarm-alert {
+  background: linear-gradient(145deg, #211b0e, #0d1213 68%);
+  border-color: #8e6a27;
+  border-radius: var(--tgm-radius-lg);
+}
+.alarm-alert .alert-icon { color: #160f04; background: linear-gradient(180deg, var(--tgm-gold-bright), #bf8617); }
+.alarm-alert h2 { color: var(--tgm-cream); }
+.alarm-alert p { color: #b8bfba; }
+
+.toast { color: var(--tgm-cream); background: #121919; border-color: #4c5557; }
+
+/* Bottom navigation uses the reference hierarchy. */
+.mobile-bottom-nav { background: rgba(5,8,9,.98); border-top-color: #202a2c; }
+.mobile-bottom-nav button { color: #737d7a; }
+.mobile-bottom-nav button.active { color: var(--tgm-gold); }
+.bottom-icon { color: inherit; }
+
+@media (max-width: 700px) {
+  .main > section:not(.reference-dashboard) { padding-left: 14px; padding-right: 14px; }
+}
