@@ -14,10 +14,12 @@
     'DEIN GAMING-ALARM CENTER',
     'Bubble Alarm und Massacre Alarm im Blick.',
     'Bereit für deine nächste Spielzeit.',
+    'automatisch planen.',
     'Your next alarm, always in view',
     'YOUR GAMING ALARM CENTER',
     'Keep Bubble and Massacre Alarms in view.',
     'Ready for your next gaming session.',
+    'Plan automatically.',
   ]);
 
   const MARKETING_PATTERN = /(dein|your)\s+(nächster|next)\s+alarm.*(immer im blick|always in view)/i;
